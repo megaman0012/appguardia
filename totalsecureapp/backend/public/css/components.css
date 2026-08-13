@@ -1,0 +1,110 @@
+/*************************************cards**************************************/
+.card-tools{
+    margin: -0.15rem 0.3rem 0rem 0.3rem !important;
+}
+
+@media (max-width: 1023px) {
+    .card-header{
+        padding: .50rem 1.25rem;
+    }
+    .card-title{
+        font-size: 14px;
+    }
+    .card-body{
+        padding: 0.75rem 1.25rem !important;
+    }
+}
+/**************************************inputs*************************************/
+.inpt label{
+    font-size: 14px;
+    font-weight: normal !important;
+    margin-bottom: 0px;
+}
+
+.inpt input{
+    border-radius: 0.6rem;
+    height: 45px;
+}
+
+.inpt select{
+    border-radius: 0.6rem;
+    height: 45px;
+}
+
+.inpt input::placeholder{
+    font-size: 13px;
+    color: gray;
+    font-family: Arial, sans-serif;
+}
+
+.inpt .charRemaining{
+    font-size: 14px;
+}
+
+@media (max-width: 1023px) {
+
+    .inpt input, .inpt select{
+        height: 35px;
+    }
+    .inpt{
+        margin-bottom: 0.25rem;
+    }
+    .inpt label{
+        font-size: 11px;
+    }
+    .inpt .charRemaining{
+        font-size: 11px;
+    }
+
+}
+
+/************************************Modals***************************************/
+
+.modal-header {
+    background-color: #17a2b8;
+    color: white;
+    padding: 0.65rem 1rem;
+}
+
+.modal-title {
+    margin-bottom: 0;
+    line-height: 1.4;
+    font-size: 16px;
+}
+
+.modal-footer{
+    padding: .40rem .75rem;
+}
+
+/************************************Datatable***************************************/
+
+.datatable thead tr th{
+    font-size: 14px;
+    font-weight: normal;
+    padding: 10px 10px;
+}
+
+.datatable tbody tr td{
+    font-size: 13px;
+}
+
+.dataTables_info, .dataTables_paginate, .dataTables_filter{
+    font-size: 13px;
+}
+
+.dataTables_length label{
+    font-size: 13px;
+    font-weight: normal !important;
+}
+
+table.dataTable thead .sorting{
+    background-position: right !important;
+}
+
+@media (max-width: 1023px) {
+    .dataTables_wrapper div:nth-child(2) div {
+        overflow-x: auto;
+    }
+}
+
+/************************************Switch***************************************/

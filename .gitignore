@@ -1,0 +1,7 @@
+# Binarios grandes que exceden el límite de GitHub (100 MB por archivo)
+*.apk
+
+# Dependencias y builds (reforzado; ya están ignorados en los sub-proyectos)
+node_modules/
+vendor/
+**/build/
