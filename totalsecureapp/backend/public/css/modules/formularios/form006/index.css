@@ -1,0 +1,11 @@
+#dtTable thead tr th{
+    font-weight: 511;
+}
+
+@media (max-width: 1023px) {
+    .btnquery{
+        height: 35px;
+        font-size: 14px;
+        width: 100%;
+    }
+}

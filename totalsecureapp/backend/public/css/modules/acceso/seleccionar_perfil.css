@@ -1,0 +1,56 @@
+#acPerfTbl{
+    width: 100%;
+}
+
+#acPerfLgBx{
+    max-width:800px !important;
+    width: 100%;
+}
+
+.perfil-logo{
+    font-size: 2.1rem;
+    font-weight: 300;
+    margin-bottom: .9rem;
+    text-align: center;
+}
+
+#acPerfLgBack{
+    margin-top: 15px;
+    width:150px;
+}
+
+#tittleAp{
+    margin-bottom: 10px;
+}
+
+#acPerfTbl thead tr th {
+    font-weight: 511;
+    text-align: center;
+}
+
+.btnPerfil{
+    width: 40px;
+}
+
+@media (max-width: 1023px) {
+    .perfil-logo{
+        font-size: 1.6rem;
+        margin-bottom: .1rem;
+    }
+    #tittleAp{
+        font-size: 12px;
+    }
+    #acPerfTbl thead tr th:nth-child(2), #acPerfTbl tbody tr td:nth-child(2){
+        display: none;
+    }
+
+    .perfil-footer{
+        margin-top: 10px !important;
+        font-size: 12px;
+    }
+    #acPerfLgBack {
+        width: 110px;
+        font-size: 12px;
+        margin-top: 10px !important;
+    }
+}
