@@ -33,7 +33,7 @@ class AccesoPersona extends Model
     const UPDATED_AT = 'ap_updated_at';
 
     public function accesos(): HasMany {
-        return $this->hasMany(Acceso::class, 'ac_ap_code', 'ac_code');
+        return $this->hasMany(Acceso::class, 'ac_ap_code', 'ap_code');
     }
 
     public function createdUser(): BelongsTo {

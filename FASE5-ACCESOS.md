@@ -1,9 +1,41 @@
 # FASE 5 — Acceso Generalizado (Vehicular + Peatonal + Proveedor)
 
-> **Estado:** 📋 Documentación Completada (2026-08-20)
+> **Estado:** ✅ Backend Implementado (2026-08-21) — 21 tests unitarios pasando
 > **Objetivo:** Separar los campos vehiculares de la tabla `acceso`, agregar validación por tipo, soporte para múltiples entradas/salidas y pre-registro de visitantes.
 > **Dependencias:** Fase 2 (PresenceValidationService para validación GPS/QR)
 > **Estimación:** 2-3 días
+
+---
+
+## 0. Registro de Implementación (2026-08-21)
+
+### Desviaciones del diseño original (justificadas)
+
+| # | Desviación | Motivo |
+|---|-----------|--------|
+| 1 | `ac_bicileta` → se **conserva** en `acceso` (no se elimina) | Los 3 registros existentes la usan; es dato peatonal, no vehicular |
+| 2 | Migración de datos en **migraciones** (no en seeder) | Atomicidad: copia → conversión → limpieza en una transacción; evita pérdida si alguien corre migrate sin seed |
+| 3 | Lógica extraída a `App\Services\AccesoService` | Consistente con arquitectura de Fases 3-4 (TurnoService, AlertaService); permite tests unitarios sin auth Sanctum |
+| 4 | `proveedor` genera detalle de visita + vehículo opcional (si envía patente) | El doc no definía detalle para proveedor; el formulario frontend le pide empresa/motivo/vehículo |
+| 5 | Se conservan columnas `ac_temperatura`, `ac_is_acomp`, `ac_nomb_acomp`, `ac_rut_acomp` | El doc las mantiene implícitamente; el frontend sigue enviándolas |
+
+### Implementado
+
+- ✅ Migraciones: `2026_08_21_100001_create_acceso_generalizado_tables` (4 tablas) y `2026_08_21_100002_acceso_generalizado_migrate_data` (conversión `ac_tipo` int→string vía SQL nativo, backfill `ac_estado_acceso`, drop de columnas vehiculares)
+- ✅ Modelos: `AccesoVehiculo`, `AccesoVisitante`, `AccesoHistorial` (con `registrar()` estático), `AccesoPreregistro`
+- ✅ `Acceso.php`: constantes TIPO_*/ESTADO_*, relaciones (`persona`, `vehiculo`, `visitante`, `historial`), scopes, accessor `tiempo_permanencia`
+- ✅ Fix relación rota `AccesoPersona.accesos()` (FK/PK invertidos)
+- ✅ Eliminado `AccesoTransporte.php` (código muerto; la tabla nunca existió en BD)
+- ✅ `AccesoService`: registrar (validación por tipo), registrarSalida, crearPreregistro, listarPreregistros, cancelarPreregistro, auto-confirmación de pre-registros al registrar entrada
+- ✅ `AccesoController` refactorizado (delega en servicio; conserva validación GPS de PresenceValidationService y subida de foto)
+- ✅ Rutas nuevas: `POST acceso/preregistro`, `POST acceso/preregistros`, `POST acceso/cancelar-preregistro`
+- ✅ Tests: `tests/Unit/AccesoServiceTest.php` — 21/21 pasando
+
+### Pendiente (frontend)
+
+- [ ] `AccesoFormScreen.tsx`: campos dinámicos según tipo (sección 7 del doc)
+- [ ] `AccesoListScreen.tsx`: filtro por tipo, badge, tiempo permanencia, botón salida solo si `en_curso`
+- [ ] `constants.ts`: rutas de preregistro
 
 ---
 

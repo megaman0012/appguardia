@@ -25,6 +25,11 @@ Route::middleware('api.auth')->group(function () {
     Route::post('accesosbyinst', [AccesoController::class, 'getAccesosByInst']);
     Route::post('accesout', [AccesoController::class, 'accesOut']);
 
+    // Pre-registro de visitantes
+    Route::post('acceso/preregistro', [AccesoController::class, 'preregistro']);
+    Route::post('acceso/preregistros', [AccesoController::class, 'listPreregistros']);
+    Route::post('acceso/cancelar-preregistro', [AccesoController::class, 'cancelarPreregistro']);
+
     Route::post('rondas', [RondaController::class, 'allRonda']);
     Route::post('rondas_gestion', [RondaController::class, 'ronda_gestion']);
     Route::post('rondas_detalle', [RondaController::class, 'detalle_by_id_ronda']);

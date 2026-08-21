@@ -2,158 +2,87 @@
 
 namespace Modules\MobileApp\Http\Controllers;
 
-use Illuminate\Support\Facades\DB;
 use App\generalTrait;
+use App\Services\AccesoService;
 use App\Services\PresenceValidationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Modules\Administracion\Models\Acceso;
-use Modules\Administracion\Models\AccesoPersona;
-use Modules\Administracion\Models\Bitacora;
+use Modules\Administracion\Models\UserHasInstitucion;
 
 class AccesoController extends Controller{
 
     use generalTrait;
 
     protected PresenceValidationService $presenceService;
+    protected AccesoService $accesoService;
 
-    public function __construct(PresenceValidationService $presenceService)
+    public function __construct(PresenceValidationService $presenceService, AccesoService $accesoService)
     {
         $this->presenceService = $presenceService;
+        $this->accesoService = $accesoService;
     }
 
-    protected $accesox = [
-        'rules' => [
-            'latitud' => 'required|numeric',
-            'longitud' => 'required|numeric',
-            'institucion' => 'required|integer',
-            'tipoAc' => 'required|integer',
-            'identificacion' => 'required',
-            'nombres' => 'required',
-            'apellidos' => 'required',
-            'nombAcomp' => 'required_if:isAcomp,true',
-            'patente' => 'required_if:tipoAc,4',
-        ],
-        'messages' => [
-            'latitud.required' => 'Campo latitud es obigatorio',
-            'longitud.required' => 'Campo longitud es obigatorio',
-            'institucion.required' => 'Campo institucion es obigatorio',
-            'tipoAc.required' => 'Campo tipo de acceso es obigatorio',
-            'identificacion.required' => 'Campo identificacion es obigatorio',
-            'nombres.required' => 'Campo nombres es obigatorio',
-            'apellidos.required' => 'Campo apellidos es obigatorio',
-            'nombAcomp.required_if' => 'Campo nombre acompañante es obigatorio',
-            'patente.required_if' => 'Campo patente es obligatorio',
-        ],
-    ];
-
+    /**
+     * Registrar un acceso (generalizado: peatonal, vehicular, proveedor, empleado, visitante)
+     */
     public function acceso(Request $request): JsonResponse {
 
         list($us, $tk) = $this->getSanctumSession($request);
 
-        $validator = Validator::make($request->all(), $this->accesox['rules'], $this->accesox['messages']);
-        if ($validator->fails()) {
-            return response()->json(['success' => false, 'errors' => $validator->errors()]);
-        }
+        try {
+            $datos = $request->all();
 
-        $validarInst = $this->presenceService->validarUbicacion(
-            $request->latitud,
-            $request->longitud,
-            $request->institucion
-        );
-
-        if (!$validarInst['valido']) {
-            return $this->message_json('errors', $validarInst['motivo']);
-        }
-
-        DB::beginTransaction();
-        try{
-
-            $ap = AccesoPersona::where('ap_documento', $request->identificacion )->first();
-
-            if(!$ap){
-                $ap = new AccesoPersona();
-                $ap->ap_documento = $request->identificacion;
-                $ap->ap_tip_doc   = 'CI';
-                $ap->ap_nombres   = $request->nombres;
-                $ap->ap_apellidos = $request->apellidos;
-                $ap->ap_estado    = true;
-                $ap->ap_created_user = $us->id;
-                $ap->ap_updated_user = $us->id;
-                $ap->save();
-            }
-
-            $acc = new Acceso();
-            $acc->ac_usu_id = $us->id;
-            $acc->ac_ug_code = $tk->tokenable_gs;
-            $acc->ac_tipo = $request->tipoAc;
-            $acc->ac_is_entrada = ( $request->isEntrada ) ? 1 : 0 ;
-            $acc->ac_ap_code = $ap->ap_code;
-            $acc->ac_lat = $request->latitud;
-            $acc->ac_lng = $request->longitud;
-            $acc->ac_ins_code = $request->institucion;
-            $acc->ac_empresa = $request->empresa;
-            $acc->ac_temperatura = $request->temperatura;
-            $acc->ac_nombre_contrato = $request->nombreContacto;
-            $acc->ac_bicicleta = $request->isBici ? 1 : 0 ;
-            $acc->ac_is_acomp = $request->isAcomp ? 1 : 0 ;
-            $acc->ac_nomb_acomp = $request->nombAcomp;
-            $acc->ac_rut_acomp = $request->rutAcomp;
-
-            $acc->ac_patente = $request->patente;
-            $acc->ac_is_sello = $request->isSello ? 1 : 0 ;
-            $acc->ac_is_neumatico = $request->isNeumaticos ? 1 : 0 ;
-            $acc->ac_is_carro = $request->isCarro ? 1 : 0 ;
-            $acc->ac_pta_llave = $request->isPtaConLlave ? 1 : 0 ;
-            $acc->ac_kms = $request->kms;
-
-            $acc->ac_observaciones = $request->observacion;
-
+            // La foto se mueve a disco antes de la transaccion
             if ($request->hasFile('file')) {
-                $file = $request->file('file');
-                list($fileMoved, $fileName) = $this->storeFiles('accesos', $file, $us->id.'_'.$tk->tokenable_gs );
+                list($fileMoved, $fileName) = $this->storeFiles('accesos', $request->file('file'), $us->id.'_'.$tk->tokenable_gs);
                 if(!$fileMoved){
-                    DB::rollBack();
                     return $this->message_json('errors', 'Error al cargar imagen a servidor' );
                 }
-                $acc->ac_foto = $fileName;
+                $datos['ac_foto'] = $fileName;
             }
-            $acc->ac_estado = true;
-            $acc->ac_created_user = $us->id;
-            $acc->ac_updated_user = $us->id;
-            $acc->save();
 
-            DB::commit();
-            return response()->json(['message' => 'Acceso registrado con éxito']);
+            $acc = $this->accesoService->registrar($datos, $us->id, $tk->tokenable_gs);
 
+            if (!empty($datos['ac_foto'])) {
+                $acc->ac_foto = $datos['ac_foto'];
+                $acc->save();
+            }
+
+        } catch (ValidationException $e) {
+            return response()->json(['success' => false, 'errors' => $e->errors()]);
         } catch (\Exception $e) {
-            DB::rollBack();
-            return $this->message_json('errors', $e->getMessage() );
+            return $this->message_json('errors', $e->getMessage());
         }
+
+        return response()->json([
+            'message' => 'Acceso registrado con éxito',
+            'ac_code' => $acc->ac_code,
+            'tipo'    => $acc->ac_tipo,
+        ]);
     }
 
-    protected array $getAccesosByInstRules = [
-        'rules' => [
-            'date' => 'required',
-            'ins_code' => 'required',
-        ],
-        'messages' => [
-            'date.required' => 'Campo fecha es obligatorio',
-            'ins_code.required' => 'Campo intitucion es obligatorio',
-        ],
-    ];
-
+    /**
+     * Listar accesos por institucion y fecha (con detalles segun tipo)
+     */
     public function getAccesosByInst(Request $request): JsonResponse {
         list($us, $tk) = $this->getSanctumSession($request);
 
-        $validator = Validator::make($request->all(), $this->getAccesosByInstRules['rules'], $this->getAccesosByInstRules['messages']);
+        $validator = Validator::make($request->all(), [
+            'date' => 'required',
+            'ins_code' => 'required',
+        ], [
+            'date.required' => 'Campo fecha es obligatorio',
+            'ins_code.required' => 'Campo intitucion es obligatorio',
+        ]);
         if ($validator->fails()) {
             return response()->json(['success' => false, 'errors' => $validator->errors()]);
         }
 
-        $accesos = Acceso::with('accesoPersona')
+        $accesos = Acceso::with(['persona', 'vehiculo', 'visitante', 'historial'])
             ->whereDate('ac_created_at', $request->date)
             ->where( 'ac_ins_code', $request->ins_code )
             ->where( 'ac_estado', 1 )
@@ -163,48 +92,113 @@ class AccesoController extends Controller{
         $res = [];
         foreach ($accesos as $ac) {
             $ac->ac_foto = $ac->imagenUrl;
+            $ac->tiempo_permanencia = $ac->tiempo_permanencia;
             $res[] = $ac->toArray();
         }
 
         return response()->json([
             'acAccByIns' => $res
         ]);
-
     }
 
-    protected array $setAccesosOut = [
-        'rules' => [
-            'code' => 'required',
-            'ins' => 'required',
-        ],
-        'messages' => [
-            'code.required' => 'Campo fecha es obligatorio',
-            'ins.required' => 'Campo intitucion es obligatorio',
-        ],
-    ];
+    /**
+     * Registrar salida de un acceso en curso
+     */
     public function accesOut(Request $request): JsonResponse {
         list($us, $tk) = $this->getSanctumSession($request);
 
-        $validator = Validator::make($request->all(), $this->setAccesosOut['rules'], $this->setAccesosOut['messages']);
+        $validator = Validator::make($request->all(), [
+            'code' => 'required',
+            'ins' => 'required',
+            'lat' => 'nullable|numeric',
+            'lng' => 'nullable|numeric',
+        ], [
+            'code.required' => 'Campo codigo es obligatorio',
+            'ins.required' => 'Campo intitucion es obligatorio',
+        ]);
         if ($validator->fails()) {
             return response()->json(['success' => false, 'errors' => $validator->errors()]);
         }
 
-        $acc = Acceso::find($request->code);
-        if(!$acc){
-            return $this->message_json('errors', 'No se encontro informacion del codigo provisto');
+        try {
+            $acc = $this->accesoService->registrarSalida(
+                (int) $request->code,
+                $request->lat,
+                $request->lng
+            );
+        } catch (\Exception $e) {
+            return $this->message_json('errors', $e->getMessage());
         }
-        if($acc->ac_is_entrada == 0){
-            return $this->message_json('errors', 'Al acceso se le registro como salida previamente');
+
+        return response()->json(['message' => 'Salida registrada con éxito']);
+    }
+
+    /**
+     * Pre-registro de visitante esperado
+     */
+    public function preregistro(Request $request): JsonResponse {
+        list($us, $tk) = $this->getSanctumSession($request);
+
+        try {
+            $preregistro = $this->accesoService->crearPreregistro($request->all(), $us->id);
+        } catch (ValidationException $e) {
+            return response()->json(['success' => false, 'errors' => $e->errors()]);
+        } catch (\Exception $e) {
+            return $this->message_json('errors', $e->getMessage());
         }
 
-        $acc->ac_is_entrada = 0;
-        $acc->ac_lat_sal = $request->lat;
-        $acc->ac_lng_sal = $request->lng;
-        $acc->ac_is_salida_fecha = date('Y-m-d H:i:s');
-        $acc->save();
+        return response()->json([
+            'message' => 'Pre-registro creado con éxito',
+            'apr_code' => $preregistro->apr_code,
+            'token'   => $preregistro->apr_token,
+        ]);
+    }
 
-        return response()->json(['message' => 'Acceso registrado con éxito']);
+    /**
+     * Listar pre-registros por institucion (y fecha opcional)
+     */
+    public function listPreregistros(Request $request): JsonResponse {
+        list($us, $tk) = $this->getSanctumSession($request);
 
+        $validator = Validator::make($request->all(), [
+            'ins_code' => 'required|integer',
+            'date' => 'nullable|date',
+        ], [
+            'ins_code.required' => 'Campo institucion es obligatorio',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()]);
+        }
+
+        $preregistros = $this->accesoService->listarPreregistros(
+            (int) $request->ins_code,
+            $request->date
+        );
+
+        return response()->json(['preregistros' => $preregistros]);
+    }
+
+    /**
+     * Cancelar un pre-registro pendiente
+     */
+    public function cancelarPreregistro(Request $request): JsonResponse {
+        list($us, $tk) = $this->getSanctumSession($request);
+
+        $validator = Validator::make($request->all(), [
+            'apr_code' => 'required|integer',
+        ], [
+            'apr_code.required' => 'Campo codigo pre-registro es obligatorio',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()]);
+        }
+
+        try {
+            $this->accesoService->cancelarPreregistro((int) $request->apr_code);
+        } catch (\Exception $e) {
+            return $this->message_json('errors', $e->getMessage());
+        }
+
+        return response()->json(['message' => 'Pre-registro cancelado con éxito']);
     }
 }
