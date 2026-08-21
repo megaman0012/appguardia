@@ -174,6 +174,52 @@ Se creó un **monorepo** en la raíz `/home/server-gea/Documentos/appguardia/` q
 4. **Configuración de producción**: definir `DB_PASSWORD`, `APP_KEY`, `APP_URL` reales y credenciales del correo (`MailTrait`) en `.env` de producción. El actual es solo demo.
 5. **Remote de GitHub**: este monorepo ya queda con remote en `git@github.com:megaman0012/appguardia.git`; los repos locales (app y backend) pueden seguir trabajándose por separado o directamente en el monorepo. Recordar que los `.env` y binarios grandes nunca se suben.
 6. **Piloto**: probar el APK release (`app-release.apk`) en el celular en la misma red del servidor (`192.168.100.212`, backend en `:3031`). Si cambia la IP del servidor, editar `expo.extra.apiHost` en `app.json` y recompilar.
+### Sesión 18/08/2026 — Credenciales unificadas + Dominio
+
+1. **Credencial única** (todos los roles): cédula **`1234567890`**, clave **`T0t@lSecure2026!`**. Roles: `Vigilante` + `Supervisor`. Esta credencial funciona en:
+   - API móvil: `POST /api/login` → token + abilities
+   - Web legacy: `/acceso/login` → selección de perfil
+   - Filament: `/admin` (tras login web + perfil Supervisor)
+2. **Dominio asignado**: `totalsecureapp.com`
+
+### Tareas pendientes — Dominio y Producción (18/08/2026)
+
+> Estas tareas quedan registradas para ejecutar cuando el usuario lo solicite.
+
+#### 1. Configuración DNS
+Configurar en el proveedor de dominio:
+
+| Tipo | Nombre | Valor | TTL |
+|------|--------|-------|-----|
+| A | `@` | IP pública del servidor | 300 |
+| A | `api` | IP pública del servidor | 300 |
+| CNAME | `www` | `totalsecureapp.com` | 300 |
+
+#### 2. Certbot + SSL
+- Instalar `certbot` en el servidor (actualmente no está instalado)
+- Obtener certificados Let's Encrypt para `totalsecureapp.com` y `api.totalsecureapp.com`
+
+#### 3. Nginx inverso
+- Host virtual para `totalsecureapp.com` → panel web Filament (puerto 3031)
+- Host virtual para `api.totalsecureapp.com` → backend Laravel API (puerto 3031)
+- Redirigir HTTP → HTTPS
+
+#### 4. Actualizar .env del backend
+```ini
+APP_URL=https://totalsecureapp.com
+FILAMENT_LIVEWIRE=https://totalsecureapp.com/admin
+APP_DEBUG=false
+```
+
+#### 5. Actualizar app Expo
+- `app.json` → `extra.apiHost` de `192.168.100.212` a `api.totalsecureapp.com`
+- `constants.ts` → quitar puerto fijo (HTTPS usa 443)
+- Recompilar APK release
+
+#### 6. Docker Compose
+- Agregar servicio Nginx HTTPS expuesto en puerto 443
+- Volumen de certificados SSL
 
 ---
-*Historial actualizado el: miércoles, 12 de agosto de 2026*
+
+*Historial actualizado el: martes, 18 de agosto de 2026*

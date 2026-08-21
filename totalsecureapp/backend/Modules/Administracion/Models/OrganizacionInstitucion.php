@@ -22,12 +22,14 @@ class OrganizacionInstitucion extends Model
         'ins_email',
         'ins_tipo',
         'ins_estado',
+        'ins_radio_tolerancia_metros',
         'ins_created_user',
         'ins_updated_user'
     ];
 
     protected $dates = ['created_at', 'updated_at'];
     protected $attributes = [ 'ins_estado' => true ];
+    protected $casts = [ 'ins_radio_tolerancia_metros' => 'integer' ];
 
     public function organizacionSede()
     {

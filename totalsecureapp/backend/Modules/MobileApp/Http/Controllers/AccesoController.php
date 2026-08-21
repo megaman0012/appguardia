@@ -4,6 +4,7 @@ namespace Modules\MobileApp\Http\Controllers;
 
 use Illuminate\Support\Facades\DB;
 use App\generalTrait;
+use App\Services\PresenceValidationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -11,16 +12,23 @@ use Illuminate\Routing\Controller;
 use Modules\Administracion\Models\Acceso;
 use Modules\Administracion\Models\AccesoPersona;
 use Modules\Administracion\Models\Bitacora;
-use Modules\Administracion\Models\UserHasInstitucion;
 
 class AccesoController extends Controller{
 
     use generalTrait;
+
+    protected PresenceValidationService $presenceService;
+
+    public function __construct(PresenceValidationService $presenceService)
+    {
+        $this->presenceService = $presenceService;
+    }
+
     protected $accesox = [
         'rules' => [
-            'latitud' => 'required',
-            'longitud' => 'required',
-            'institucion' => 'required',
+            'latitud' => 'required|numeric',
+            'longitud' => 'required|numeric',
+            'institucion' => 'required|integer',
             'tipoAc' => 'required|integer',
             'identificacion' => 'required',
             'nombres' => 'required',
@@ -50,9 +58,14 @@ class AccesoController extends Controller{
             return response()->json(['success' => false, 'errors' => $validator->errors()]);
         }
 
-        $ins = UserHasInstitucion::where( 'ui_usu_id', $us->id )->where( 'ui_ins_code', $request->institucion )->where( 'ui_state', 1 )->first();
-        if(!$ins){
-            return $this->message_json('errors', 'Usuario no vinculado a institucion');
+        $validarInst = $this->presenceService->validarUbicacion(
+            $request->latitud,
+            $request->longitud,
+            $request->institucion
+        );
+
+        if (!$validarInst['valido']) {
+            return $this->message_json('errors', $validarInst['motivo']);
         }
 
         DB::beginTransaction();
@@ -140,13 +153,7 @@ class AccesoController extends Controller{
             return response()->json(['success' => false, 'errors' => $validator->errors()]);
         }
 
-        $ins = UserHasInstitucion::where( 'ui_ins_code', $request->ins_code )->where( 'ui_state', 1 )->first();
-        if(!$ins){
-            return $this->message_json('errors', 'Usuario no vinculado a institucion');
-        }
-
         $accesos = Acceso::with('accesoPersona')
-            //->where( 'bt_usu_id', $us->id ) //solo por usuario
             ->whereDate('ac_created_at', $request->date)
             ->where( 'ac_ins_code', $request->ins_code )
             ->where( 'ac_estado', 1 )
@@ -183,10 +190,6 @@ class AccesoController extends Controller{
             return response()->json(['success' => false, 'errors' => $validator->errors()]);
         }
 
-        $ins = UserHasInstitucion::where( 'ui_usu_id', $us->id )->where( 'ui_ins_code', $request->ins )->where( 'ui_state', 1 )->first();
-        if(!$ins){
-            return $this->message_json('errors', 'Usuario no vinculado a institucion');
-        }
         $acc = Acceso::find($request->code);
         if(!$acc){
             return $this->message_json('errors', 'No se encontro informacion del codigo provisto');

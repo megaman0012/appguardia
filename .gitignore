@@ -5,3 +5,6 @@
 node_modules/
 vendor/
 **/build/
+
+# Credenciales sensibles - no versionar
+Credencial*todos.txt

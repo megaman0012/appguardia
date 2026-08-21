@@ -1,0 +1,284 @@
+# RESUMEN DE AVANCE — Total Secure App
+
+> **Última actualización:** 2026-08-21 (Migraciones + Seeder + Tests ejecutados ✅)
+
+---
+
+## Estado General del Proyecto
+
+| Fase | Descripción | Estado | Documento |
+|------|-------------|--------|-----------|
+| 0 | Auditoría código + esquema | ✅ Completada | `ANALISIS-ESQUEMA-ACTUAL.md` |
+| 1 | Inventario unificado | ✅ Implementación Completada | `FASE1-INVENTARIO-UNIFICADO.md` |
+| 2 | Validación presencia central | ✅ Implementación Completada | `FASE2-PRESENCE-VALIDATION.md` |
+| 3 | Modelo de turnos | ✅ Implementación Completada | `FASE3-TURNOS.md` |
+| 4 | Alertas con escalamiento | ✅ Implementación Completada | `FASE4-ALERTAS.md` |
+| 5 | Acceso generalizado | 📋 Documentación | `FASE5-ACCESOS.md` |
+| 6 | RBAC granular | 📋 Documentación | `FASE6-RBAC.md` |
+| 7 | Offline sync (backend) | ⏳ Pendiente | — |
+| 8 | API portal cliente | ⏳ Pendiente | — |
+| 9 | QA + despliegue | ⏳ Pendiente | — |
+
+---
+
+## Archivos Importantes
+
+| Archivo | Descripción |
+|---------|-------------|
+| `planificacion_pasos.md` | Roadmap completo del proyecto |
+| `ANALISIS-ESQUEMA-ACTUAL.md` | Diagrama ER + modelos + endpoints |
+| `FASE1-INVENTARIO-UNIFICADO.md` | Documentación técnica Fase 1 |
+| `FASE2-PRESENCE-VALIDATION.md` | Documentación técnica Fase 2 |
+| `FASE3-TURNOS.md` | Documentación técnica Fase 3 |
+| `FASE4-ALERTAS.md` | Documentación técnica Fase 4 |
+| `FASE5-ACCESOS.md` | Documentación técnica Fase 5 |
+| `FASE6-RBAC.md` | Documentación técnica Fase 6 |
+| `RESUMEN-AVANCE.md` | Este archivo |
+
+---
+
+## Archivos Creados - Fase 1
+
+### Migraciones
+- `database/migrations/2026_08_20_000001_create_inv_producto_catalogo_table.php`
+- `database/migrations/2026_08_20_000002_create_inv_lista_table.php`
+- `database/migrations/2026_08_20_000003_create_inv_lista_item_table.php`
+- `database/migrations/2026_08_20_000004_create_inv_movimiento_cabecera_table.php`
+- `database/migrations/2026_08_20_000005_create_inv_movimiento_detalle_table.php`
+
+### Seeders
+- `database/seeders/SeedInvInventoryData.php` (migración de datos)
+- `database/seeders/VerifyInventoryMigration.php` (verificación)
+
+### Modelos Eloquent
+- `Modules/Administracion/Models/ProductoCatalogo.php`
+- `Modules/Administracion/Models/Lista.php`
+- `Modules/Administracion/Models/ListaItem.php`
+- `Modules/Administracion/Models/MovimientoCabecera.php`
+- `Modules/Administracion/Models/MovimientoDetalle.php`
+
+### Controllers
+- `Modules/MobileApp/Http/Controllers/InventarioController.php` (actualizado)
+
+### Rutas
+- `Modules/MobileApp/Routes/api.php` (agregada ruta `/inventario/registrar-baja`)
+
+---
+
+## Archivos Creados - Fase 2
+
+### Migraciones
+- `database/migrations/2026_08_20_100001_add_radio_tolerancia_to_institucion_table.php`
+
+### Modelos Eloquent
+- `Modules/Administracion/Models/OrganizacionInstitucion.php` (actualizado con `ins_radio_tolerancia_metros`)
+
+### Services
+- `app/Services/PresenceValidationService.php` (servicio central de validación)
+
+### Controllers Refactorizados
+- `Modules/MobileApp/Http/Controllers/BiometriaController.php`
+- `Modules/MobileApp/Http/Controllers/RondaController.php`
+- `Modules/MobileApp/Http/Controllers/AccesoController.php`
+
+### Tests
+- `tests/Unit/PresenceValidationServiceTest.php`
+
+---
+
+## Archivos Creados - Fase 3
+
+### Migraciones
+- `database/migrations/2026_08_20_200001_create_turno_table.php`
+- `database/migrations/2026_08_20_200002_add_bio_tu_code_to_biometria_table.php`
+
+### Modelos Eloquent
+- `Modules/Administracion/Models/Turno.php`
+- `Modules/Administracion/Models/user_has_biometria.php` (actualizado con `bio_tu_code`)
+
+### Services
+- `app/Services/TurnoService.php` (servicio central de turnos)
+
+### Controllers
+- `Modules/MobileApp/Http/Controllers/TurnoController.php` (3 endpoints)
+
+### Console Commands
+- `app/Console/Commands/CerrarTurnosDelDia.php` (command artisan)
+- `app/Console/Kernel.php` (scheduler configurado a las 23:55)
+
+### Tests
+- `tests/Unit/TurnoServiceTest.php` (8 tests unitarios)
+
+---
+
+## Archivos Creados - Fase 4
+
+### Migraciones
+- `database/migrations/2026_08_20_300001_add_escalamiento_to_alertas_table.php`
+- `database/migrations/2026_08_20_300002_create_alertas_detalle_table.php`
+- `database/migrations/2026_08_20_300003_create_alertas_historial_table.php`
+
+### Modelos Eloquent
+- `Modules/Administracion/Models/Alertas.php` (actualizado con relaciones, scopes, accessors)
+- `Modules/Administracion/Models/AlertaDetalle.php` (nuevo)
+- `Modules/Administracion/Models/AlertaHistorial.php` (nuevo)
+
+### Services
+- `app/Services/AlertaService.php` (crear, asignar, atender, escalar, cancelar, estadísticas)
+
+### Events
+- `app/Events/AlertaCreada.php` (broadcast para notificaciones en tiempo real)
+
+### Jobs
+- `app/Jobs/NotificarAlertaPendiente.php` (escalamiento automático por tiempo)
+
+### Controllers
+- `Modules/MobileApp/Http/Controllers/AlertaController.php` (6 endpoints)
+
+### Rutas
+- `Modules/MobileApp/Routes/api.php` (agregadas rutas de alertas)
+
+### Tests
+- `tests/Unit/AlertaServiceTest.php` (8 tests unitarios)
+
+---
+
+## Sesión 2026-08-21: Migraciones, Seeder y Tests
+
+### Correcciones aplicadas
+
+| Problema | Causa raíz | Solución |
+|----------|-----------|----------|
+| Migración fallaba: "Cannot declare class AddRadioToleranciaToInstitucion" | Nombre de clase no seguía convención StudlyCase del archivo | Renombradas clases en `2026_08_20_100001` y `2026_08_20_200002` |
+| Migración alertas fallaba: DBAL no instalado | `renameColumn()` requiere doctrine/dbal (no presente) | Reemplazado con SQL nativo `ALTER TABLE ... RENAME COLUMN` |
+| Seeder fallaba: columna inexistente | `ipc_stock_actual` no estaba en la migración del catálogo | Nueva migración `2026_08_21_000001_add_stock_actual_to_inv_producto_catalogo_table` |
+| Seeder no idempotente | Re-ejecución duplicaba filas / violaba PK | Verificaciones de existencia antes de cada insert |
+| Tests: clase `Tests\TestCase` inexistente | Faltaban archivos base de testing | Creados `tests/TestCase.php` y `tests/CreatesApplication.php` |
+| Tests: FK violation en users | BD de pruebas sin usuario id=1 | setUp crea usuario de prueba; BD dedicada `coredt360_testing` en phpunit.xml |
+| Tests: factory de Alertas inexistente | Modelo usaba HasFactory sin factory | Creada `database/factories/Modules/Administracion/Models/AlertasFactory.php` |
+
+### Bugs reales detectados por tests (corregidos en TurnoService)
+
+1. **`calcularTardanza()` / `calcularMinutosExtras()`** — comparaban fechas completas en vez de solo hora del día (`Carbon::parse('08:00')` toma la fecha actual), produciendo valores absurdos al cruzar medianoche. Además el signo de `diffInMinutes()` estaba invertido. Refactorizado a minutos-del-día.
+2. **`cerrarTurnosSinMarcacion()`** — solo procesaba turnos de HOY; los turnos vencidos de días anteriores quedaban 'programado' para siempre. Ahora incluye `tu_fecha <= hoy`.
+
+### Resultado final
+
+- ✅ 12 migraciones ejecutadas (11 pendientes + 1 nueva de stock)
+- ✅ Seeder ejecutado e idempotente (6 productos, 3 listas, 6 items, movimientos migrados)
+- ✅ **20/20 tests unitarios pasando** (PresenceValidation: 4, TurnoService: 8, AlertaService: 8)
+- ✅ BD de pruebas aislada: `coredt360_testing` (RefreshDatabase seguro, no toca la BD de desarrollo)
+
+
+## Próximos Pasos
+
+### Fase 1 (Inventario Unificado) ✅
+1. ✅ Crear migraciones (5 archivos)
+2. ✅ Ejecutar `php artisan migrate`
+3. ✅ Crear seeder de migración
+4. ✅ Ejecutar `php artisan db:seed --class=SeedInvInventoryData`
+5. ✅ Crear modelos actualizados
+6. ✅ Actualizar controller
+7. ✅ Actualizar rutas
+8. ⏳ Probar endpoints
+
+### Fase 2 (Validación de Presencia) ✅
+1. ✅ Crear migración `add_radio_tolerancia_to_institucion`
+2. ✅ Actualizar modelo `OrganizacionInstitucion`
+3. ✅ Crear `app/Services/PresenceValidationService.php`
+4. ✅ Refactorizar `BiometriaController`
+5. ✅ Refactorizar `RondaController`
+6. ✅ Refactorizar `AccesoController`
+7. ✅ Crear tests unitarios
+8. ✅ Ejecutar tests y verificar
+
+### Fase 3 (Modelo de Turnos) ✅
+1. ✅ Crear migración `create_turno_table`
+2. ✅ Crear migración `add_bio_tu_code_to_biometria_table`
+3. ✅ Ejecutar `php artisan migrate`
+4. ✅ Crear modelo `Turno.php`
+5. ✅ Actualizar modelo `user_has_biometria.php`
+6. ✅ Crear `app/Services/TurnoService.php`
+7. ✅ Crear `TurnoController.php` + rutas
+8. ✅ Crear command `CerrarTurnosDelDia`
+9. ✅ Configurar scheduler en Kernel.php
+10. ✅ Crear tests unitarios
+11. ✅ Ejecutar tests y verificar
+
+### Fase 4 (Alertas con Escalamiento) ✅
+1. ✅ Crear migración `add_escalamiento_to_alertas`
+2. ✅ Crear migración `create_alertas_detalle_table`
+3. ✅ Crear migración `create_alertas_historial_table`
+4. ✅ Ejecutar `php artisan migrate`
+5. ✅ Actualizar modelo `Alertas.php`
+6. ✅ Crear modelos `AlertaDetalle.php` y `AlertaHistorial.php`
+7. ✅ Crear `app/Services/AlertaService.php`
+8. ✅ Crear evento `AlertaCreada.php`
+9. ✅ Crear job `NotificarAlertaPendiente.php`
+10. ✅ Actualizar `AlertaController.php`
+11. ✅ Actualizar rutas API
+12. ✅ Crear tests unitarios
+
+### Fase 5 (Acceso Generalizado)
+1. Crear migración `alter_acceso_add_estado_acceso_and_token`
+2. Crear migración `create_acceso_vehiculo_table`
+3. Crear migración `create_acceso_visitante_table`
+4. Crear migración `create_acceso_historial_table`
+5. Crear migración `create_acceso_preregistro_table`
+6. Crear `SeedAccesoVehiculo.php` (migrar datos + limpiar columnas)
+7. Ejecutar `php artisan migrate`
+8. Ejecutar `php artisan db:seed --class=SeedAccesoVehiculo`
+9. Crear modelos: `AccesoVehiculo`, `AccesoVisitante`, `AccesoHistorial`, `AccesoPreregistro`
+10. Actualizar modelo `Acceso.php` (constantes, relaciones, scopes)
+11. Fix `AccesoPersona.php` (relación rota)
+12. Eliminar `AccesoTransporte.php` (código muerto)
+13. Refactorizar `AccesoController.php` (validación por tipo)
+14. Actualizar `AccesoFormScreen.tsx` (campos dinámicos por tipo)
+15. Actualizar `AccesoListScreen.tsx` (filtro por tipo, tiempo permanencia)
+16. Crear tests unitarios
+17. Ejecutar tests y verificar
+
+### Fase 6 (RBAC Granular)
+1. Crear migración `seed_mobile_permissions.php`
+2. Ejecutar `php artisan migrate`
+3. Crear `app/Http/Middleware/CheckPermission.php`
+4. Registrar middleware en `Kernel.php`
+5. Crear `app/Traits/BelongsToInstitution.php`
+6. Crear `Modules/MobileApp/Http/Controllers/PerfilController.php`
+7. Actualizar `Modules/MobileApp/Routes/api.php` con permisos
+8. Aplicar BelongsToInstitution a modelos
+9. Reescr `ProfileSelectionScreen.tsx`
+10. Limpiar modelos duplicados
+11. Actualizar LoginController abilities
+12. Crear tests de permisos
+13. Ejecutar tests y verificar
+
+---
+
+## Comando Útil para Reanudar
+
+```bash
+# Ver estado de migraciones
+php artisan migrate:status
+
+# Ejecutar migraciones pendientes
+php artisan migrate
+
+# Ejecutar seeder específico
+php artisan db:seed --class=SeedInvInventoryData
+
+# Verificar migración
+php artisan db:seed --class=VerifyInventoryMigration
+
+# Ejecutar tests de presencia
+php artisan test --unit=PresenceValidationServiceTest
+
+# Ejecutar tests de turnos
+php artisan test --unit=TurnoServiceTest
+
+# Ejecutar tests de alertas
+php artisan test --unit=AlertaServiceTest
+
+# Ejecutar command de cierre de turnos
+php artisan turnos:cerrar-dia
+```

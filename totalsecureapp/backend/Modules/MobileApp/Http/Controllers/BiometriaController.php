@@ -3,30 +3,39 @@
 namespace Modules\MobileApp\Http\Controllers;
 
 use App\generalTrait;
+use App\Services\PresenceValidationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Routing\Controller;
 
 use Modules\Administracion\Models\user_has_biometria;
-use Modules\Administracion\Models\UserHasInstitucion;
 
 class BiometriaController extends Controller {
 
     use generalTrait;
 
+    protected PresenceValidationService $presenceService;
+
+    public function __construct(PresenceValidationService $presenceService)
+    {
+        $this->presenceService = $presenceService;
+    }
+
     protected $biometrix = [
         'rules' => [
             'file' => 'required',
-            'latitud' => 'required',
-            'longitud' => 'required',
-            'is_entrada' => 'required',
+            'latitud' => 'required|numeric',
+            'longitud' => 'required|numeric',
+            'is_entrada' => 'required|boolean',
+            'institucion' => 'required|integer',
         ],
         'messages' => [
             'file.required' => 'Archivo de imagen es obligatorio',
             'latitud.required' => 'Ubicacion latitud es obligatorio',
             'longitud.required' => 'Ubicacion longitud es obligatorio',
             'is_entrada.required' => 'Campo tipo marcacion es obligatorio',
+            'institucion.required' => 'Campo institucion es obligatorio',
         ],
     ];
 
@@ -34,14 +43,19 @@ class BiometriaController extends Controller {
 
         list($us, $tk) = $this->getSanctumSession($request);
 
-        $ins = UserHasInstitucion::where( 'ui_usu_id', $us->id )->where( 'ui_ins_code', $request->institucion )->where( 'ui_state', 1 )->first();
-        if(!$ins){
-            return $this->message_json('errors', 'Usuario no vinculado a institucion');
-        }
-
         $validator = Validator::make($request->all(), $this->biometrix['rules'], $this->biometrix['messages']);
         if ($validator->fails()) {
             return response()->json(['success' => false, 'errors' => $validator->errors()]);
+        }
+
+        $validarInst = $this->presenceService->validarUbicacion(
+            $request->latitud,
+            $request->longitud,
+            $request->institucion
+        );
+
+        if (!$validarInst['valido']) {
+            return $this->message_json('errors', $validarInst['motivo']);
         }
 
         $file = $request->file('file');
@@ -61,7 +75,10 @@ class BiometriaController extends Controller {
         $biox->bio_updated_user = $us->id;
         $biox->save();
 
-        return response()->json(['message' => 'Biometría cargada con éxito']);
+        return response()->json([
+            'message' => 'Biometría cargada con éxito',
+            'distancia_m' => $validarInst['distancia_m'],
+        ]);
 
     }
 
