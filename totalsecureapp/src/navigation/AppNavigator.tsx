@@ -16,6 +16,7 @@ export type RootStackParamList = {
   ScannerQR: { rc_id: number | string };
   AccesoList: undefined;
   AccesoForm: undefined;
+  PreregistroForm: undefined;
   NovedadList: undefined;
   NovedadCreate: undefined;
   Alertas: undefined;
@@ -40,6 +41,7 @@ import { RondaDetalleScreen } from '../screens/RondaDetalleScreen';
 import { ScannerQRScreen } from '../screens/ScannerQRScreen';
 import { AccesoListScreen } from '../screens/AccesoListScreen';
 import { AccesoFormScreen } from '../screens/AccesoFormScreen';
+import { PreregistroFormScreen } from '../screens/PreregistroFormScreen';
 import { NovedadListScreen } from '../screens/NovedadListScreen';
 import { NovedadCreateScreen } from '../screens/NovedadCreateScreen';
 import { AlertasScreen } from '../screens/AlertasScreen';
@@ -84,6 +86,7 @@ export const AppNavigator = () => {
       <Stack.Screen name="ScannerQR" component={ScannerQRScreen} />
       <Stack.Screen name="AccesoList" component={AccesoListScreen} />
       <Stack.Screen name="AccesoForm" component={AccesoFormScreen} />
+      <Stack.Screen name="PreregistroForm" component={PreregistroFormScreen} />
       <Stack.Screen name="NovedadList" component={NovedadListScreen} />
       <Stack.Screen name="NovedadCreate" component={NovedadCreateScreen} />
       <Stack.Screen name="Alertas" component={AlertasScreen} />

@@ -1,6 +1,6 @@
 # RESUMEN DE AVANCE — Total Secure App
 
-> **Última actualización:** 2026-08-21 (Fase 5 backend implementada ✅ — 41 tests pasando)
+> **Última actualización:** 2026-08-21 (Fase 5 completa: backend + frontend ✅ — 41 tests pasando)
 
 ---
 
@@ -13,7 +13,7 @@
 | 2 | Validación presencia central | ✅ Implementación Completada | `FASE2-PRESENCE-VALIDATION.md` |
 | 3 | Modelo de turnos | ✅ Implementación Completada | `FASE3-TURNOS.md` |
 | 4 | Alertas con escalamiento | ✅ Implementación Completada | `FASE4-ALERTAS.md` |
-| 5 | Acceso generalizado | ✅ Backend Implementado (frontend pendiente) | `FASE5-ACCESOS.md` |
+| 5 | Acceso generalizado | ✅ Completa (backend + frontend) | `FASE5-ACCESOS.md` |
 | 6 | RBAC granular | 📋 Documentación | `FASE6-RBAC.md` |
 | 7 | Offline sync (backend) | ⏳ Pendiente | — |
 | 8 | API portal cliente | ⏳ Pendiente | — |
@@ -219,7 +219,7 @@
 11. ✅ Actualizar rutas API
 12. ✅ Crear tests unitarios
 
-### Fase 5 (Acceso Generalizado) ✅ Backend
+### Fase 5 (Acceso Generalizado) ✅ Completa (backend + frontend)
 1. ✅ Crear migración `create_acceso_generalizado_tables` (vehiculo, visitante, historial, preregistro)
 2. ✅ Crear migración `acceso_generalizado_migrate_data` (conversión ac_tipo int→string, backfill estado, drop columnas vehiculares)
 3. ✅ Ejecutar `php artisan migrate`
@@ -231,8 +231,10 @@
 9. ✅ Refactorizar `AccesoController.php` (delega en servicio; conserva validación GPS y foto)
 10. ✅ Rutas nuevas: `acceso/preregistro`, `acceso/preregistros`, `acceso/cancelar-preregistro`
 11. ✅ Crear tests unitarios (21 tests)
-12. ⏳ Actualizar `AccesoFormScreen.tsx` (campos dinámicos por tipo)
-13. ⏳ Actualizar `AccesoListScreen.tsx` (filtro por tipo, tiempo permanencia)
+12. ✅ Actualizar `AccesoFormScreen.tsx` (campos dinámicos por tipo: vehículo opcional en proveedor, motivo para visitante/proveedor)
+13. ✅ Actualizar `AccesoListScreen.tsx` (pestañas Accesos/Pre-registros, filtro por tipo, badge estado EN CURSO/COMPLETADA, permanencia, salida solo si en_curso)
+14. ✅ Crear `PreregistroFormScreen.tsx` + ruta de navegación
+15. ✅ `constants.ts`: endpoints de preregistro
 
 ### Fase 6 (RBAC Granular)
 1. Crear migración `seed_mobile_permissions.php`

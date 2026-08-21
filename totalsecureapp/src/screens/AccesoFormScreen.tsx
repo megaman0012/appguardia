@@ -17,30 +17,53 @@ import { getCurrentLocation } from '../utils/location';
 import { CameraCapture } from '../components/CameraCapture';
 
 const TIPOS = [
-  { value: '1', label: 'Peatón' },
-  { value: '2', label: 'Empleado' },
-  { value: '3', label: 'Visitante' },
-  { value: '4', label: 'Vehículo' },
+  { value: 'peatonal', label: 'Peatón' },
+  { value: 'empleado', label: 'Empleado' },
+  { value: 'visitante', label: 'Visitante' },
+  { value: 'proveedor', label: 'Proveedor' },
+  { value: 'vehicular', label: 'Vehículo' },
 ];
 
 export const AccesoFormScreen = ({ navigation }: { navigation: any }) => {
   const { institucion } = useAuth();
 
   const [isEntrada, setIsEntrada] = useState(true);
-  const [tipoAc, setTipoAc] = useState('1');
+  const [tipoAc, setTipoAc] = useState('peatonal');
   const [identificacion, setIdentificacion] = useState('');
   const [nombres, setNombres] = useState('');
   const [apellidos, setApellidos] = useState('');
   const [isAcomp, setIsAcomp] = useState(false);
   const [nombAcomp, setNombAcomp] = useState('');
+  const [temperatura, setTemperatura] = useState('');
+  const [observacion, setObservacion] = useState('');
+
+  // Seccion vehicular (obligatoria para vehicular, opcional para proveedor)
   const [patente, setPatente] = useState('');
   const [empresa, setEmpresa] = useState('');
-  const [temperatura, setTemperatura] = useState('');
-  const [nombreContacto, setNombreContacto] = useState('');
-  const [observacion, setObservacion] = useState('');
+  const [color, setColor] = useState('');
+  const [marca, setMarca] = useState('');
+  const [modelo, setModelo] = useState('');
+  const [anio, setAnio] = useState('');
+  const [kms, setKms] = useState('');
+  const [isSello, setIsSello] = useState(false);
+  const [isNeumaticos, setIsNeumaticos] = useState(false);
+  const [isCarro, setIsCarro] = useState(false);
+  const [isPtaConLlave, setIsPtaConLlave] = useState(false);
+
+  // Seccion visita (visitante y proveedor)
+  const [motivo, setMotivo] = useState('');
+  const [areaVisita, setAreaVisita] = useState('');
+  const [personaVisita, setPersonaVisita] = useState('');
+  const [personasGrupo, setPersonasGrupo] = useState('1');
+  const [duracionEstimada, setDuracionEstimada] = useState('');
+
   const [showCamera, setShowCamera] = useState(false);
   const [photo, setPhoto] = useState<{ uri: string } | null>(null);
   const [enviando, setEnviando] = useState(false);
+
+  const esVehicular = tipoAc === 'vehicular';
+  const conVehiculo = esVehicular || tipoAc === 'proveedor';
+  const conVisita = tipoAc === 'visitante' || tipoAc === 'proveedor';
 
   const enviar = async () => {
     if (institucion?.ins_code === undefined) return;
@@ -49,8 +72,12 @@ export const AccesoFormScreen = ({ navigation }: { navigation: any }) => {
       Alert.alert('Aviso', 'Complete identificación, nombres y apellidos');
       return;
     }
-    if (tipoAc === '4' && !patente.trim()) {
+    if (esVehicular && !patente.trim()) {
       Alert.alert('Aviso', 'Ingrese la patente del vehículo');
+      return;
+    }
+    if (conVisita && !motivo.trim()) {
+      Alert.alert('Aviso', 'Ingrese el motivo de la visita');
       return;
     }
     if (isAcomp && !nombAcomp.trim()) {
@@ -80,16 +107,32 @@ export const AccesoFormScreen = ({ navigation }: { navigation: any }) => {
       formData.append('longitud', coords.lng);
       formData.append('isAcomp', isAcomp ? 'true' : 'false');
       if (isAcomp) formData.append('nombAcomp', nombAcomp.trim());
-      formData.append('isBici', 'false');
-      formData.append('isSello', 'false');
-      formData.append('isNeumaticos', 'false');
-      formData.append('isCarro', 'false');
-      formData.append('isPtaConLlave', 'false');
-      if (tipoAc === '4') formData.append('patente', patente.trim());
-      if (empresa) formData.append('empresa', empresa.trim());
       if (temperatura) formData.append('temperatura', temperatura.trim());
-      if (nombreContacto) formData.append('nombreContacto', nombreContacto.trim());
       if (observacion) formData.append('observacion', observacion.trim());
+
+      if (conVehiculo && patente.trim()) {
+        formData.append('patente', patente.trim().toUpperCase());
+        if (empresa) formData.append('empresa', empresa.trim());
+        if (color) formData.append('color', color.trim());
+        if (marca) formData.append('marca', marca.trim());
+        if (modelo) formData.append('modelo', modelo.trim());
+        if (anio) formData.append('anio', anio.trim());
+        if (kms) formData.append('kms', kms.trim());
+        formData.append('isSello', isSello ? 'true' : 'false');
+        formData.append('isNeumaticos', isNeumaticos ? 'true' : 'false');
+        formData.append('isCarro', isCarro ? 'true' : 'false');
+        formData.append('isPtaConLlave', isPtaConLlave ? 'true' : 'false');
+      }
+
+      if (conVisita) {
+        formData.append('motivo', motivo.trim());
+        if (areaVisita) formData.append('areaVisita', areaVisita.trim());
+        if (personaVisita) formData.append('personaVisita', personaVisita.trim());
+        if (personasGrupo) formData.append('personasGrupo', personasGrupo.trim());
+        if (duracionEstimada) formData.append('duracionEstimada', duracionEstimada.trim());
+        if (empresa) formData.append('empresaOrigen', empresa.trim());
+      }
+
       if (photo) {
         formData.append('file', {
           uri: photo.uri,
@@ -116,6 +159,23 @@ export const AccesoFormScreen = ({ navigation }: { navigation: any }) => {
       setEnviando(false);
     }
   };
+
+  const Checkbox = ({
+    label,
+    value,
+    onChange,
+  }: {
+    label: string;
+    value: boolean;
+    onChange: (v: boolean) => void;
+  }) => (
+    <TouchableOpacity style={styles.checkRow} onPress={() => onChange(!value)}>
+      <View style={[styles.checkbox, value ? styles.checkboxOn : null]}>
+        {value ? <Text style={styles.checkMark}>✓</Text> : null}
+      </View>
+      <Text style={styles.checkLabel}>{label}</Text>
+    </TouchableOpacity>
+  );
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -176,25 +236,7 @@ export const AccesoFormScreen = ({ navigation }: { navigation: any }) => {
         style={styles.input}
       />
 
-      {tipoAc === '4' && (
-        <TextInput
-          placeholder="Patente"
-          value={patente}
-          onChangeText={setPatente}
-          style={styles.input}
-          autoCapitalize="characters"
-        />
-      )}
-
-      <TouchableOpacity
-        style={styles.checkRow}
-        onPress={() => setIsAcomp(!isAcomp)}
-      >
-        <View style={[styles.checkbox, isAcomp ? styles.checkboxOn : null]}>
-          {isAcomp ? <Text style={styles.checkMark}>✓</Text> : null}
-        </View>
-        <Text style={styles.checkLabel}>Con acompañante</Text>
-      </TouchableOpacity>
+      <Checkbox label="Con acompañante" value={isAcomp} onChange={setIsAcomp} />
       {isAcomp && (
         <TextInput
           placeholder="Nombre del acompañante"
@@ -204,24 +246,112 @@ export const AccesoFormScreen = ({ navigation }: { navigation: any }) => {
         />
       )}
 
-      <TextInput
-        placeholder="Empresa"
-        value={empresa}
-        onChangeText={setEmpresa}
-        style={styles.input}
-      />
+      {conVehiculo && (
+        <>
+          <Text style={styles.sectionTitle}>Vehículo{esVehicular ? '' : ' (opcional)'}</Text>
+          <TextInput
+            placeholder={esVehicular ? 'Patente *' : 'Patente'}
+            value={patente}
+            onChangeText={setPatente}
+            style={styles.input}
+            autoCapitalize="characters"
+          />
+          <TextInput
+            placeholder="Empresa de transporte"
+            value={empresa}
+            onChangeText={setEmpresa}
+            style={styles.input}
+          />
+          <View style={styles.row2}>
+            <TextInput
+              placeholder="Color"
+              value={color}
+              onChangeText={setColor}
+              style={[styles.input, styles.inputHalf]}
+            />
+            <TextInput
+              placeholder="Marca"
+              value={marca}
+              onChangeText={setMarca}
+              style={[styles.input, styles.inputHalf]}
+            />
+          </View>
+          <View style={styles.row2}>
+            <TextInput
+              placeholder="Modelo"
+              value={modelo}
+              onChangeText={setModelo}
+              style={[styles.input, styles.inputHalf]}
+            />
+            <TextInput
+              placeholder="Año"
+              value={anio}
+              onChangeText={setAnio}
+              style={[styles.input, styles.inputHalf]}
+              keyboardType="numeric"
+            />
+          </View>
+          <TextInput
+            placeholder="Kilometraje"
+            value={kms}
+            onChangeText={setKms}
+            style={styles.input}
+            keyboardType="numeric"
+          />
+          <Checkbox label="Con sello" value={isSello} onChange={setIsSello} />
+          <Checkbox label="Revisión de neumáticos" value={isNeumaticos} onChange={setIsNeumaticos} />
+          <Checkbox label="Revisión de carrocería" value={isCarro} onChange={setIsCarro} />
+          <Checkbox label="Puerta con llave" value={isPtaConLlave} onChange={setIsPtaConLlave} />
+        </>
+      )}
+
+      {conVisita && (
+        <>
+          <Text style={styles.sectionTitle}>Visita</Text>
+          <TextInput
+            placeholder="Motivo *"
+            value={motivo}
+            onChangeText={setMotivo}
+            style={styles.input}
+          />
+          <TextInput
+            placeholder="Área a visitar"
+            value={areaVisita}
+            onChangeText={setAreaVisita}
+            style={styles.input}
+          />
+          <TextInput
+            placeholder="Persona que visita"
+            value={personaVisita}
+            onChangeText={setPersonaVisita}
+            style={styles.input}
+          />
+          <View style={styles.row2}>
+            <TextInput
+              placeholder="Personas en grupo"
+              value={personasGrupo}
+              onChangeText={setPersonasGrupo}
+              style={[styles.input, styles.inputHalf]}
+              keyboardType="numeric"
+            />
+            <TextInput
+              placeholder="Duración estimada (h)"
+              value={duracionEstimada}
+              onChangeText={setDuracionEstimada}
+              style={[styles.input, styles.inputHalf]}
+              keyboardType="decimal-pad"
+            />
+          </View>
+        </>
+      )}
+
+      <Text style={styles.sectionTitle}>Datos generales</Text>
       <TextInput
         placeholder="Temperatura (°C)"
         value={temperatura}
         onChangeText={setTemperatura}
         style={styles.input}
         keyboardType="decimal-pad"
-      />
-      <TextInput
-        placeholder="Nombre de contacto"
-        value={nombreContacto}
-        onChangeText={setNombreContacto}
-        style={styles.input}
       />
       <TextInput
         placeholder="Observaciones"
@@ -308,6 +438,14 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: '500',
   },
+  sectionTitle: {
+    marginHorizontal: 20,
+    marginTop: 22,
+    marginBottom: 2,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#007AFF',
+  },
   tiposRow: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20 },
   tipoChip: {
     borderWidth: 1,
@@ -330,12 +468,14 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 15,
   },
+  row2: { flexDirection: 'row', marginHorizontal: 10 },
+  inputHalf: { flex: 1, marginHorizontal: 10 },
   textArea: { minHeight: 80, textAlignVertical: 'top' },
   checkRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: 20,
-    marginTop: 16,
+    marginTop: 14,
   },
   checkbox: {
     width: 22,

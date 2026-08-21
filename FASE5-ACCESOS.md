@@ -1,6 +1,6 @@
 # FASE 5 — Acceso Generalizado (Vehicular + Peatonal + Proveedor)
 
-> **Estado:** ✅ Backend Implementado (2026-08-21) — 21 tests unitarios pasando
+> **Estado:** ✅ Implementada (2026-08-21) — backend (21 tests) + frontend completados
 > **Objetivo:** Separar los campos vehiculares de la tabla `acceso`, agregar validación por tipo, soporte para múltiples entradas/salidas y pre-registro de visitantes.
 > **Dependencias:** Fase 2 (PresenceValidationService para validación GPS/QR)
 > **Estimación:** 2-3 días
@@ -33,9 +33,11 @@
 
 ### Pendiente (frontend)
 
-- [ ] `AccesoFormScreen.tsx`: campos dinámicos según tipo (sección 7 del doc)
-- [ ] `AccesoListScreen.tsx`: filtro por tipo, badge, tiempo permanencia, botón salida solo si `en_curso`
-- [ ] `constants.ts`: rutas de preregistro
+- [x] `AccesoFormScreen.tsx`: campos dinámicos según tipo — chips con los 5 tipos (`peatonal/empleado/visitante/proveedor/vehicular`); sección vehículo (patente obligatoria solo en vehicular, opcional en proveedor; color/marca/modelo/año/kms/checks sello-neumáticos-carrocería-puerta); sección visita (motivo obligatorio, área, persona que visita, grupo, duración) para visitante y proveedor
+- [x] `AccesoListScreen.tsx`: pestañas Accesos/Pre-registros, filtro por tipo (chips), badge de estado (`EN CURSO`/`COMPLETADA`), tiempo de permanencia, patente/motivo desde las relaciones detalle, botón salida solo si `en_curso`, cancelar pre-registro pendiente
+- [x] `PreregistroFormScreen.tsx` (nueva): alta de pre-registro de visitante con fecha/hora estimada, motivo y área
+- [x] `constants.ts`: rutas de preregistro (`PREREGISTRO_CREATE/LIST/CANCEL`)
+- [x] `AppNavigator.tsx`: ruta `PreregistroForm` registrada
 
 ---
 

@@ -40,6 +40,9 @@ export const API_ENDPOINTS = {
     REGISTRAR: '/acceso',
     LIST_BY_INST: '/accesosbyinst',
     SALIDA: '/accesout',
+    PREREGISTRO_CREATE: '/acceso/preregistro',
+    PREREGISTRO_LIST: '/acceso/preregistros',
+    PREREGISTRO_CANCEL: '/acceso/cancelar-preregistro',
   },
   NOVEDAD: {
     CREATE: '/novedad_create',
