@@ -1,11 +1,15 @@
 <?php
 
 namespace Modules\Administracion\Models;
+
 use Modules\Acceso\Models\users;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Acceso extends Model {
 
@@ -13,7 +17,33 @@ class Acceso extends Model {
 
     protected $table = 'acceso';
     protected $primaryKey = 'ac_code';
-    //public $timestamps = true;
+
+    // Tipos de acceso
+    const TIPO_PEATONAL  = 'peatonal';
+    const TIPO_VEHICULAR = 'vehicular';
+    const TIPO_PROVEEDOR = 'proveedor';
+    const TIPO_EMPLEADO  = 'empleado';
+    const TIPO_VISITANTE = 'visitante';
+
+    const TIPOS_VALIDOS = [
+        self::TIPO_PEATONAL,
+        self::TIPO_VEHICULAR,
+        self::TIPO_PROVEEDOR,
+        self::TIPO_EMPLEADO,
+        self::TIPO_VISITANTE,
+    ];
+
+    // Tipos que requieren detalle vehicular obligatorio
+    const TIPOS_CON_VEHICULO = [self::TIPO_VEHICULAR];
+
+    // Tipos que llevan detalle de visitante (motivo, area, etc.)
+    const TIPOS_CON_VISITA = [self::TIPO_VISITANTE, self::TIPO_PROVEEDOR];
+
+    // Estados del acceso
+    const ESTADO_PROGRAMADA = 'programada';
+    const ESTADO_EN_CURSO   = 'en_curso';
+    const ESTADO_COMPLETADA = 'completada';
+    const ESTADO_CANCELADA  = 'cancelada';
 
     protected $fillable = [
         'ac_code',
@@ -28,19 +58,13 @@ class Acceso extends Model {
         'ac_lng',
         'ac_lat_sal',
         'ac_lng_sal',
-        'ac_empresa',
+        'ac_estado_acceso',
+        'ac_token',
         'ac_temperatura',
-        'ac_nombre_contrato',
         'ac_bicicleta',
         'ac_is_acomp',
         'ac_nomb_acomp',
         'ac_rut_acomp',
-        'ac_patente',
-        'ac_is_sello',
-        'ac_is_neumatico',
-        'ac_is_carro',
-        'ac_pta_llave',
-        'ac_kms',
         'ac_observaciones',
         'ac_foto',
         'ac_estado',
@@ -48,6 +72,12 @@ class Acceso extends Model {
         'ac_updated_at',
         'ac_created_user',
         'ac_updated_user',
+    ];
+
+    protected $casts = [
+        'ac_bicicleta' => 'boolean',
+        'ac_is_acomp'  => 'boolean',
+        'ac_estado'    => 'boolean',
     ];
 
     const CREATED_AT = 'ac_created_at';
@@ -67,12 +97,49 @@ class Acceso extends Model {
         return null;
     }
 
+    public function getTiempoPermanenciaAttribute(): ?string {
+        if (!$this->ac_is_salida_fecha) return null;
+
+        $entrada = Carbon::parse($this->getRawOriginal('ac_created_at'));
+        $salida  = Carbon::parse($this->ac_is_salida_fecha);
+        $diff    = $entrada->diff($salida);
+
+        if ($diff->days > 0) {
+            return "{$diff->days}d {$diff->h}h {$diff->i}m";
+        }
+        if ($diff->h > 0) {
+            return "{$diff->h}h {$diff->i}m";
+        }
+        return "{$diff->i}m";
+    }
+
+    // ── Relaciones ──
+
     public function institucion(): BelongsTo {
         return $this->belongsTo(OrganizacionInstitucion::class, 'ac_ins_code', 'ins_code');
     }
 
-    public function accesoPersona(): BelongsTo {
+    public function persona(): BelongsTo {
         return $this->belongsTo(AccesoPersona::class, 'ac_ap_code', 'ap_code');
+    }
+
+    /**
+     * Alias de compatibilidad con codigo existente (frontend/controller legado)
+     */
+    public function accesoPersona(): BelongsTo {
+        return $this->persona();
+    }
+
+    public function vehiculo(): HasOne {
+        return $this->hasOne(AccesoVehiculo::class, 'av_ac_code', 'ac_code');
+    }
+
+    public function visitante(): HasOne {
+        return $this->hasOne(AccesoVisitante::class, 'avi_ac_code', 'ac_code');
+    }
+
+    public function historial(): HasMany {
+        return $this->hasMany(AccesoHistorial::class, 'ah_ac_code', 'ac_code');
     }
 
     public function createdUser(): BelongsTo {
@@ -81,5 +148,41 @@ class Acceso extends Model {
 
     public function updatedUser(): BelongsTo {
         return $this->belongsTo(users::class, 'ac_updated_user', 'id');
+    }
+
+    // ── Scopes ──
+
+    public function scopePorTipo(Builder $query, string $tipo): Builder {
+        return $query->where('ac_tipo', $tipo);
+    }
+
+    public function scopePorInstitucion(Builder $query, int $insCode): Builder {
+        return $query->where('ac_ins_code', $insCode);
+    }
+
+    public function scopeEstado(Builder $query, string $estado): Builder {
+        return $query->where('ac_estado_acceso', $estado);
+    }
+
+    public function scopeEntradas(Builder $query): Builder {
+        return $query->where('ac_is_entrada', 1);
+    }
+
+    public function scopeSalidas(Builder $query): Builder {
+        return $query->where('ac_is_entrada', 0);
+    }
+
+    // ── Helpers ──
+
+    public function esVehicular(): bool {
+        return in_array($this->ac_tipo, self::TIPOS_CON_VEHICULO, true);
+    }
+
+    public function esPeatonal(): bool {
+        return $this->ac_tipo === self::TIPO_PEATONAL;
+    }
+
+    public function enCurso(): bool {
+        return $this->ac_estado_acceso === self::ESTADO_EN_CURSO;
     }
 }

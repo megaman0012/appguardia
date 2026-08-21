@@ -1,6 +1,6 @@
 # RESUMEN DE AVANCE — Total Secure App
 
-> **Última actualización:** 2026-08-21 (Migraciones + Seeder + Tests ejecutados ✅)
+> **Última actualización:** 2026-08-21 (Fase 5 backend implementada ✅ — 41 tests pasando)
 
 ---
 
@@ -13,7 +13,7 @@
 | 2 | Validación presencia central | ✅ Implementación Completada | `FASE2-PRESENCE-VALIDATION.md` |
 | 3 | Modelo de turnos | ✅ Implementación Completada | `FASE3-TURNOS.md` |
 | 4 | Alertas con escalamiento | ✅ Implementación Completada | `FASE4-ALERTAS.md` |
-| 5 | Acceso generalizado | 📋 Documentación | `FASE5-ACCESOS.md` |
+| 5 | Acceso generalizado | ✅ Backend Implementado (frontend pendiente) | `FASE5-ACCESOS.md` |
 | 6 | RBAC granular | 📋 Documentación | `FASE6-RBAC.md` |
 | 7 | Offline sync (backend) | ⏳ Pendiente | — |
 | 8 | API portal cliente | ⏳ Pendiente | — |
@@ -219,24 +219,20 @@
 11. ✅ Actualizar rutas API
 12. ✅ Crear tests unitarios
 
-### Fase 5 (Acceso Generalizado)
-1. Crear migración `alter_acceso_add_estado_acceso_and_token`
-2. Crear migración `create_acceso_vehiculo_table`
-3. Crear migración `create_acceso_visitante_table`
-4. Crear migración `create_acceso_historial_table`
-5. Crear migración `create_acceso_preregistro_table`
-6. Crear `SeedAccesoVehiculo.php` (migrar datos + limpiar columnas)
-7. Ejecutar `php artisan migrate`
-8. Ejecutar `php artisan db:seed --class=SeedAccesoVehiculo`
-9. Crear modelos: `AccesoVehiculo`, `AccesoVisitante`, `AccesoHistorial`, `AccesoPreregistro`
-10. Actualizar modelo `Acceso.php` (constantes, relaciones, scopes)
-11. Fix `AccesoPersona.php` (relación rota)
-12. Eliminar `AccesoTransporte.php` (código muerto)
-13. Refactorizar `AccesoController.php` (validación por tipo)
-14. Actualizar `AccesoFormScreen.tsx` (campos dinámicos por tipo)
-15. Actualizar `AccesoListScreen.tsx` (filtro por tipo, tiempo permanencia)
-16. Crear tests unitarios
-17. Ejecutar tests y verificar
+### Fase 5 (Acceso Generalizado) ✅ Backend
+1. ✅ Crear migración `create_acceso_generalizado_tables` (vehiculo, visitante, historial, preregistro)
+2. ✅ Crear migración `acceso_generalizado_migrate_data` (conversión ac_tipo int→string, backfill estado, drop columnas vehiculares)
+3. ✅ Ejecutar `php artisan migrate`
+4. ✅ Crear modelos: `AccesoVehiculo`, `AccesoVisitante`, `AccesoHistorial`, `AccesoPreregistro`
+5. ✅ Actualizar modelo `Acceso.php` (constantes, relaciones, scopes, tiempo_permanencia)
+6. ✅ Fix `AccesoPersona.php` (relación rota)
+7. ✅ Eliminar `AccesoTransporte.php` (código muerto)
+8. ✅ Crear `app/Services/AccesoService.php` (validación por tipo + preregistros)
+9. ✅ Refactorizar `AccesoController.php` (delega en servicio; conserva validación GPS y foto)
+10. ✅ Rutas nuevas: `acceso/preregistro`, `acceso/preregistros`, `acceso/cancelar-preregistro`
+11. ✅ Crear tests unitarios (21 tests)
+12. ⏳ Actualizar `AccesoFormScreen.tsx` (campos dinámicos por tipo)
+13. ⏳ Actualizar `AccesoListScreen.tsx` (filtro por tipo, tiempo permanencia)
 
 ### Fase 6 (RBAC Granular)
 1. Crear migración `seed_mobile_permissions.php`
@@ -278,6 +274,9 @@ php artisan test --unit=TurnoServiceTest
 
 # Ejecutar tests de alertas
 php artisan test --unit=AlertaServiceTest
+
+# Ejecutar tests de accesos (Fase 5)
+php artisan test tests/Unit/AccesoServiceTest.php
 
 # Ejecutar command de cierre de turnos
 php artisan turnos:cerrar-dia
