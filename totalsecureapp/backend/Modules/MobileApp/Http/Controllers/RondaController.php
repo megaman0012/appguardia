@@ -3,6 +3,7 @@
 namespace Modules\MobileApp\Http\Controllers;
 
 use App\generalTrait;
+use App\Services\PresenceValidationService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,11 +13,18 @@ use Illuminate\Support\Facades\Validator;
 use Modules\Administracion\Models\InstitucionMarcadores;
 use Modules\Administracion\Models\ronda_cabecera;
 use Modules\Administracion\Models\ronda_detalle;
-use Modules\Administracion\Models\UserHasInstitucion;
 
 class RondaController extends Controller {
 
     use generalTrait;
+
+    protected PresenceValidationService $presenceService;
+
+    public function __construct(PresenceValidationService $presenceService)
+    {
+        $this->presenceService = $presenceService;
+    }
+
     protected array $rondax = [
         'rules' => [ 'ins_code' => 'required' ],
         'messages' => [ 'ins_code.required' => 'Campo intitucion es obligatorio' ],
@@ -80,9 +88,9 @@ class RondaController extends Controller {
             return response()->json(['success' => false, 'errors' => $validator->errors()]);
         }
 
-        $ins = UserHasInstitucion::where( 'ui_usu_id', $us->id )->where( 'ui_ins_code', $request->ins_code )->where( 'ui_state', 1 )->first();
-        if(!$ins){
-            return $this->message_json('errors', 'Usuario no vinculado a institucion');
+        $validarInst = $this->presenceService->validarInstitucion($request->ins_code);
+        if (!$validarInst['valido']) {
+            return $this->message_json('errors', $validarInst['motivo']);
         }
 
         $rondas = ronda_cabecera::where('rc_usu_code', $us->id)
@@ -104,7 +112,7 @@ class RondaController extends Controller {
                 'rc_id' => $rnd->rc_id,
                 'rc_fecha_inicio' => $rnd->rc_fecha_inicio,
                 'rc_fecha_fin' => $rnd->rc_fecha_fin,
-                'rc_estado_ronda' => $rnd->rc_estado_ronda, //Iniciada, Cancelada, Finalizada
+                'rc_estado_ronda' => $rnd->rc_estado_ronda,
             );
         }
 
@@ -124,9 +132,9 @@ class RondaController extends Controller {
                 return response()->json(['success' => false, 'errors' => $validator->errors()]);
             }
 
-            $ins = UserHasInstitucion::where( 'ui_usu_id', $us->id )->where( 'ui_ins_code', $request->ins_code )->where( 'ui_state', 1 )->first();
-            if(!$ins){
-                return $this->message_json('errors', 'Usuario no vinculado a institucion');
+            $validarInst = $this->presenceService->validarInstitucion($request->ins_code);
+            if (!$validarInst['valido']) {
+                return $this->message_json('errors', $validarInst['motivo']);
             }
 
             if($request->rc_estado_ronda == "Iniciada"){
@@ -194,9 +202,9 @@ class RondaController extends Controller {
             return response()->json(['success' => false, 'errors' => $validator->errors()]);
         }
 
-        $ins = UserHasInstitucion::where( 'ui_usu_id', $us->id )->where( 'ui_ins_code', $request->ins_code )->where( 'ui_state', 1 )->first();
-        if(!$ins){
-            return $this->message_json('errors', 'Usuario no vinculado a institucion');
+        $validarInst = $this->presenceService->validarInstitucion($request->ins_code);
+        if (!$validarInst['valido']) {
+            return $this->message_json('errors', $validarInst['motivo']);
         }
 
         $rds = ronda_detalle::where('rd_rc_id', $request->rc_id)
@@ -233,9 +241,9 @@ class RondaController extends Controller {
             return response()->json(['success' => false, 'errors' => $validator->errors()]);
         }
 
-        $ins = UserHasInstitucion::where( 'ui_usu_id', $us->id )->where( 'ui_ins_code', $request->ins_code )->where( 'ui_state', 1 )->first();
-        if(!$ins){
-            return $this->message_json('errors', 'Usuario no vinculado a institucion');
+        $validarInst = $this->presenceService->validarInstitucion($request->ins_code);
+        if (!$validarInst['valido']) {
+            return $this->message_json('errors', $validarInst['motivo']);
         }
 
         try{
@@ -295,25 +303,25 @@ class RondaController extends Controller {
             return response()->json(['success' => false, 'errors' => $validator->errors()]);
         }
 
-        $ins = UserHasInstitucion::where( 'ui_usu_id', $us->id )->where( 'ui_ins_code', $request->ins_code )->where( 'ui_state', 1 )->first();
-        if(!$ins) {
-            return $this->message_json('errors', 'Usuario no vinculado a institucion');
+        $validacion = $this->presenceService->validarPresencia(
+            $request->rc_qr,
+            $request->rd_lat,
+            $request->rd_lng,
+            $request->ins_code
+        );
+
+        if (!$validacion['valido']) {
+            return $this->message_json('errors', $validacion['motivo']);
         }
-        $dcTxt = $this->aesCypher($request->rc_qr, 2);
-        $partes = explode('_', $dcTxt);
-        if (!isset($partes[1]) || $partes[1] !== "TS") {
-            return $this->message_json('errors', 'QrCode no fue generado en el sistema');
-        }
-        $codMark = $partes[0];
-        $marcador = InstitucionMarcadores::where( 'im_code', $codMark )->where( 'im_ins_code', $request->ins_code )->first();
-        if(!$marcador){
-            return $this->message_json('errors', 'Marcador no encontrado o pertenece a otra institucion');
-        }
-        $ronDet = ronda_detalle::where( 'rd_im_code', $codMark )
-            ->where( 'rd_usu_id', $us->id )
-            ->where( 'rd_ins_code', $request->ins_code )
+
+        $marcador = $validacion['marcador'];
+
+        $ronDet = ronda_detalle::where('rd_im_code', $marcador->im_code)
+            ->where('rd_usu_id', $us->id)
+            ->where('rd_ins_code', $request->ins_code)
             ->orderBy('rd_id', 'desc')
             ->first();
+
         if($ronDet){
             $fechaRegistro = Carbon::parse($ronDet->rd_fecha_hora);
             $ahora = Carbon::now();
@@ -322,6 +330,7 @@ class RondaController extends Controller {
                 return $this->message_json('errors', 'Ya registro este marcador espere 5 minutos');
             }
         }
+
         try{
             $rd = new ronda_detalle();
             $rd->rd_usu_id = $us->id;
@@ -337,7 +346,11 @@ class RondaController extends Controller {
             $rd->rd_created_user = $us->id;
             $rd->rd_updated_user = $us->id;
             $rd->save();
-            return response()->json([ 'result' => 'success', 'message' => 'Novedad Cargada Correctamente']);
+            return response()->json([
+                'result' => 'success',
+                'message' => 'Novedad Cargada Correctamente',
+                'distancia_m' => $validacion['distancia_m'],
+            ]);
         }catch (Exception $e){
             return $this->message_json('errors', $e->getMessage());
         }

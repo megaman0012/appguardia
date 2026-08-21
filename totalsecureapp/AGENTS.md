@@ -61,6 +61,25 @@ Expo SDK 57. Leer docs versionadas en https://docs.expo.dev/versions/v57.0.0/ an
 - **Versiones alineadas con SDK 57** vía `npx expo install` (`expo`, `react-native-safe-area-context`, `react-native-screens`).
 - `android/` se versiona para portabilidad. Las salidas de build (`**/build/`, `.gradle`, `local.properties`) están ignoradas con `.gitignore` propio dentro de `android/`.
 
+## Verificación de funcionamiento (2026-08-18)
+
+Se verificó el estado completo del proyecto:
+
+| Componente | Estado | Detalle |
+|------------|--------|---------|
+| Backend Docker | ✅ Funcionando | Contenedores `ts_app`, `ts_db`, `ts_nginx` activos en puerto 3031 |
+| API REST | ✅ Funcionando | `POST /api/login` responde correctamente con JSON |
+| Frontend Expo | ✅ Compila | TypeScript sin errores, bundle genera ~1MB |
+| Web export | ✅ Funcionando | Export estático en `dist/`, servido en `0.0.0.0:8081` |
+| Flujo Login → Home | ✅ Completo | Login → Selección institución → Home → Módulos |
+| Pantallas módulos | ✅ Todas operativas | Rondas, Accesos, Novedades, Alertas, Inventario, Biometría, Perfil |
+
+**Para acceder desde otra PC en la misma red:**
+1. Levantar Expo: `npx expo start --web --port 8081` (o export estático: `npx expo export --platform web`)
+2. Abrir `http://192.168.100.212:8081` desde el navegador
+
+**Nota:** El error "React Native DevTools" al iniciar Expo es esperado en servidores Linux sin interfaz gráfica (Electron no tiene `--no-sandbox`). No afecta al funcionamiento de la app.
+
 ## Pendientes conocidos
 
 - **Firebase/Google Play:** falta `google-services.json` para notificaciones push en dispositivos reales en producción (la app ya registra el token; sin Firebase no llega la notificación a teléfonos). Se debe evitar versionar el archivo con credenciales reales en el repo.

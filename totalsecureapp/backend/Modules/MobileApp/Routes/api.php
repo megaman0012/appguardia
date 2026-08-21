@@ -10,6 +10,7 @@ use Modules\MobileApp\Http\Controllers\AccesoController;
 use Modules\MobileApp\Http\Controllers\RondaController;
 use Modules\MobileApp\Http\Controllers\NotificacionController;
 use Modules\MobileApp\Http\Controllers\AlertaController;
+use Modules\MobileApp\Http\Controllers\TurnoController;
 
 Route::post('login', [LoginController::class, 'login']);
 Route::post('solicitud_paswchg', [LoginController::class, 'solicitud_cambiopass']);
@@ -37,6 +38,11 @@ Route::middleware('api.auth')->group(function () {
     Route::post('/token/remove', [NotificacionController::class, 'removeToken']);
 
     Route::post('/alert/today', [AlertaController::class, 'today']);
+    Route::post('/alert/crear', [AlertaController::class, 'crear']);
+    Route::post('/alert/{id}/atender', [AlertaController::class, 'atender']);
+    Route::post('/alert/{id}/cancelar', [AlertaController::class, 'cancelar']);
+    Route::post('/alert/estadisticas', [AlertaController::class, 'estadisticas']);
+    Route::get('/alert/{id}/historial', [AlertaController::class, 'historial']);
 
     Route::post('/notification/institution', [NotificacionController::class, 'sendToInstitution']);
     Route::post('/notification/user', [NotificacionController::class, 'sendToUser']);
@@ -45,8 +51,12 @@ Route::middleware('api.auth')->group(function () {
     Route::post('/inventario/listbyinst', [InventarioController::class, 'allListByInst']);
     Route::post('/inventario/listsave', [InventarioController::class, 'saveListMov']);
     Route::post('/inventario/finishsave', [InventarioController::class, 'finishListMov']);
+    Route::post('/inventario/registrar-baja', [InventarioController::class, 'registrarBaja']);
 
-
+    // === TURNOS ===
+    Route::post('/turnos-del-dia', [TurnoController::class, 'turnosDelDia']);
+    Route::post('/turnos-vincular-marcaje', [TurnoController::class, 'vincularMarcaje']);
+    Route::post('/turnos-cumplimiento', [TurnoController::class, 'cumplimiento']);
 
 });
 

@@ -1,0 +1,303 @@
+# Total Secure — Análisis Técnico v1 y Roadmap de Actualización v2.0
+
+## 1. Stack y arquitectura inferidos
+
+- **Backend/Admin:** Laravel + Livewire + **Filament** (confirmado por el branding "filament" en el footer y el patrón de tablas con toggle de columnas, filtros, paginación).
+- **Frontend guardias:** APK móvil (Android, tablet en sitio) que hace check-in por cédula + foto + GPS + escaneo QR.
+- **Base de datos:** relacional (estructura de tablas maestro-detalle consistente con Eloquent/Filament Resources).
+- **Multi-tenant implícito:** Sede (país) → Organización (cliente) → Institución (sitio), con roles cuyo scope de datos cambia según perfil.
+
+## 2. Modelo de datos actual (inferido de las 14 pantallas)
+
+```
+Sede (país)
+ └─ Organizacion (cliente)
+     └─ Institucion (sitio físico)
+         ├─ Marcador (punto de control: tipo, descripción, geo, QR, activo)
+         │    └─ usado por: Biometria, Rondas, Acceso (validación de presencia)
+         ├─ Lista (inventario por institución)
+         │    └─ Producto (nombre, descripción, especificación)
+         ├─ Movimiento (cabecera: código, estado [Devolución/...], lista asociada)
+         │    └─ MovimientoDetalle (producto, recibido, cant. default, cant. recepción, observación, estado)
+         ├─ Biometria (marcación entrada/salida: cédula, usuario, tipo, fecha, foto, gps)
+         ├─ Alerta (código, usuario, estado [Finalizada/...], fecha, geo/mapa)
+         ├─ Acceso (sello, neumáticos, carro, p.carga llave, kms, imagen, fecha entrada/salida, entrevista, apellidos, temperatura, patente)
+         ├─ Ronda (cabecera: inicio, fin, usuario, estado [Finalizada/Cancelada])
+         │    └─ RondaDetalle (marcador escaneado, fecha, imagen, observación)
+         └─ Novedad (foto, descripción, fecha, geo)
+
+Usuario ── N:M ── Perfil (Administrador, Administrador General, Supervisor, Vigilante)
+```
+
+### Observaciones clave del modelo
+1. **Marcador es la entidad más reutilizada del sistema.** Biometría, Rondas y (probablemente) Acceso dependen de él para validar presencia física vía QR + GPS. Hoy vive "colgado" dentro de Organización > Institución, pero funcionalmente es un servicio transversal.
+2. **Movimiento e Inventario Equipamiento están separados de Listas > Productos**, pero se refieren a los mismos productos. Hay dos jerarquías de inventario que deberían ser una sola (catálogo vs. trazabilidad de asignación/devolución).
+3. **Acceso (Imagen 2) tiene un modelo de datos distinto y más rígido** que el resto (columnas fijas tipo carro/sello/neumáticos/kms) — parece diseñado para un caso de uso específico (garita vehicular) y no generaliza bien a peatones u otros tipos de acceso.
+4. **No hay evidencia de relación explícita Usuario ↔ Institución/turno** — no se ve cómo el sistema sabe qué guardia debería estar en qué sitio y a qué hora, lo cual es clave para validar biometría/rondas contra un plan esperado en vez de solo registrar lo que pasó.
+5. **Alertas es un log, no un flujo de atención.** Se ve "Estado Alerta: Finalizada" pero no hay evidencia de escalamiento, tiempo de respuesta, ni asignación a un supervisor específico — datos críticos para un botón de pánico real.
+6. **117 alertas, 755 rondas, 554 movimientos** — el volumen ya es real, así que cualquier refactor de v2 debe incluir migración de datos, no solo rediseño de tablas nuevas.
+
+## 3. Problemas técnicos / de negocio que veo en v1 (para justificar la v2)
+
+| # | Problema | Impacto |
+|---|---|---|
+| 1 | Marcador/QR duplicado conceptualmente entre módulos sin un servicio central de validación de geocerca | Inconsistencias: cada módulo puede validar GPS/QR distinto |
+| 2 | Dos jerarquías de inventario (Listas>Productos vs Inventario Equipamiento) | Reportes de stock poco confiables, doble mantenimiento |
+| 3 | Acceso con columnas fijas de vehículo | No sirve para peatones, proveedores, visitas sin vehículo |
+| 4 | Sin modelo de turnos/planificación | No se puede detectar ausentismo, tardanza, ni "guardia marcó desde otro sitio" |
+| 5 | Alertas sin flujo de escalamiento/SLA | Botón de pánico sin trazabilidad de tiempo de respuesta real |
+| 6 | Perfiles fijos (4 roles hardcodeados) | Cada cliente nuevo con necesidades distintas de permisos obliga a tocar código |
+| 7 | Sin evidencia de sync offline en la APK | Si el guardia está en un sitio sin señal, ¿se pierde el registro? |
+| 8 | Filament como panel único (probable) | Bien para admin interno, pero limita portal de cliente final (dueño de la institución viendo sus propios reportes) si no se separa API de la UI |
+
+---
+
+## 4. Roadmap de v2.0 por fases
+
+Orden pensado así: primero **orden y optimización de lo que ya existe** (datos, arquitectura, servicios transversales), y solo después **features nuevas**. Cada fase es independiente y entregable, y trae su propio prompt listo para pegar en Claude Code (ajusta rutas/nombres de tu repo real antes de correrlo).
+
+---
+
+### FASE 0 — Auditoría del código y esquema actual
+**Objetivo:** tener el estado real (no inferido) de BD, modelos, migraciones y relaciones antes de tocar nada.
+
+**Entregable:** documento de esquema real + lista de deuda técnica encontrada en código.
+
+**Prompt:**
+```
+Actúa como arquitecto de software Laravel. Analiza este repositorio de un sistema de guardias 
+de seguridad (Total Secure) construido en Laravel + Filament.
+
+1. Lista todos los modelos Eloquent, sus migraciones y relaciones (hasMany, belongsTo, 
+   belongsToMany), incluyendo soft deletes, timestamps y campos nullable.
+2. Genera un diagrama entidad-relación en formato mermaid a partir del esquema real de BD.
+3. Identifica: falta de índices en columnas usadas en filtros/búsqueda (institucion_id, 
+   fecha, cedula, estado), falta de foreign keys con onDelete definido, campos que deberían 
+   ser enum/estado y hoy son string libre.
+4. Identifica duplicación de lógica entre los módulos Biometria, Rondas y Acceso 
+   (validación de marcador/QR/GPS).
+5. Entrega todo como un archivo ANALISIS-ESQUEMA-ACTUAL.md en la raíz del proyecto.
+
+No modifiques código todavía, solo analiza y documenta.
+```
+
+---
+
+### FASE 1 — Normalización de base de datos e inventario unificado
+**Objetivo:** resolver el problema #2 (dos jerarquías de inventario) y #6 del análisis, consolidando `Listas > Productos` con `Inventario Equipamiento` en un solo modelo: catálogo de producto → asignación/movimiento → estado actual.
+
+**Entregable:** migraciones nuevas + migración de datos de las tablas actuales, sin perder los 554 movimientos existentes.
+
+**Prompt:**
+```
+Sobre el esquema documentado en ANALISIS-ESQUEMA-ACTUAL.md, diseña e implementa la 
+consolidación del módulo de inventario:
+
+1. Crea un modelo unificado: 
+   - producto_catalogo (id, institucion_id, nombre, descripcion, especificacion, activo)
+   - lista (agrupador lógico, ya existente, relacionado a producto_catalogo via pivot)
+   - movimiento (cabecera: institucion_id, lista_id, estado [entrega|devolucion|baja], 
+     usuario_id, created_at)
+   - movimiento_detalle (movimiento_id, producto_catalogo_id, cantidad_default, 
+     cantidad_real, recibido bool, observacion, estado)
+2. Escribe una migration + seeder que migre los datos existentes de las tablas actuales 
+   de "Listas > Productos" y "Inventario Equipamiento" / "Movimientos Cabecera" hacia el 
+   nuevo esquema, preservando IDs y fechas originales.
+3. Agrega un campo calculado o accessor "stock_actual" por producto_catalogo basado en el 
+   histórico de movimientos (entregas - devoluciones - bajas).
+4. Escribe tests de migración que verifiquen que el conteo de registros antes/después coincide.
+
+Antes de correr la migración en producción, genera un dump de respaldo de las tablas afectadas.
+```
+
+---
+
+### FASE 2 — Servicio central de "Marcador / Validación de Presencia"
+**Objetivo:** resolver el problema #1. Un único servicio (`PresenceValidationService`) usado por Biometría, Rondas y Acceso para validar QR + GPS + geocerca, en vez de lógica repetida en cada módulo.
+
+**Prompt:**
+```
+Crea un servicio central PresenceValidationService en app/Services/ que reciba:
+- marcador_id (o código QR escaneado)
+- coordenadas GPS del dispositivo
+- radio de tolerancia en metros (configurable por institución)
+
+Y devuelva: válido/inválido, distancia calculada, y motivo de rechazo si aplica 
+(QR no pertenece a la institución, fuera de radio, marcador inactivo).
+
+Refactoriza los controladores/actions de Biometria, RondaDetalle y Acceso para que 
+usen este servicio en lugar de validar QR/GPS de forma independiente en cada uno.
+
+Agrega un campo radio_tolerancia_metros a la tabla institucion (default 100).
+
+Escribe tests unitarios del servicio cubriendo: marcador válido dentro de radio, 
+fuera de radio, QR de otra institución, marcador inactivo.
+```
+
+---
+
+### FASE 3 — Modelo de Turnos y Planificación
+**Objetivo:** resolver el problema #4. Sin esto, biometría y rondas son solo un log; con esto, se vuelven verificación contra un plan.
+
+**Prompt:**
+```
+Diseña e implementa un módulo de Turnos:
+
+1. Modelo turno (id, institucion_id, usuario_id, marcador_id_esperado, fecha, 
+   hora_inicio_prevista, hora_fin_prevista, estado [programado|en_curso|completado|ausente])
+2. Al registrar una marcación de Biometria, si existe un turno programado para ese 
+   usuario/institución/fecha, vincula la marcación al turno y calcula:
+   - minutos_tardanza (si aplica)
+   - marco_desde_institucion_correcta (bool, cruzando con PresenceValidationService de la Fase 2)
+3. Crea un job/comando programado (Laravel Scheduler) que, al cerrar el día, marque como 
+   "ausente" los turnos programados sin marcación de entrada.
+4. Expón en el panel Filament una vista "Cumplimiento de Turnos" con columnas: 
+   usuario, institución, turno esperado, marcó, tardanza, estado.
+
+No rompas el flujo actual de Biometria: el vínculo a turno debe ser opcional 
+(nullable) para no bloquear marcaciones sin turno planificado.
+```
+
+---
+
+### FASE 4 — Alertas con flujo de escalamiento real
+**Objetivo:** resolver el problema #5. Convertir el log de alertas en un flujo con tiempos de respuesta y notificación real a consola/supervisores.
+
+**Prompt:**
+```
+Extiende el módulo de Alertas:
+
+1. Agrega a la tabla alerta: prioridad (alta/media/baja), asignado_a (usuario_id, nullable, 
+   supervisor), fecha_atencion, tiempo_respuesta_segundos (calculado: fecha_atencion - created_at), 
+   estado ampliado (pendiente|en_atencion|finalizada|cancelada).
+2. Al crear una alerta (botón de pánico desde la APK), dispara un evento AlertaCreada.
+3. Crea un Listener que:
+   - notifique en tiempo real al panel Filament (usa Laravel Echo/Reverb o Pusher, 
+     lo que ya esté disponible en el proyecto)
+   - envíe notificación push/SMS a los supervisores de esa institución (deja el canal 
+     como interfaz, implementa el driver que corresponda: Firebase, Twilio, etc.)
+4. Agrega en el panel Filament un widget de "Alertas activas" en el Escritorio, 
+   visible solo para perfiles Supervisor/Administrador, ordenado por prioridad y tiempo 
+   sin atender.
+5. Escribe tests del cálculo de tiempo_respuesta_segundos y del disparo del evento.
+```
+
+---
+
+### FASE 5 — Generalizar el módulo de Acceso
+**Objetivo:** resolver el problema #3. Permitir registrar accesos peatonales, de proveedores y de visitas, no solo vehículos.
+
+**Prompt:**
+```
+Refactoriza el módulo de Acceso para soportar múltiples tipos de ingreso sin perder 
+los campos vehiculares existentes:
+
+1. Agrega tipo_acceso enum: vehicular | peatonal | proveedor | visita
+2. Mueve los campos específicos de vehículo (sello, neumaticos, carro, p_carga_llave, 
+   kms, patente) a una tabla relacionada acceso_vehiculo (acceso_id FK), 
+   nullable/opcional según tipo_acceso.
+3. Mantén compatibilidad retro: migra los registros actuales de Acceso como 
+   tipo_acceso = 'vehicular' con sus datos actuales movidos a acceso_vehiculo.
+4. Ajusta el formulario Filament para mostrar/ocultar la sección de datos vehiculares 
+   dinámicamente según el tipo_acceso seleccionado.
+5. Mantén los campos comunes (entrevista, imagen, temperatura, apellidos, fecha entrada/salida) 
+   en la tabla acceso principal para todos los tipos.
+```
+
+---
+
+### FASE 6 — RBAC granular (reemplazo de perfiles fijos)
+**Objetivo:** resolver el problema #6. Permitir permisos por acción/módulo en vez de 4 roles hardcodeados, sin romper el login multi-perfil actual.
+
+**Prompt:**
+```
+Implementa permisos granulares usando spatie/laravel-permission sobre el modelo de 
+autenticación existente:
+
+1. Crea permisos por módulo y acción, ej: organizacion.ver, organizacion.editar, 
+   inventario.ver, inventario.editar, reporteria.biometria.ver, reporteria.alertas.ver, 
+   alertas.atender, etc.
+2. Migra los 4 perfiles actuales (Administrador, Administrador General, Supervisor, 
+   Vigilante) a roles de Spatie con sus permisos equivalentes, preservando el 
+   comportamiento actual exacto.
+3. Mantén la pantalla "Perfiles" (selector post-login cuando el usuario tiene más de 
+   un rol) funcionando igual que hoy, ahora respaldada por roles de Spatie en vez de 
+   una tabla de perfiles ad-hoc.
+4. Agrega scope de datos por organización/institución al rol Supervisor y Vigilante 
+   usando un Global Scope de Eloquent basado en las instituciones asignadas al usuario, 
+   no en el rol en sí (para permitir Supervisores con acceso a un subconjunto custom 
+   de instituciones).
+5. Escribe tests que confirmen que un Vigilante no puede ver reportería de otra institución.
+```
+
+---
+
+### FASE 7 — Sincronización offline de la APK
+**Objetivo:** resolver el problema #7. Que Biometría, Rondas, Acceso y Novedades no pierdan registros en sitios sin señal.
+
+**Prompt:**
+```
+Diseña el contrato de API para soporte offline-first en la APK de guardias:
+
+1. Define endpoints idempotentes (POST con un client_uuid generado en el dispositivo 
+   como idempotency key) para: biometria, ronda_detalle, acceso, novedad.
+2. El backend debe rechazar duplicados por client_uuid sin generar error visible al usuario 
+   (devolver 200 con el registro ya existente).
+3. Documenta en un archivo API-OFFLINE-SYNC.md el flujo esperado en la APK: 
+   guardar en SQLite local → intentar enviar → si falla, reintentar en background → 
+   marcar como sincronizado.
+4. Agrega a las tablas biometria, ronda_detalle, acceso y novedad una columna 
+   client_uuid (unique) y sincronizado_en (timestamp, nullable = pendiente aunque 
+   ya haya llegado, útil para auditoría de latencia de red en campo).
+
+Esto es solo el contrato backend; el trabajo de la APK (Android) queda fuera de este prompt.
+```
+
+---
+
+### FASE 8 — Separación API / Portal cliente
+**Objetivo:** habilitar que el dueño de una organización (no solo el staff interno) vea reportes de su propia institución sin acceso al panel administrativo completo.
+
+**Prompt:**
+```
+Extrae una capa de API REST (o GraphQL si el proyecto ya usa Lighthouse) separada del 
+panel Filament, para exponer solo lectura de:
+- reportería de biometría, alertas, rondas, novedades y acceso, filtrada por las 
+  instituciones del token autenticado
+- usando Laravel Sanctum para autenticación de esta API
+
+No modifiques el panel Filament actual: esta API es un consumidor adicional del mismo 
+dominio (mismos Modelos/Services de las fases anteriores), pensada para un futuro 
+portal cliente en React/Vue o para integraciones de terceros.
+
+Documenta los endpoints con un archivo OpenAPI (openapi.yaml).
+```
+
+---
+
+### FASE 9 — QA, performance y despliegue
+**Objetivo:** cerrar la v2 con confiabilidad, dado el volumen real de datos (117+ alertas, 755+ rondas, 554+ movimientos y creciendo).
+
+**Prompt:**
+```
+Revisa el proyecto completo tras las fases anteriores:
+
+1. Ejecuta un análisis de queries N+1 en todos los Filament Resources con relaciones 
+   (Biometria, Rondas, Alertas, Acceso, Movimientos) usando Laravel Debugbar o 
+   clockwork; corrige con eager loading (with()) donde falte.
+2. Agrega índices compuestos para los filtros más usados detectados en las capturas: 
+   (institucion_id, fecha), (usuario_id, fecha), (estado).
+3. Configura cache de consultas para los widgets de dashboard (Alertas activas, 
+   Cumplimiento de turnos) con invalidación por evento en vez de TTL ciego.
+4. Escribe un checklist de despliegue: backup pre-migración, orden de ejecución de 
+   las migraciones de Fase 1 a 8, rollback plan por fase.
+5. Entrega un archivo CHECKLIST-DESPLIEGUE-V2.md.
+```
+
+---
+
+## 5. Cómo usar esto
+
+- Corre las fases **en orden**: cada una asume que la anterior ya está aplicada (especialmente Fase 1 y 2, de las que dependen casi todas las demás).
+- Cada prompt está escrito para pegarse directo en Claude Code apuntando a tu repo real — ajusta nombres de tablas/campos si en tu código difieren de lo que inferí de las capturas.
+- Antes de la Fase 1 (la primera que toca datos reales), asegúrate de tener el resultado de la Fase 0 y un backup de BD.

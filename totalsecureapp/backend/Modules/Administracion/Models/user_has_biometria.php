@@ -24,6 +24,7 @@ class user_has_biometria extends Model {
         'bio_lng',
         'bio_ins_code',
         'bio_state',
+        'bio_tu_code',
         'bio_created_user',
         'bio_updated_user',
     ];
@@ -46,6 +47,10 @@ class user_has_biometria extends Model {
 
     public function userHasGestions(): BelongsTo {
         return $this->belongsTo(user_has_gestions::class, 'bio_ug_code');
+    }
+
+    public function turno(): BelongsTo {
+        return $this->belongsTo(Turno::class, 'bio_tu_code', 'tu_id');
     }
 
     public function getImagenUrlAttribute(): ?string {
