@@ -37,7 +37,7 @@
 - [x] `AccesoListScreen.tsx`: pestañas Accesos/Pre-registros, filtro por tipo (chips), badge de estado (`EN CURSO`/`COMPLETADA`), tiempo de permanencia, patente/motivo desde las relaciones detalle, botón salida solo si `en_curso`, cancelar pre-registro pendiente
 - [x] `PreregistroFormScreen.tsx` (nueva): alta de pre-registro de visitante con fecha/hora estimada, motivo y área
 - [x] `constants.ts`: rutas de preregistro (`PREREGISTRO_CREATE/LIST/CANCEL`)
-- [x] `AppNavigator.tsx`: ruta `PreregistroForm` registrada
+- [x] `AppNavigator.tsx`: rutas `AccesoList`, `AccesoForm` y `PreregistroForm` registradas; botón "Nuevo acceso" en el tab de accesos (acceso al formulario)
 
 ---
 
@@ -1310,9 +1310,9 @@ class AccesoControllerTest extends TestCase
 - [ ] `AccesoPersona.accesos()` relación corregida (FK/PK invertidos)
 - [ ] Modelos nuevos con relaciones y scopes
 - [ ] Controller refactorizado con validación por tipo
-- [ ] Frontend: campos dinámicos según tipo seleccionado
-- [ ] Frontend: filtro por tipo en listado
-- [ ] Tests unitarios pasando
+- [x] Frontend: campos dinámicos según tipo seleccionado
+- [x] Frontend: filtro por tipo en listado
+- [x] Tests unitarios pasando
 
 ---
 

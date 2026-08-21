@@ -423,6 +423,12 @@ export const AccesoListScreen = ({ navigation }: { navigation: any }) => {
               </TouchableOpacity>
             ))}
           </ScrollView>
+          <TouchableOpacity
+            style={styles.newButton}
+            onPress={() => navigation.navigate('AccesoForm')}
+          >
+            <Text style={styles.newButtonText}>Nuevo acceso</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <TouchableOpacity
