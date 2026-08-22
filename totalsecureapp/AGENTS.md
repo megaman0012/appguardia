@@ -68,7 +68,7 @@ Expo SDK 57. Leer docs versionadas en https://docs.expo.dev/versions/v57.0.0/ an
   - Home con los módulos **construidos y conectados**: Rondas (lista, detalle, escaneo QR), Accesos (lista + formulario), Novedades (lista + creación), Alertas, Inventario (lista + detalle/checklist), Biometría y Perfil.
   - Recuperación de contraseña: `PasswordResetRequestScreen` → `PasswordResetScreen` (formulario de nueva clave) → login.
   - Notificaciones push: `src/services/notifications.ts` registra el token push (`POST api/token/save`).
-- Correcciones de esta etapa: `tsconfig.json` excluye `backend/` (vendor rompía `tsc`), `HomeScreen` usa el usuario del contexto, `ProfileSelectionScreen` quedó como referencia (usa endpoints inexistentes, no está en el navegador).
+- Correcciones de esta etapa: `tsconfig.json` excluye `backend/` (vendor rompía `tsc`), `HomeScreen` usa el usuario del contexto. (`ProfileSelectionScreen` estaba roto y quedó reescrito y conectado en la Fase 6, ver la sección RBAC.)
 - **Versiones alineadas con SDK 57** vía `npx expo install` (`expo`, `react-native-safe-area-context`, `react-native-screens`).
 - `android/` se versiona para portabilidad. Las salidas de build (`**/build/`, `.gradle`, `local.properties`) están ignoradas con `.gitignore` propio dentro de `android/`.
 
@@ -97,4 +97,5 @@ Se verificó el estado completo del proyecto:
 - **Cambio de contraseña por email:** la app puede completar el flujo porque la API devuelve el token; si se quiere estricto por correo, usar deep linking (`Linking` + scheme).
 - **Compilar APK:** el APK **release standalone** ya se compiló (`android/app/build/outputs/apk/release/app-release.apk`, ~99 MB, firmado con debug keystore, `com.dt360.coreapp` v1.0.0, targetSdk 36). Para producción real: generar keystore propio y usar `npx expo prebuild`/EAS. El APK debug (`app-debug.apk`, ~190 MB) solo funciona con Metro levantado (`npx expo start`).
 - **Páginas legacy (Persona/Epicrisis/Referencia):** provienen de la app original (`coredt360`/HagpAsist). Los catálogos están sembrados, pero los flujos de captura (`getbydoc`, `document`, guardado) apuntan a tablas de salud que no forman parte de este proyecto → fuera de alcance.
-- **`ProfileSelectionScreen`** (referencia con endpoints inexistentes, no está en el navegador): decidir si se elimina.
+- **`procesar_perfil` devuelve también los permisos del panel web legacy** (p. ej. `administracion/persona.index` en el rol Vigilante). La app los ignora porque filtra por nombres concretos; si se quiere que el endpoint devuelva solo permisos móviles, filtrar por `ps_codigo` entre 10 y 18.
+- **Unificar `Role` con `roles`** (`Modules/Acceso/Models/`): no son duplicados exactos, `Role` es el modelo de Spatie declarado en `config/permission.php` y `roles` es el `$model` de `RolesResource` de Filament. Unificarlos exige refactorizar el resource; queda pendiente de decisión.
