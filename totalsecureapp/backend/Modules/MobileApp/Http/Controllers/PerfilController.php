@@ -2,12 +2,20 @@
 
 namespace Modules\MobileApp\Http\Controllers;
 
+use App\Services\PermisosApiService;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Validator;
 use Modules\MobileApp\Models\users;
 
 class PerfilController extends Controller {
+
+    protected PermisosApiService $permisos;
+
+    public function __construct(PermisosApiService $permisos)
+    {
+        $this->permisos = $permisos;
+    }
 
     /**
      * POST /api/seleccionar_perfil
@@ -57,11 +65,7 @@ class PerfilController extends Controller {
             return response()->json(['message' => 'El perfil no pertenece al usuario'], 403);
         }
 
-        $permisos = $perfil->permissions()
-            ->where('pr_state', 1)
-            ->orderBy('name')
-            ->pluck('permissions.name')
-            ->values();
+        $permisos = $this->permisos->paraRol((int) $perfil->id);
 
         return response()->json([
             'perfil' => [
