@@ -25,8 +25,6 @@ use Illuminate\Support\Facades\Hash;
 use Modules\Acceso\Models\users;
 use Modules\Acceso\Models\user_has_gestions;
 use Modules\Acceso\Models\role_has_permissions;
-use Modules\Acceso\Models\roles;
-use Modules\Acceso\Models\Role;
 
 class LoginController extends Controller{
 
