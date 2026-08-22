@@ -1,0 +1,13 @@
+{
+    "name": "PortalApi",
+    "alias": "portalapi",
+    "description": "API REST de solo lectura para el portal cliente (Fase 8)",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\PortalApi\\Providers\\PortalApiServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

@@ -8,11 +8,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Acceso\Models\user_has_gestions;
 use Modules\Acceso\Models\users;
+use App\Traits\BelongsToInstitution;
 
 
 class user_has_biometria extends Model {
 
     use HasFactory;
+    use BelongsToInstitution;
+
+    protected string $institutionColumn = 'bio_ins_code';
+
     protected $table = 'user_has_biometria';
     protected $primaryKey = 'bio_code';
     protected $fillable = [

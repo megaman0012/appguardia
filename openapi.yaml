@@ -1,0 +1,420 @@
+openapi: 3.0.3
+
+info:
+  title: Total Secure — API Portal Cliente
+  version: "1.0.0"
+  description: |
+    API REST de **solo lectura** para el portal cliente (Fase 8).
+
+    Permite que el dueño de una organización consulte la reportería de sus propias
+    instituciones sin acceso al panel administrativo. Es un consumidor adicional
+    del mismo dominio que usa la app móvil: mismos modelos y servicios, ninguna
+    tabla propia.
+
+    ## Alcance de datos
+
+    Un token solo puede leer las instituciones asignadas al usuario en
+    `user_has_institucion`. Sin el parámetro `ins_code` la consulta abarca todas
+    sus instituciones; con `ins_code` se acota a esa, y **pedir una institución
+    ajena devuelve 403, no una lista vacía**: una respuesta vacía permitiría
+    sondear qué códigos de institución existen.
+
+    ## Autorización
+
+    Cada endpoint exige su permiso `portal.*`, que trae el rol `Cliente`. Ese rol
+    no hereda ningún permiso de la app móvil, así que un token del portal no
+    puede escribir en los endpoints de la app, ni un token de la app leer aquí.
+
+servers:
+  - url: http://localhost:3031
+    description: Desarrollo local (Docker)
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Instituciones
+  - name: Resumen
+  - name: Reportería
+
+paths:
+
+  /api/portal/instituciones:
+    get:
+      tags: [Instituciones]
+      summary: Instituciones visibles para el token
+      description: |
+        Punto de entrada del portal: de aquí salen los `ins_code` válidos para el
+        resto de los endpoints. Requiere el permiso `portal.instituciones`.
+      responses:
+        "200":
+          description: Listado de instituciones
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  datos:
+                    type: array
+                    items: { $ref: "#/components/schemas/Institucion" }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/portal/resumen:
+    get:
+      tags: [Resumen]
+      summary: Totales del rango
+      description: |
+        Contadores para el tablero, para no obligar al cliente a paginar cinco
+        listados solo para contar. Requiere el permiso `portal.resumen`.
+      parameters:
+        - $ref: "#/components/parameters/InsCode"
+        - $ref: "#/components/parameters/Desde"
+        - $ref: "#/components/parameters/Hasta"
+      responses:
+        "200":
+          description: Totales del rango
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rango: { $ref: "#/components/schemas/Rango" }
+                  instituciones:
+                    type: array
+                    items: { type: integer }
+                  totales:
+                    type: object
+                    properties:
+                      marcajes:           { type: integer, example: 128 }
+                      rondas:             { type: integer, example: 42 }
+                      novedades:          { type: integer, example: 17 }
+                      accesos:            { type: integer, example: 310 }
+                      accesos_en_curso:   { type: integer, example: 4 }
+                      alertas:            { type: integer, example: 9 }
+                      alertas_pendientes: { type: integer, example: 2 }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/portal/biometria:
+    get:
+      tags: [Reportería]
+      summary: Marcajes de entrada y salida del personal
+      description: Requiere el permiso `portal.biometria`.
+      parameters:
+        - $ref: "#/components/parameters/InsCode"
+        - $ref: "#/components/parameters/Desde"
+        - $ref: "#/components/parameters/Hasta"
+        - $ref: "#/components/parameters/PorPagina"
+        - $ref: "#/components/parameters/Page"
+      responses:
+        "200":
+          description: Listado paginado de marcajes
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListaPaginada"
+                  - type: object
+                    properties:
+                      datos:
+                        type: array
+                        items: { $ref: "#/components/schemas/Marcaje" }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/portal/rondas:
+    get:
+      tags: [Reportería]
+      summary: Rondas con su cantidad de puntos recorridos
+      description: Requiere el permiso `portal.rondas`.
+      parameters:
+        - $ref: "#/components/parameters/InsCode"
+        - $ref: "#/components/parameters/Desde"
+        - $ref: "#/components/parameters/Hasta"
+        - $ref: "#/components/parameters/PorPagina"
+        - $ref: "#/components/parameters/Page"
+      responses:
+        "200":
+          description: Listado paginado de rondas
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListaPaginada"
+                  - type: object
+                    properties:
+                      datos:
+                        type: array
+                        items: { $ref: "#/components/schemas/Ronda" }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/portal/novedades:
+    get:
+      tags: [Reportería]
+      summary: Bitácora de novedades reportadas
+      description: Requiere el permiso `portal.novedades`.
+      parameters:
+        - $ref: "#/components/parameters/InsCode"
+        - $ref: "#/components/parameters/Desde"
+        - $ref: "#/components/parameters/Hasta"
+        - $ref: "#/components/parameters/PorPagina"
+        - $ref: "#/components/parameters/Page"
+      responses:
+        "200":
+          description: Listado paginado de novedades
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListaPaginada"
+                  - type: object
+                    properties:
+                      datos:
+                        type: array
+                        items: { $ref: "#/components/schemas/Novedad" }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/portal/accesos:
+    get:
+      tags: [Reportería]
+      summary: Entradas y salidas de personas y vehículos
+      description: Requiere el permiso `portal.accesos`.
+      parameters:
+        - $ref: "#/components/parameters/InsCode"
+        - $ref: "#/components/parameters/Desde"
+        - $ref: "#/components/parameters/Hasta"
+        - $ref: "#/components/parameters/PorPagina"
+        - $ref: "#/components/parameters/Page"
+        - name: tipo
+          in: query
+          description: Tipo de acceso
+          schema:
+            type: string
+            enum: [peatonal, vehicular, proveedor, empleado, visitante]
+        - name: estado
+          in: query
+          description: Estado del acceso
+          schema:
+            type: string
+            enum: [en_curso, completada]
+      responses:
+        "200":
+          description: Listado paginado de accesos
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListaPaginada"
+                  - type: object
+                    properties:
+                      datos:
+                        type: array
+                        items: { $ref: "#/components/schemas/Acceso" }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/portal/alertas:
+    get:
+      tags: [Reportería]
+      summary: Alertas y su estado de atención
+      description: Requiere el permiso `portal.alertas`.
+      parameters:
+        - $ref: "#/components/parameters/InsCode"
+        - $ref: "#/components/parameters/Desde"
+        - $ref: "#/components/parameters/Hasta"
+        - $ref: "#/components/parameters/PorPagina"
+        - $ref: "#/components/parameters/Page"
+        - name: prioridad
+          in: query
+          schema:
+            type: string
+            enum: [baja, media, alta, critica]
+      responses:
+        "200":
+          description: Listado paginado de alertas
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListaPaginada"
+                  - type: object
+                    properties:
+                      datos:
+                        type: array
+                        items: { $ref: "#/components/schemas/Alerta" }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Token personal de Laravel Sanctum.
+
+  parameters:
+    InsCode:
+      name: ins_code
+      in: query
+      required: false
+      description: |
+        Acota la consulta a una institución. Omitido, abarca todas las del token.
+        Una institución no asignada al usuario devuelve **403**.
+      schema: { type: integer, example: 1 }
+    Desde:
+      name: desde
+      in: query
+      required: false
+      description: Inicio del rango (`YYYY-MM-DD`). Por defecto, 30 días antes de `hasta`.
+      schema: { type: string, format: date }
+    Hasta:
+      name: hasta
+      in: query
+      required: false
+      description: Fin del rango (`YYYY-MM-DD`). Por defecto, hoy. Si `desde` es posterior, se normaliza el orden.
+      schema: { type: string, format: date }
+    PorPagina:
+      name: por_pagina
+      in: query
+      required: false
+      description: Filas por página. Máximo 200; un valor mayor se recorta a 200.
+      schema: { type: integer, default: 50, maximum: 200, minimum: 1 }
+    Page:
+      name: page
+      in: query
+      required: false
+      schema: { type: integer, default: 1, minimum: 1 }
+
+  responses:
+    NoAutenticado:
+      description: Falta el token o no es válido
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example: { message: "Unauthenticated" }
+    SinPermiso:
+      description: |
+        El token no tiene el permiso `portal.*` requerido, el usuario no tiene
+        instituciones asignadas, o pidió una institución que no le corresponde.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            sinPermiso:
+              value: { message: "No tiene permiso para esta acción", required_permission: "portal.novedades" }
+            institucionAjena:
+              value: { message: "La institucion solicitada no esta asignada al usuario" }
+            sinInstituciones:
+              value: { message: "El usuario no tiene instituciones asignadas" }
+
+  schemas:
+
+    Error:
+      type: object
+      properties:
+        message: { type: string }
+        required_permission:
+          type: string
+          description: Presente solo cuando falta un permiso.
+
+    Rango:
+      type: object
+      properties:
+        desde: { type: string, format: date }
+        hasta: { type: string, format: date }
+
+    Paginacion:
+      type: object
+      properties:
+        pagina:     { type: integer, example: 1 }
+        por_pagina: { type: integer, example: 50 }
+        total:      { type: integer, example: 137 }
+        ultima:     { type: integer, example: 3 }
+
+    ListaPaginada:
+      type: object
+      properties:
+        datos:      { type: array, items: { type: object } }
+        paginacion: { $ref: "#/components/schemas/Paginacion" }
+        rango:      { $ref: "#/components/schemas/Rango" }
+
+    Institucion:
+      type: object
+      properties:
+        ins_code:                    { type: integer, example: 1 }
+        ins_descripcion:             { type: string, example: "INSTITUCIÓN DEMO S.A." }
+        ins_direccion:               { type: string, nullable: true }
+        ins_ciudad:                  { type: string, nullable: true }
+        ins_tipo:                    { type: string, nullable: true }
+        ins_radio_tolerancia_metros: { type: integer, nullable: true, example: 100 }
+
+    Marcaje:
+      type: object
+      properties:
+        bio_code:        { type: integer }
+        ins_code:        { type: integer }
+        usuario:         { type: string, nullable: true }
+        tipo:            { type: string, enum: [entrada, salida] }
+        fecha:           { type: string, format: date-time }
+        lat:             { type: string, nullable: true }
+        lng:             { type: string, nullable: true }
+        sincronizado_en:
+          type: string
+          format: date-time
+          nullable: true
+          description: Momento en que el servidor recibió el registro (ver Fase 7).
+
+    Ronda:
+      type: object
+      properties:
+        rc_id:             { type: integer }
+        ins_code:          { type: integer }
+        usuario:           { type: string, nullable: true }
+        estado:            { type: string, example: "Finalizada" }
+        fecha_inicio:      { type: string, format: date-time }
+        fecha_fin:         { type: string, format: date-time, nullable: true }
+        puntos_recorridos: { type: integer, example: 6 }
+
+    Novedad:
+      type: object
+      properties:
+        nv_id:       { type: integer }
+        ins_code:    { type: integer }
+        usuario:     { type: string, nullable: true }
+        observacion: { type: string }
+        fecha:       { type: string, format: date-time }
+        foto:        { type: string, nullable: true, description: URL absoluta, o null si no hay imagen. }
+        lat:         { type: string, nullable: true }
+        lng:         { type: string, nullable: true }
+
+    Acceso:
+      type: object
+      properties:
+        ac_code:            { type: integer }
+        ins_code:           { type: integer }
+        tipo:               { type: string, enum: [peatonal, vehicular, proveedor, empleado, visitante] }
+        estado:             { type: string, enum: [en_curso, completada] }
+        persona:            { type: string }
+        documento:          { type: string, nullable: true }
+        entrada:            { type: string, format: date-time }
+        salida:             { type: string, format: date-time, nullable: true }
+        tiempo_permanencia: { type: string, nullable: true, example: "2h 15m" }
+        patente:            { type: string, nullable: true }
+        motivo:             { type: string, nullable: true }
+
+    Alerta:
+      type: object
+      properties:
+        al_code:              { type: integer }
+        ins_code:             { type: integer }
+        usuario:              { type: string, nullable: true }
+        observacion:          { type: string, nullable: true }
+        prioridad:            { type: string, enum: [baja, media, alta, critica] }
+        estado:               { type: string, example: "pendiente" }
+        fecha:                { type: string, format: date-time, nullable: true }
+        tiempo_respuesta_min: { type: integer, nullable: true }
+        esta_retrasada:       { type: boolean }

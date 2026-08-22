@@ -43,6 +43,15 @@
 - **La fecha del evento la envía el dispositivo** en `ocurrido_en`, no el servidor: un registro hecho sin señal debe conservar su hora real. Una fecha futura se recorta a "ahora". Al tocar estos controladores, no volver a `date('Y-m-d H:i:s')`.
 - **Orden obligatorio:** la comprobación de idempotencia va **antes** de validar GPS, de guardar la foto y —en el QR de rondas— del guard de "espere 5 minutos". Si se reordena, un reintento legítimo se rechaza. Ver §6 de `API-OFFLINE-SYNC.md`.
 
+## API Portal Cliente (Fase 8)
+
+- Módulo propio `Modules/PortalApi`, prefijo **`api/portal`**, registrado en `modules_statuses.json`. **Solo GET**: es una capa de lectura sobre los mismos modelos y servicios que consume la app móvil, sin tablas ni consultas propias. El panel Filament no se tocó.
+- 7 endpoints: `instituciones`, `resumen`, `biometria`, `rondas`, `novedades`, `accesos`, `alertas`. Documentados en `openapi.yaml` (raíz del monorepo).
+- Autenticación Sanctum (`api.auth`) + permiso `portal.*` por ruta. El rol **`Cliente`** (migración `2026_08_21_400001`, sección `ps_codigo` 19) trae solo esos 7 permisos de lectura: no hereda ninguno de la app móvil, así que un token del portal no puede escribir en la app ni uno de la app leer aquí.
+- **El alcance por institución se resuelve solo en `App\Services\PortalScopeService`**, nunca en los controllers. Un cliente ve únicamente sus instituciones de `user_has_institucion`; pedir una ajena con `ins_code` devuelve **403, no una lista vacía** (una vacía permitiría sondear qué códigos existen). Al agregar un endpoint al portal, usar `PortalController::contexto()`: es lo que garantiza el filtro.
+- El scope `forInstitutions([])` del trait `BelongsToInstitution` **no devuelve nada** a propósito: "sin instituciones" debe significar "sin datos", nunca "todos".
+- Paginación con tope duro de 200 filas (`PortalScopeService::POR_PAGINA_MAX`); rango por defecto, los últimos 30 días.
+
 ## Interfaz Web (panel)
 
 El backend trae dos capas web sobre el mismo dominio `http://localhost:3031`:

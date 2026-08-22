@@ -2,5 +2,6 @@
     "Acceso": true,
     "Administracion": true,
     "Formularios": true,
-    "MobileApp": true
+    "MobileApp": true,
+    "PortalApi": true
 }
