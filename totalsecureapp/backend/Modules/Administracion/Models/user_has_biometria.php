@@ -27,6 +27,8 @@ class user_has_biometria extends Model {
         'bio_tu_code',
         'bio_created_user',
         'bio_updated_user',
+        'bio_client_uuid',
+        'bio_sincronizado_en',
     ];
 
     protected $dates = [

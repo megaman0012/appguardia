@@ -4,6 +4,7 @@ namespace Modules\MobileApp\Http\Controllers;
 
 use App\generalTrait;
 use App\Services\AccesoService;
+use App\Services\OfflineSyncService;
 use App\Services\PresenceValidationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,11 +20,16 @@ class AccesoController extends Controller{
 
     protected PresenceValidationService $presenceService;
     protected AccesoService $accesoService;
+    protected OfflineSyncService $offlineSync;
 
-    public function __construct(PresenceValidationService $presenceService, AccesoService $accesoService)
-    {
+    public function __construct(
+        PresenceValidationService $presenceService,
+        AccesoService $accesoService,
+        OfflineSyncService $offlineSync
+    ) {
         $this->presenceService = $presenceService;
         $this->accesoService = $accesoService;
+        $this->offlineSync = $offlineSync;
     }
 
     /**
@@ -32,6 +38,15 @@ class AccesoController extends Controller{
     public function acceso(Request $request): JsonResponse {
 
         list($us, $tk) = $this->getSanctumSession($request);
+
+        $clientUuid = $request->input('client_uuid');
+
+        // Se corta antes de mover la foto a disco: un reintento no debe volver a
+        // subir la imagen ni dejar archivos huerfanos.
+        $yaSincronizado = $this->offlineSync->buscar(Acceso::class, 'ac_client_uuid', $clientUuid);
+        if ($yaSincronizado !== null) {
+            return $this->respuestaAcceso($yaSincronizado, true);
+        }
 
         try {
             $datos = $request->all();
@@ -45,9 +60,17 @@ class AccesoController extends Controller{
                 $datos['ac_foto'] = $fileName;
             }
 
-            $acc = $this->accesoService->registrar($datos, $us->id, $tk->tokenable_gs);
+            list($acc, $duplicado) = $this->offlineSync->registrar(
+                Acceso::class,
+                'ac_client_uuid',
+                $clientUuid,
+                function () use ($datos, $us, $tk) {
+                    return $this->accesoService->registrar($datos, $us->id, $tk->tokenable_gs);
+                }
+            );
 
-            if (!empty($datos['ac_foto'])) {
+            // En un duplicado no se sobreescribe la foto ya guardada.
+            if (!$duplicado && !empty($datos['ac_foto'])) {
                 $acc->ac_foto = $datos['ac_foto'];
                 $acc->save();
             }
@@ -58,10 +81,21 @@ class AccesoController extends Controller{
             return $this->message_json('errors', $e->getMessage());
         }
 
+        return $this->respuestaAcceso($acc, $duplicado);
+    }
+
+    /**
+     * Un duplicado responde 200 igual que un alta nueva, para que la APK lo marque
+     * como sincronizado sin mostrar error al guardia.
+     */
+    private function respuestaAcceso(Acceso $acc, bool $duplicado): JsonResponse
+    {
         return response()->json([
-            'message' => 'Acceso registrado con éxito',
-            'ac_code' => $acc->ac_code,
-            'tipo'    => $acc->ac_tipo,
+            'message'     => $duplicado ? 'Acceso ya sincronizado' : 'Acceso registrado con éxito',
+            'ac_code'     => $acc->ac_code,
+            'tipo'        => $acc->ac_tipo,
+            'client_uuid' => $acc->ac_client_uuid,
+            'duplicado'   => $duplicado,
         ]);
     }
 

@@ -15,6 +15,13 @@ use Modules\Administracion\Models\AccesoVisitante;
 
 class AccesoService
 {
+    protected OfflineSyncService $offlineSync;
+
+    public function __construct(OfflineSyncService $offlineSync)
+    {
+        $this->offlineSync = $offlineSync;
+    }
+
     // ── Reglas de validacion ──
 
     protected array $reglasBase = [
@@ -25,6 +32,8 @@ class AccesoService
         'identificacion' => 'required',
         'nombres'        => 'required',
         'apellidos'      => 'required',
+        'client_uuid'    => 'nullable|uuid',
+        'ocurrido_en'    => 'nullable|date',
     ];
 
     protected array $reglasVehicular = [
@@ -92,6 +101,11 @@ class AccesoService
                 'ac_rut_acomp'     => $datos['rutAcomp'] ?? null,
                 'ac_observaciones' => $datos['observacion'] ?? null,
                 'ac_estado'        => true,
+                // La fecha del evento la envia el dispositivo: el acceso pudo
+                // ocurrir horas antes de que hubiera señal (Fase 7).
+                'ac_created_at'      => $this->offlineSync->ocurridoEn($datos['ocurrido_en'] ?? null),
+                'ac_client_uuid'     => $datos['client_uuid'] ?? null,
+                'ac_sincronizado_en' => $this->offlineSync->sincronizadoEn(),
                 'ac_created_user'  => $usuarioId,
                 'ac_updated_user'  => $usuarioId,
             ]);

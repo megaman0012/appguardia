@@ -1,6 +1,6 @@
 # RESUMEN DE AVANCE — Total Secure App
 
-> **Última actualización:** 2026-08-21 (Fase 5 completa: backend + frontend ✅ — 41 tests pasando)
+> **Última actualización:** 2026-08-21 (Fases 6 y 7 completas ✅ — 66 tests pasando)
 
 ---
 
@@ -14,8 +14,8 @@
 | 3 | Modelo de turnos | ✅ Implementación Completada | `FASE3-TURNOS.md` |
 | 4 | Alertas con escalamiento | ✅ Implementación Completada | `FASE4-ALERTAS.md` |
 | 5 | Acceso generalizado | ✅ Completa (backend + frontend) | `FASE5-ACCESOS.md` |
-| 6 | RBAC granular | 📋 Documentación | `FASE6-RBAC.md` |
-| 7 | Offline sync (backend) | ⏳ Pendiente | — |
+| 6 | RBAC granular | ✅ Implementación Completada | `FASE6-RBAC.md` |
+| 7 | Offline sync (backend) | ✅ Implementación Completada | `API-OFFLINE-SYNC.md` |
 | 8 | API portal cliente | ⏳ Pendiente | — |
 | 9 | QA + despliegue | ⏳ Pendiente | — |
 
@@ -33,6 +33,7 @@
 | `FASE4-ALERTAS.md` | Documentación técnica Fase 4 |
 | `FASE5-ACCESOS.md` | Documentación técnica Fase 5 |
 | `FASE6-RBAC.md` | Documentación técnica Fase 6 |
+| `API-OFFLINE-SYNC.md` | Contrato de sincronización offline (Fase 7) |
 | `RESUMEN-AVANCE.md` | Este archivo |
 
 ---
@@ -253,6 +254,50 @@
 
 ---
 
+## Archivos Creados - Fase 6 (RBAC)
+
+### Migraciones
+- `database/migrations/2026_08_21_200001_seed_mobile_permissions.php` (9 secciones, 31 permisos; crea los roles si no existen)
+
+### Middleware / Traits
+- `app/Http/Middleware/CheckPermission.php` (alias `permission.api`)
+- `app/Traits/BelongsToInstitution.php`
+
+### Controllers
+- `Modules/MobileApp/Http/Controllers/PerfilController.php` (`seleccionar_perfil`, `procesar_perfil`)
+- `Modules/MobileApp/Http/Controllers/LoginController.php` (abilities granulares + `perfiles`)
+
+### Frontend
+- `src/screens/ProfileSelectionScreen.tsx` (reescrito y conectado al navegador)
+- `src/context/AuthContext.tsx` (`perfil`, `permisos`, helper `can()`)
+- `src/screens/HomeScreen.tsx` (módulos según permiso)
+
+### Tests
+- `tests/Unit/RbacTest.php` (9 tests)
+
+---
+
+## Archivos Creados - Fase 7 (Offline Sync)
+
+### Migraciones
+- `database/migrations/2026_08_21_300001_add_offline_sync_columns.php` (`client_uuid` unique + `sincronizado_en` en `user_has_biometria`, `ronda_detalle`, `acceso`, `novedad`)
+
+### Services
+- `app/Services/OfflineSyncService.php` (idempotencia, carrera de reintentos, fecha del evento)
+
+### Controllers con idempotencia
+- `BiometriaController`, `RondaController` (2 endpoints), `AccesoController`, `NovedadController`
+- `app/Services/AccesoService.php` (columnas offline en el create)
+
+### Tests
+- `tests/Unit/OfflineSyncTest.php` (16 tests, incluye contrato HTTP)
+
+### Bugs reales encontrados en Fase 7
+1. **`catch (Exception $e)` sin barra inicial** en `NovedadController` y `RondaController`: en ese namespace resolvía a una clase inexistente, así que el catch nunca capturaba nada y cualquier excepción escapaba como error 500. Corregido a `\Exception`.
+2. **La fecha del evento era la del servidor** (`date('Y-m-d H:i:s')`): un registro hecho sin señal quedaba fechado en el momento de la sincronización, no en el del hecho. Ahora la envía el dispositivo en `ocurrido_en`.
+
+---
+
 ## Comando Útil para Reanudar
 
 ```bash
@@ -279,6 +324,13 @@ php artisan test --unit=AlertaServiceTest
 
 # Ejecutar tests de accesos (Fase 5)
 php artisan test tests/Unit/AccesoServiceTest.php
+
+# Ejecutar tests de RBAC (Fase 6) y offline sync (Fase 7)
+DB_PORT=5434 ./vendor/bin/phpunit --testsuite Unit --filter RbacTest
+DB_PORT=5434 ./vendor/bin/phpunit --testsuite Unit --filter OfflineSyncTest
+
+# Suite completa (66 tests). Desde el host se necesita DB_PORT=5434
+DB_PORT=5434 ./vendor/bin/phpunit --testsuite Unit
 
 # Ejecutar command de cierre de turnos
 php artisan turnos:cerrar-dia

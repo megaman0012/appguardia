@@ -77,6 +77,8 @@ class Acceso extends Model {
         'ac_updated_at',
         'ac_created_user',
         'ac_updated_user',
+        'ac_client_uuid',
+        'ac_sincronizado_en',
     ];
 
     protected $casts = [

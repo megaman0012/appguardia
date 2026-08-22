@@ -35,6 +35,14 @@
 - Frontend: la app guarda perfil y permisos en `AuthContext` (`perfil`, `permisos`, helper `can()`), y `HomeScreen` muestra cada módulo según su permiso de lectura. El flujo es Login → `ProfileSelection` (se salta solo si hay un único perfil) → Selección de institución → Home.
 - Trait `App\Traits\BelongsToInstitution` con scope `forInstitution()` en `ronda_cabecera`, `Alertas`, `Novedad`, `Acceso` e `InvMovimiento` (cada modelo declara su `$institutionColumn`).
 
+## Offline sync (Fase 7)
+
+- Los 5 endpoints que crean registros en campo (`biometria`, `rondas_detalle_gestion`, `rondas_detalle_qrcode`, `acceso`, `novedad_create`) son **idempotentes** por `client_uuid`: un reintento con el mismo uuid devuelve **200 con el registro existente** y `duplicado: true`, nunca un error. Contrato completo en `API-OFFLINE-SYNC.md` (raíz del monorepo).
+- Columnas `<pref>_client_uuid` (unique) y `<pref>_sincronizado_en` en `user_has_biometria`, `ronda_detalle`, `acceso` y `novedad` (migración `2026_08_21_300001`).
+- `App\Services\OfflineSyncService` centraliza la idempotencia: `buscar()`, `registrar()` (que además resuelve la carrera de dos reintentos simultáneos capturando el `unique_violation` 23505), `ocurridoEn()` y `sincronizadoEn()`.
+- **La fecha del evento la envía el dispositivo** en `ocurrido_en`, no el servidor: un registro hecho sin señal debe conservar su hora real. Una fecha futura se recorta a "ahora". Al tocar estos controladores, no volver a `date('Y-m-d H:i:s')`.
+- **Orden obligatorio:** la comprobación de idempotencia va **antes** de validar GPS, de guardar la foto y —en el QR de rondas— del guard de "espere 5 minutos". Si se reordena, un reintento legítimo se rechaza. Ver §6 de `API-OFFLINE-SYNC.md`.
+
 ## Interfaz Web (panel)
 
 El backend trae dos capas web sobre el mismo dominio `http://localhost:3031`:

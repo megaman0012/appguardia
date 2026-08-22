@@ -3,6 +3,7 @@
 namespace Modules\MobileApp\Http\Controllers;
 
 use App\generalTrait;
+use App\Services\OfflineSyncService;
 use App\Services\PresenceValidationService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -20,9 +21,12 @@ class RondaController extends Controller {
 
     protected PresenceValidationService $presenceService;
 
-    public function __construct(PresenceValidationService $presenceService)
+    protected OfflineSyncService $offlineSync;
+
+    public function __construct(PresenceValidationService $presenceService, OfflineSyncService $offlineSync)
     {
         $this->presenceService = $presenceService;
+        $this->offlineSync = $offlineSync;
     }
 
     protected array $rondax = [
@@ -69,6 +73,8 @@ class RondaController extends Controller {
             'rd_observacion' => 'required',
             'rd_lat' => 'required',
             'rd_lng' => 'required',
+            'client_uuid' => 'nullable|uuid',
+            'ocurrido_en' => 'nullable|date',
         ],
         'messages' => [
             'ins_code.required' => 'Campo intitucion es obligatorio',
@@ -241,6 +247,15 @@ class RondaController extends Controller {
             return response()->json(['success' => false, 'errors' => $validator->errors()]);
         }
 
+        $clientUuid = $request->input('client_uuid');
+
+        // Se corta antes de subir la foto: un reintento no debe volver a escribir
+        // la imagen ni dejar archivos huerfanos en disco.
+        $yaSincronizado = $this->offlineSync->buscar(ronda_detalle::class, 'rd_client_uuid', $clientUuid);
+        if ($yaSincronizado !== null) {
+            return $this->respuestaDetalle($yaSincronizado, true, null);
+        }
+
         $validarInst = $this->presenceService->validarInstitucion($request->ins_code);
         if (!$validarInst['valido']) {
             return $this->message_json('errors', $validarInst['motivo']);
@@ -264,19 +279,46 @@ class RondaController extends Controller {
             $rd->rd_ins_code = $request->ins_code;
             $rd->rd_rc_id = $request->rc_id;
             $rd->rd_observacion = $request->rd_observacion;
-            $rd->rd_fecha_hora = date('Y-m-d H:i:s');
+            $rd->rd_fecha_hora = $this->offlineSync->ocurridoEn($request->input('ocurrido_en'));
             $rd->rd_lat = $request->rd_lat;
             $rd->rd_lng = $request->rd_lng;
             $rd->rd_estado = 1;
+            $rd->rd_client_uuid = $clientUuid;
+            $rd->rd_sincronizado_en = $this->offlineSync->sincronizadoEn();
             $rd->rd_created_user = $us->id;
             $rd->rd_updated_user = $us->id;
-            $rd->save();
 
-            return response()->json([ 'result' => 'success', 'message' => 'Detalle Cargado Correctamente']);
-        }catch (Exception $e){
+            list($rd, $duplicado) = $this->offlineSync->registrar(
+                ronda_detalle::class,
+                'rd_client_uuid',
+                $clientUuid,
+                function () use ($rd) {
+                    $rd->save();
+                    return $rd;
+                }
+            );
+
+            return $this->respuestaDetalle($rd, $duplicado, null);
+        }catch (\Exception $e){
             return $this->message_json('errors', $e->getMessage());
         }
 
+    }
+
+    /**
+     * Un duplicado responde 200 igual que un alta nueva, para que la APK lo marque
+     * como sincronizado sin mostrar error al guardia.
+     */
+    private function respuestaDetalle(ronda_detalle $rd, bool $duplicado, $distancia): JsonResponse
+    {
+        return response()->json([
+            'result'      => 'success',
+            'message'     => $duplicado ? 'Detalle ya sincronizado' : 'Detalle Cargado Correctamente',
+            'rd_id'       => $rd->rd_id,
+            'client_uuid' => $rd->rd_client_uuid,
+            'duplicado'   => $duplicado,
+            'distancia_m' => $distancia,
+        ]);
     }
 
     protected array $rondaxDetallexQrCode = [
@@ -286,6 +328,8 @@ class RondaController extends Controller {
             'rc_qr' => 'required',
             'rd_lat' => 'required',
             'rd_lng' => 'required',
+            'client_uuid' => 'nullable|uuid',
+            'ocurrido_en' => 'nullable|date',
         ],
         'messages' => [
             'ins_code.required' => 'Campo intitucion es obligatorio',
@@ -301,6 +345,15 @@ class RondaController extends Controller {
         $validator = Validator::make($request->all(), $this->rondaxDetallexQrCode['rules'], $this->rondaxDetallexQrCode['messages']);
         if ($validator->fails()) {
             return response()->json(['success' => false, 'errors' => $validator->errors()]);
+        }
+
+        $clientUuid = $request->input('client_uuid');
+
+        // Antes del guard de 5 minutos y de revalidar GPS: un reintento del mismo
+        // escaneo tiene que resolverse como exito, no como "espere 5 minutos".
+        $yaSincronizado = $this->offlineSync->buscar(ronda_detalle::class, 'rd_client_uuid', $clientUuid);
+        if ($yaSincronizado !== null) {
+            return $this->respuestaDetalle($yaSincronizado, true, null);
         }
 
         $validacion = $this->presenceService->validarPresencia(
@@ -339,19 +392,27 @@ class RondaController extends Controller {
             $rd->rd_rc_id = $request->rc_id;
             $rd->rd_im_code = $marcador->im_code;
             $rd->rd_observacion = $marcador->im_descripcion;
-            $rd->rd_fecha_hora = date('Y-m-d H:i:s');
+            $rd->rd_fecha_hora = $this->offlineSync->ocurridoEn($request->input('ocurrido_en'));
             $rd->rd_lat = $request->rd_lat;
             $rd->rd_lng = $request->rd_lng;
             $rd->rd_estado = 1;
+            $rd->rd_client_uuid = $clientUuid;
+            $rd->rd_sincronizado_en = $this->offlineSync->sincronizadoEn();
             $rd->rd_created_user = $us->id;
             $rd->rd_updated_user = $us->id;
-            $rd->save();
-            return response()->json([
-                'result' => 'success',
-                'message' => 'Novedad Cargada Correctamente',
-                'distancia_m' => $validacion['distancia_m'],
-            ]);
-        }catch (Exception $e){
+
+            list($rd, $duplicado) = $this->offlineSync->registrar(
+                ronda_detalle::class,
+                'rd_client_uuid',
+                $clientUuid,
+                function () use ($rd) {
+                    $rd->save();
+                    return $rd;
+                }
+            );
+
+            return $this->respuestaDetalle($rd, $duplicado, $validacion['distancia_m']);
+        }catch (\Exception $e){
             return $this->message_json('errors', $e->getMessage());
         }
     }
