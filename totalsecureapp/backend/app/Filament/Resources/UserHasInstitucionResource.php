@@ -39,6 +39,13 @@ class UserHasInstitucionResource extends Resource
     protected static ?int $navigationSort = 9;
     protected static ?string $navigationLabel = 'Usuarios > Institucion';
     protected static ?string $model = UserHasInstitucion::class;
+
+    /**
+     * Relaciones que usan las columnas de la tabla. Sin esto cada fila
+     * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
+     * 126 consultas en vez de 6.
+     */
+    protected const RELACIONES_TABLA = ['institucion.organizacionSede.organizacion', 'institucion.organizacionSede.sede', 'usuario'];
     protected static ?string $navigationIcon = 'heroicon-o-identification';
 
     public static function form(Form $form): Form
@@ -143,5 +150,10 @@ class UserHasInstitucionResource extends Resource
 
     protected static function shouldRegisterNavigation(): bool {
         return in_array( Session::get('usuPF'), ['Administrador', 'Administrador General'] );
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(self::RELACIONES_TABLA);
     }
 }

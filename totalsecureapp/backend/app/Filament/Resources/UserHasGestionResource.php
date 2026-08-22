@@ -36,6 +36,13 @@ class UserHasGestionResource extends Resource{
     protected static ?int $navigationSort = 8;
     protected static ?string $navigationLabel = 'Usuarios > Gestion';
     protected static ?string $model = user_has_gestions::class;
+
+    /**
+     * Relaciones que usan las columnas de la tabla. Sin esto cada fila
+     * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
+     * 126 consultas en vez de 6.
+     */
+    protected const RELACIONES_TABLA = ['usuario'];
     protected static ?string $navigationIcon = 'heroicon-o-user-circle';
 
     public static function form(Form $form): Form {
@@ -128,4 +135,9 @@ class UserHasGestionResource extends Resource{
     }
 
 
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(self::RELACIONES_TABLA);
+    }
 }
