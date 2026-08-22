@@ -14,7 +14,8 @@ use Modules\Administracion\Models\user_has_biometria;
  * Reporteria de solo lectura del portal cliente.
  *
  * Todos los listados salen del mismo dominio que usa la app movil y el panel: no
- * hay consultas propias ni tablas nuevas, solo lectura acotada por institucion.
+ * hay consultas propias ni tablas nuevas. El acotado por institucion y por fecha
+ * lo hace $ctx->consulta(), nunca este controller.
  */
 class ReporteController extends PortalController
 {
@@ -23,28 +24,27 @@ class ReporteController extends PortalController
      */
     public function biometria(Request $request): JsonResponse
     {
-        list($error, $instituciones, $desde, $hasta) = $this->contexto($request);
+        list($error, $ctx) = $this->contexto($request);
         if ($error) {
             return $error;
         }
 
-        $pagina = user_has_biometria::forInstitutions($instituciones)
+        $pagina = $ctx->consulta(user_has_biometria::class, 'bio_created_at')
             ->with('usuario')
-            ->whereBetween('bio_created_at', [$desde . ' 00:00:00', $hasta . ' 23:59:59'])
             ->where('bio_state', true)
             ->orderByDesc('bio_created_at')
-            ->paginate($this->scope->porPagina($request));
+            ->paginate($ctx->porPagina());
 
         return $this->paginado($pagina, fn ($bio) => [
-            'bio_code'       => (int) $bio->bio_code,
-            'ins_code'       => (int) $bio->bio_ins_code,
-            'usuario'        => optional($bio->usuario)->usu_nmbcom,
-            'tipo'           => $bio->bio_is_entrada ? 'entrada' : 'salida',
-            'fecha'          => (string) $bio->bio_created_at,
-            'lat'            => $bio->bio_lat,
-            'lng'            => $bio->bio_lng,
+            'bio_code'        => (int) $bio->bio_code,
+            'ins_code'        => (int) $bio->bio_ins_code,
+            'usuario'         => optional($bio->usuario)->usu_nmbcom,
+            'tipo'            => $bio->bio_is_entrada ? 'entrada' : 'salida',
+            'fecha'           => (string) $bio->bio_created_at,
+            'lat'             => $bio->bio_lat,
+            'lng'             => $bio->bio_lng,
             'sincronizado_en' => $bio->bio_sincronizado_en,
-        ], ['rango' => compact('desde', 'hasta')]);
+        ], $ctx);
     }
 
     /**
@@ -52,29 +52,29 @@ class ReporteController extends PortalController
      */
     public function rondas(Request $request): JsonResponse
     {
-        list($error, $instituciones, $desde, $hasta) = $this->contexto($request);
+        list($error, $ctx) = $this->contexto($request);
         if ($error) {
             return $error;
         }
 
-        $pagina = ronda_cabecera::forInstitutions($instituciones)
+        $pagina = $ctx->consulta(ronda_cabecera::class, 'rc_fecha_inicio')
             ->with('users')
-            ->whereBetween('rc_fecha_inicio', [$desde . ' 00:00:00', $hasta . ' 23:59:59'])
+            // withCount y no un count() por fila: con 200 filas por pagina eso
+            // eran 200 consultas extra.
+            ->withCount(['detalles' => fn ($q) => $q->where('rd_estado', 1)])
             ->where('rc_estado', 1)
             ->orderByDesc('rc_fecha_inicio')
-            ->paginate($this->scope->porPagina($request));
+            ->paginate($ctx->porPagina());
 
         return $this->paginado($pagina, fn ($rc) => [
-            'rc_id'           => (int) $rc->rc_id,
-            'ins_code'        => (int) $rc->rc_ins_code,
-            'usuario'         => optional($rc->users)->usu_nmbcom,
-            'estado'          => $rc->rc_estado_ronda,
-            'fecha_inicio'    => $rc->rc_fecha_inicio,
-            'fecha_fin'       => $rc->rc_fecha_fin,
-            'puntos_recorridos' => \Modules\Administracion\Models\ronda_detalle::where('rd_rc_id', $rc->rc_id)
-                ->where('rd_estado', 1)
-                ->count(),
-        ], ['rango' => compact('desde', 'hasta')]);
+            'rc_id'             => (int) $rc->rc_id,
+            'ins_code'          => (int) $rc->rc_ins_code,
+            'usuario'           => optional($rc->users)->usu_nmbcom,
+            'estado'            => $rc->rc_estado_ronda,
+            'fecha_inicio'      => $rc->rc_fecha_inicio,
+            'fecha_fin'         => $rc->rc_fecha_fin,
+            'puntos_recorridos' => (int) $rc->detalles_count,
+        ], $ctx);
     }
 
     /**
@@ -82,17 +82,16 @@ class ReporteController extends PortalController
      */
     public function novedades(Request $request): JsonResponse
     {
-        list($error, $instituciones, $desde, $hasta) = $this->contexto($request);
+        list($error, $ctx) = $this->contexto($request);
         if ($error) {
             return $error;
         }
 
-        $pagina = Novedad::forInstitutions($instituciones)
+        $pagina = $ctx->consulta(Novedad::class, 'nv_fecha_hora')
             ->with('users')
-            ->whereBetween('nv_fecha_hora', [$desde . ' 00:00:00', $hasta . ' 23:59:59'])
             ->where('nv_estado', 1)
             ->orderByDesc('nv_fecha_hora')
-            ->paginate($this->scope->porPagina($request));
+            ->paginate($ctx->porPagina());
 
         return $this->paginado($pagina, fn ($nv) => [
             'nv_id'       => (int) $nv->nv_id,
@@ -103,7 +102,7 @@ class ReporteController extends PortalController
             'foto'        => $nv->imagenUrl,
             'lat'         => $nv->nv_lat,
             'lng'         => $nv->nv_lng,
-        ], ['rango' => compact('desde', 'hasta')]);
+        ], $ctx);
     }
 
     /**
@@ -111,14 +110,13 @@ class ReporteController extends PortalController
      */
     public function accesos(Request $request): JsonResponse
     {
-        list($error, $instituciones, $desde, $hasta) = $this->contexto($request);
+        list($error, $ctx) = $this->contexto($request);
         if ($error) {
             return $error;
         }
 
-        $consulta = Acceso::forInstitutions($instituciones)
+        $consulta = $ctx->consulta(Acceso::class, 'ac_created_at')
             ->with(['persona', 'vehiculo', 'visitante'])
-            ->whereBetween('ac_created_at', [$desde . ' 00:00:00', $hasta . ' 23:59:59'])
             ->where('ac_estado', true);
 
         if ($request->filled('tipo')) {
@@ -128,8 +126,7 @@ class ReporteController extends PortalController
             $consulta->estado($request->input('estado'));
         }
 
-        $pagina = $consulta->orderByDesc('ac_created_at')
-            ->paginate($this->scope->porPagina($request));
+        $pagina = $consulta->orderByDesc('ac_created_at')->paginate($ctx->porPagina());
 
         return $this->paginado($pagina, fn ($ac) => [
             'ac_code'            => (int) $ac->ac_code,
@@ -143,7 +140,7 @@ class ReporteController extends PortalController
             'tiempo_permanencia' => $ac->tiempo_permanencia,
             'patente'            => optional($ac->vehiculo)->av_patente,
             'motivo'             => optional($ac->visitante)->avi_motivo,
-        ], ['rango' => compact('desde', 'hasta')]);
+        ], $ctx);
     }
 
     /**
@@ -151,33 +148,31 @@ class ReporteController extends PortalController
      */
     public function alertas(Request $request): JsonResponse
     {
-        list($error, $instituciones, $desde, $hasta) = $this->contexto($request);
+        list($error, $ctx) = $this->contexto($request);
         if ($error) {
             return $error;
         }
 
-        $consulta = Alertas::forInstitutions($instituciones)
+        $consulta = $ctx->consulta(Alertas::class, 'al_fecha')
             ->with('usuario')
-            ->whereBetween('al_fecha', [$desde . ' 00:00:00', $hasta . ' 23:59:59'])
             ->where('al_estado', 1);
 
         if ($request->filled('prioridad')) {
             $consulta->porPrioridad($request->input('prioridad'));
         }
 
-        $pagina = $consulta->orderByDesc('al_fecha')
-            ->paginate($this->scope->porPagina($request));
+        $pagina = $consulta->orderByDesc('al_fecha')->paginate($ctx->porPagina());
 
         return $this->paginado($pagina, fn ($al) => [
-            'al_code'         => (int) $al->al_code,
-            'ins_code'        => (int) $al->al_ins_code,
-            'usuario'         => optional($al->usuario)->usu_nmbcom,
-            'observacion'     => $al->al_observacion,
-            'prioridad'       => $al->al_prioridad,
-            'estado'          => $al->al_estado_alerta,
-            'fecha'           => optional($al->al_fecha)->format('Y-m-d H:i:s'),
+            'al_code'              => (int) $al->al_code,
+            'ins_code'             => (int) $al->al_ins_code,
+            'usuario'              => optional($al->usuario)->usu_nmbcom,
+            'observacion'          => $al->al_observacion,
+            'prioridad'            => $al->al_prioridad,
+            'estado'               => $al->al_estado_alerta,
+            'fecha'                => optional($al->al_fecha)->format('Y-m-d H:i:s'),
             'tiempo_respuesta_min' => $al->tiempo_respuesta,
-            'esta_retrasada'  => $al->esta_retrasada,
-        ], ['rango' => compact('desde', 'hasta')]);
+            'esta_retrasada'       => $al->esta_retrasada,
+        ], $ctx);
     }
 }

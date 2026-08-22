@@ -1,6 +1,6 @@
 # RESUMEN DE AVANCE — Total Secure App
 
-> **Última actualización:** 2026-08-21 (Fases 6, 7 y 8 completas ✅ — 79 tests pasando)
+> **Última actualización:** 2026-08-21 (Fases 6, 7 y 8 completas ✅ — 81 tests pasando)
 
 ---
 
@@ -310,6 +310,7 @@
 
 ### Services
 - `app/Services/PortalScopeService.php` (instituciones del token, validación de `ins_code`, rango de fechas, tope de paginación)
+- `app/Services/PortalContext.php` (contexto validado; su método `consulta()` es la **única** forma de abrir una consulta del portal)
 
 ### Migraciones
 - `database/migrations/2026_08_21_400001_seed_portal_permissions.php` (sección `ps_codigo` 19, 7 permisos `portal.*`, rol `Cliente`)
@@ -322,7 +323,30 @@
 - `openapi.yaml` (OpenAPI 3.0.3: 7 endpoints, 10 esquemas)
 
 ### Tests
-- `tests/Unit/PortalApiTest.php` (13 tests; el central verifica que ningún listado devuelva datos de otra institución)
+- `tests/Unit/PortalApiTest.php` (15 tests; las rutas se descubren del router, así que un endpoint nuevo queda cubierto sin tocar el test)
+
+### Refactor: el filtro por institución no se puede olvidar
+
+El primer diseño centralizaba la **decisión** (qué instituciones ve el token) pero
+dejaba distribuida la **aplicación**: 10 llamadas a `forInstitutions()` más un
+`whereIn` aparte en `InstitucionController`, que se saltaba el camino común. Un
+endpoint nuevo que olvidara filtrar compilaba, pasaba los tests (que enumeraban 5
+rutas a mano) y devolvía los datos de todos los clientes.
+
+Ahora el controller no consulta modelos: pide el contexto y de ahí sale el builder
+ya acotado por institución y por fecha (`$ctx->consulta(Modelo::class, 'columna')`).
+Quedan **cero** consultas directas a modelos en el módulo. Descartado el global
+scope de Eloquent: `addGlobalScope()` es estático y se quedaría pegado en los
+procesos largos de la cola (`NotificarAlertaPendiente`), afectando a la app móvil
+y a Filament.
+
+Como red, el test descubre las rutas GET del router en vez de enumerarlas, y falla
+si un endpoint devuelve otra institución **o** si su respuesta no expone `ins_code`
+ni `instituciones` (es decir, si no se puede auditar). Verificado agregando a
+propósito un endpoint sin filtro: el test lo detectó y lo nombró.
+
+De paso, `puntos_recorridos` pasó de un `count()` por fila a `withCount()`: con 200
+filas por página eran 200 consultas extra.
 
 **No se tocó el panel Filament**, como pide el roadmap: esta API es un consumidor
 adicional de los mismos modelos y servicios.

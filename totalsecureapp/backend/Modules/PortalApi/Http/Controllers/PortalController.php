@@ -2,6 +2,7 @@
 
 namespace Modules\PortalApi\Http\Controllers;
 
+use App\Services\PortalContext;
 use App\Services\PortalScopeService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
@@ -9,10 +10,11 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
 /**
- * Base de la API del portal cliente (Fase 8).
+ * Base de la API del portal cliente (Fase 8). Solo lectura.
  *
- * Solo lectura. Resuelve el alcance por institucion en un unico lugar para que
- * ningun endpoint pueda olvidarse de filtrar.
+ * Los controllers del portal no consultan modelos directamente: piden el
+ * contexto y de ahi sale el builder, ya acotado a las instituciones del token.
+ * Asi el filtro no es algo que haya que recordar aplicar en cada endpoint.
  */
 abstract class PortalController extends Controller
 {
@@ -24,39 +26,37 @@ abstract class PortalController extends Controller
     }
 
     /**
-     * Contexto de la consulta: instituciones autorizadas y rango de fechas.
+     * Contexto validado de la consulta, o la respuesta de rechazo.
      *
-     * @return array{0: ?JsonResponse, 1: int[], 2: string, 3: string}
-     *         [respuestaDeError, instituciones, desde, hasta]
+     * @return array{0: ?JsonResponse, 1: ?PortalContext}
      */
     protected function contexto(Request $request): array
     {
         $usuario = auth('sanctum')->user();
 
-        list($instituciones, $motivo) = $this->scope->resolver($request, $usuario->id);
+        list($contexto, $motivo) = $this->scope->contextoPara($request, $usuario->id);
 
         if ($motivo !== null) {
-            return [response()->json(['message' => $motivo], 403), [], '', ''];
+            return [response()->json(['message' => $motivo], 403), null];
         }
 
-        list($desde, $hasta) = $this->scope->rango($request);
-
-        return [null, $instituciones, $desde, $hasta];
+        return [null, $contexto];
     }
 
     /**
      * Envoltorio uniforme de las listas paginadas.
      */
-    protected function paginado(LengthAwarePaginator $pagina, callable $mapear, array $meta = []): JsonResponse
+    protected function paginado(LengthAwarePaginator $pagina, callable $mapear, PortalContext $ctx): JsonResponse
     {
         return response()->json([
             'datos'      => array_map($mapear, $pagina->items()),
             'paginacion' => [
-                'pagina'      => $pagina->currentPage(),
-                'por_pagina'  => $pagina->perPage(),
-                'total'       => $pagina->total(),
-                'ultima'      => $pagina->lastPage(),
+                'pagina'     => $pagina->currentPage(),
+                'por_pagina' => $pagina->perPage(),
+                'total'      => $pagina->total(),
+                'ultima'     => $pagina->lastPage(),
             ],
-        ] + $meta);
+            'rango'      => $ctx->rango(),
+        ]);
     }
 }

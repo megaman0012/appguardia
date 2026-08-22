@@ -4,10 +4,12 @@ namespace Tests\Unit;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Modules\Administracion\Models\Acceso;
 use Modules\Administracion\Models\Alertas;
 use Modules\Administracion\Models\Novedad;
 use Modules\Administracion\Models\ronda_cabecera;
+use Modules\Administracion\Models\ronda_detalle;
 use Modules\Administracion\Models\user_has_biometria;
 use Modules\MobileApp\Models\users;
 use Tests\TestCase;
@@ -90,13 +92,28 @@ class PortalApiTest extends TestCase
             'bio_state'      => true,
         ]);
 
-        ronda_cabecera::create([
+        $ronda = ronda_cabecera::create([
             'rc_usu_code'     => 2,
             'rc_ins_code'     => $insCode,
             'rc_fecha_inicio' => now(),
             'rc_estado'       => 1,
             'rc_estado_ronda' => 'Finalizada',
         ]);
+
+        // Dos puntos recorridos, para que puntos_recorridos se verifique contra un
+        // valor distinto de cero (un conteo roto tambien daria 0).
+        foreach ([1, 2] as $n) {
+            ronda_detalle::create([
+                'rd_usu_id'     => 2,
+                'rd_ins_code'   => $insCode,
+                'rd_rc_id'      => $ronda->rc_id,
+                'rd_observacion' => 'Punto ' . $n,
+                'rd_fecha_hora' => now(),
+                'rd_estado'     => 1,
+                'rd_lat'        => '-2.18',
+                'rd_lng'        => '-79.88',
+            ]);
+        }
 
         Novedad::create([
             'nv_usu_id'      => 2,
@@ -141,20 +158,54 @@ class PortalApiTest extends TestCase
     private function getPortal(string $uri, ?string $token)
     {
         $headers = $token ? ['Authorization' => "Bearer {$token}"] : [];
-        return $this->getJson('/api/portal/' . $uri, $headers);
+        return $this->getJson('/' . ltrim($uri, '/'), $headers);
     }
 
-    private const LISTADOS = ['biometria', 'rondas', 'novedades', 'accesos', 'alertas'];
+    /**
+     * Rutas GET del portal leidas del router, no escritas a mano.
+     *
+     * Asi un endpoint nuevo queda cubierto por los tests de aislamiento sin que
+     * nadie tenga que acordarse de agregarlo aqui: si no filtra, falla.
+     *
+     * @return string[]
+     */
+    private function rutasGetDelPortal(): array
+    {
+        $rutas = [];
+
+        foreach (Route::getRoutes() as $ruta) {
+            if (!str_starts_with($ruta->uri(), 'api/portal/')) {
+                continue;
+            }
+            if (!in_array('GET', $ruta->methods(), true)) {
+                continue;
+            }
+            // Las rutas con parametros necesitarian valores de ejemplo; hoy no hay.
+            if (str_contains($ruta->uri(), '{')) {
+                continue;
+            }
+            $rutas[$ruta->uri()] = true;
+        }
+
+        return array_keys($rutas);
+    }
 
     // ── Autenticacion y permisos ──
 
+    public function test_las_rutas_del_portal_se_descubren(): void
+    {
+        // Guarda contra un test que pase por vacio: si el descubrimiento se rompe,
+        // los tests de aislamiento no verificarian nada y seguirian en verde.
+        $rutas = $this->rutasGetDelPortal();
+
+        $this->assertGreaterThanOrEqual(7, count($rutas), 'Se esperaban al menos los 7 endpoints del portal');
+    }
+
     public function test_sin_token_responde_401(): void
     {
-        foreach (self::LISTADOS as $uri) {
-            $this->getPortal($uri, null)->assertStatus(401);
+        foreach ($this->rutasGetDelPortal() as $uri) {
+            $this->getPortal($uri, null)->assertStatus(401, "{$uri} deberia exigir token");
         }
-        $this->getPortal('instituciones', null)->assertStatus(401);
-        $this->getPortal('resumen', null)->assertStatus(401);
     }
 
     public function test_un_token_de_la_app_movil_no_puede_leer_el_portal(): void
@@ -162,10 +213,10 @@ class PortalApiTest extends TestCase
         // Un Vigilante no tiene permisos portal.*, aunque este autenticado.
         $token = $this->tokenCon('Vigilante');
 
-        foreach (self::LISTADOS as $uri) {
-            $this->getPortal($uri, $token)->assertStatus(403);
+        foreach ($this->rutasGetDelPortal() as $uri) {
+            $this->getPortal($uri, $token)
+                ->assertStatus(403, "{$uri} deberia rechazar un token sin permisos portal.*");
         }
-        $this->getPortal('resumen', $token)->assertStatus(403);
     }
 
     public function test_cliente_sin_instituciones_asignadas_responde_403(): void
@@ -173,9 +224,9 @@ class PortalApiTest extends TestCase
         // Usuario 2 tiene rol Cliente pero ninguna institucion vinculada.
         $token = $this->tokenCon('Cliente', 2);
 
-        $this->getPortal('instituciones', $token)->assertStatus(403);
-        $this->getPortal('resumen', $token)->assertStatus(403);
-        $this->getPortal('novedades', $token)->assertStatus(403);
+        $this->getPortal('api/portal/instituciones', $token)->assertStatus(403);
+        $this->getPortal('api/portal/resumen', $token)->assertStatus(403);
+        $this->getPortal('api/portal/novedades', $token)->assertStatus(403);
     }
 
     // ── Alcance por institucion ──
@@ -184,31 +235,54 @@ class PortalApiTest extends TestCase
     {
         $token = $this->tokenCon('Cliente');
 
-        $r = $this->getPortal('instituciones', $token);
+        $r = $this->getPortal('api/portal/instituciones', $token);
 
         $r->assertStatus(200);
         $r->assertJsonCount(1, 'datos');
         $r->assertJsonPath('datos.0.ins_code', $this->insPropia);
     }
 
-    public function test_ningun_listado_devuelve_datos_de_otra_institucion(): void
+    public function test_ningun_endpoint_devuelve_datos_de_otra_institucion(): void
     {
         $token = $this->tokenCon('Cliente');
 
-        foreach (self::LISTADOS as $uri) {
+        foreach ($this->rutasGetDelPortal() as $uri) {
             $r = $this->getPortal($uri, $token);
-            $r->assertStatus(200);
+            $r->assertStatus(200, "{$uri} deberia responder 200 para un cliente valido");
 
-            $datos = $r->json('datos');
-            $this->assertCount(1, $datos, "El listado {$uri} deberia traer solo 1 registro");
+            $cuerpo = $r->json();
+            $verificado = false;
 
-            foreach ($datos as $fila) {
-                $this->assertSame(
-                    $this->insPropia,
-                    $fila['ins_code'],
-                    "El listado {$uri} filtro datos de otra institucion"
-                );
+            // Filas con ins_code: todas deben ser de la institucion propia.
+            foreach ($cuerpo['datos'] ?? [] as $fila) {
+                if (array_key_exists('ins_code', $fila)) {
+                    $this->assertSame(
+                        $this->insPropia,
+                        $fila['ins_code'],
+                        "{$uri} devolvio datos de otra institucion"
+                    );
+                    $verificado = true;
+                }
             }
+
+            // Endpoints que declaran el alcance en vez de filas (resumen).
+            if (array_key_exists('instituciones', $cuerpo)) {
+                $this->assertSame(
+                    [$this->insPropia],
+                    $cuerpo['instituciones'],
+                    "{$uri} declaro un alcance mas amplio que la institucion propia"
+                );
+                $verificado = true;
+            }
+
+            // Un endpoint cuya respuesta no expone ni ins_code ni instituciones no
+            // se puede auditar aqui: falla a proposito para que quien lo agregue
+            // lo haga verificable, en vez de quedar fuera del test en silencio.
+            $this->assertTrue(
+                $verificado,
+                "{$uri} no expone ins_code en sus filas ni el arreglo instituciones, "
+                . "asi que su aislamiento no es verificable"
+            );
         }
     }
 
@@ -218,17 +292,29 @@ class PortalApiTest extends TestCase
 
         // 403 y no una lista vacia: una respuesta vacia dejaria sondear que
         // codigos de institucion existen.
-        foreach (self::LISTADOS as $uri) {
-            $this->getPortal($uri . '?ins_code=' . $this->insAjena, $token)->assertStatus(403);
+        foreach ($this->rutasGetDelPortal() as $uri) {
+            $this->getPortal($uri . '?ins_code=' . $this->insAjena, $token)
+                ->assertStatus(403, "{$uri} deberia rechazar una institucion ajena");
         }
-        $this->getPortal('resumen?ins_code=' . $this->insAjena, $token)->assertStatus(403);
+    }
+
+    public function test_rondas_cuenta_los_puntos_de_su_propia_ronda(): void
+    {
+        $token = $this->tokenCon('Cliente');
+
+        $r = $this->getPortal('api/portal/rondas', $token);
+
+        $r->assertStatus(200);
+        $r->assertJsonCount(1, 'datos');
+        // Dos puntos sembrados en la ronda propia; los de la ronda ajena no cuentan.
+        $r->assertJsonPath('datos.0.puntos_recorridos', 2);
     }
 
     public function test_pedir_la_institucion_propia_funciona(): void
     {
         $token = $this->tokenCon('Cliente');
 
-        $r = $this->getPortal('novedades?ins_code=' . $this->insPropia, $token);
+        $r = $this->getPortal('api/portal/novedades?ins_code=' . $this->insPropia, $token);
 
         $r->assertStatus(200);
         $r->assertJsonCount(1, 'datos');
@@ -241,7 +327,7 @@ class PortalApiTest extends TestCase
     {
         $token = $this->tokenCon('Cliente');
 
-        $r = $this->getPortal('novedades?desde=2020-01-01&hasta=2020-01-31', $token);
+        $r = $this->getPortal('api/portal/novedades?desde=2020-01-01&hasta=2020-01-31', $token);
 
         $r->assertStatus(200);
         $r->assertJsonCount(0, 'datos');
@@ -251,7 +337,7 @@ class PortalApiTest extends TestCase
     {
         $token = $this->tokenCon('Cliente');
 
-        $r = $this->getPortal('novedades?por_pagina=99999', $token);
+        $r = $this->getPortal('api/portal/novedades?por_pagina=99999', $token);
 
         $r->assertStatus(200);
         $r->assertJsonPath('paginacion.por_pagina', 200);
@@ -262,7 +348,7 @@ class PortalApiTest extends TestCase
         $token = $this->tokenCon('Cliente');
 
         // desde > hasta: se normaliza en vez de producir un vacio inexplicable.
-        $r = $this->getPortal('novedades?desde=' . now()->addDay()->format('Y-m-d')
+        $r = $this->getPortal('api/portal/novedades?desde=' . now()->addDay()->format('Y-m-d')
             . '&hasta=' . now()->subDay()->format('Y-m-d'), $token);
 
         $r->assertStatus(200);
@@ -275,7 +361,7 @@ class PortalApiTest extends TestCase
     {
         $token = $this->tokenCon('Cliente');
 
-        $r = $this->getPortal('resumen', $token);
+        $r = $this->getPortal('api/portal/resumen', $token);
 
         $r->assertStatus(200);
         // Hay un registro de cada tipo por institucion; solo debe contar el propio.

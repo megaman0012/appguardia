@@ -49,8 +49,8 @@ class ronda_cabecera extends Model {
     }
 
 
-    /*public function detalles()
+    public function detalles()
     {
         return $this->hasMany(ronda_detalle::class, 'rd_rc_id');
-    }*/
+    }
 }
