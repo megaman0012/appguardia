@@ -1,0 +1,16 @@
+{
+    "name": "totalsecure/portalapi",
+    "description": "API REST de solo lectura para el portal cliente",
+    "authors": [],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {}
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\PortalApi\\": ""
+        }
+    }
+}

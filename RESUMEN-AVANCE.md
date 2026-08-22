@@ -1,6 +1,6 @@
 # RESUMEN DE AVANCE — Total Secure App
 
-> **Última actualización:** 2026-08-21 (Fases 6 y 7 completas ✅ — 66 tests pasando)
+> **Última actualización:** 2026-08-21 (Fases 6, 7 y 8 completas ✅ — 79 tests pasando)
 
 ---
 
@@ -16,7 +16,7 @@
 | 5 | Acceso generalizado | ✅ Completa (backend + frontend) | `FASE5-ACCESOS.md` |
 | 6 | RBAC granular | ✅ Implementación Completada | `FASE6-RBAC.md` |
 | 7 | Offline sync (backend) | ✅ Implementación Completada | `API-OFFLINE-SYNC.md` |
-| 8 | API portal cliente | ⏳ Pendiente | — |
+| 8 | API portal cliente | ✅ Implementación Completada | `openapi.yaml` |
 | 9 | QA + despliegue | ⏳ Pendiente | — |
 
 ---
@@ -34,6 +34,7 @@
 | `FASE5-ACCESOS.md` | Documentación técnica Fase 5 |
 | `FASE6-RBAC.md` | Documentación técnica Fase 6 |
 | `API-OFFLINE-SYNC.md` | Contrato de sincronización offline (Fase 7) |
+| `openapi.yaml` | Especificación OpenAPI de la API del portal cliente (Fase 8) |
 | `RESUMEN-AVANCE.md` | Este archivo |
 
 ---
@@ -298,6 +299,36 @@
 
 ---
 
+## Archivos Creados - Fase 8 (API Portal Cliente)
+
+### Módulo nuevo
+- `Modules/PortalApi/` — módulo propio, prefijo `api/portal`, registrado en `modules_statuses.json`
+  - `Providers/PortalApiServiceProvider.php`, `Providers/RouteServiceProvider.php`
+  - `Routes/api.php` (7 rutas, todas GET)
+  - `Http/Controllers/PortalController.php` (base: resuelve el alcance por institución)
+  - `Http/Controllers/InstitucionController.php`, `ReporteController.php`, `ResumenController.php`
+
+### Services
+- `app/Services/PortalScopeService.php` (instituciones del token, validación de `ins_code`, rango de fechas, tope de paginación)
+
+### Migraciones
+- `database/migrations/2026_08_21_400001_seed_portal_permissions.php` (sección `ps_codigo` 19, 7 permisos `portal.*`, rol `Cliente`)
+
+### Modificados
+- `app/Traits/BelongsToInstitution.php` (nuevo scope `forInstitutions()` para varias instituciones)
+- `Modules/Administracion/Models/user_has_biometria.php` (adopta el trait con `bio_ins_code`)
+
+### Documentación
+- `openapi.yaml` (OpenAPI 3.0.3: 7 endpoints, 10 esquemas)
+
+### Tests
+- `tests/Unit/PortalApiTest.php` (13 tests; el central verifica que ningún listado devuelva datos de otra institución)
+
+**No se tocó el panel Filament**, como pide el roadmap: esta API es un consumidor
+adicional de los mismos modelos y servicios.
+
+---
+
 ## Comando Útil para Reanudar
 
 ```bash
@@ -329,7 +360,10 @@ php artisan test tests/Unit/AccesoServiceTest.php
 DB_PORT=5434 ./vendor/bin/phpunit --testsuite Unit --filter RbacTest
 DB_PORT=5434 ./vendor/bin/phpunit --testsuite Unit --filter OfflineSyncTest
 
-# Suite completa (66 tests). Desde el host se necesita DB_PORT=5434
+# Tests de la API del portal cliente (Fase 8)
+DB_PORT=5434 ./vendor/bin/phpunit --testsuite Unit --filter PortalApiTest
+
+# Suite completa (79 tests). Desde el host se necesita DB_PORT=5434
 DB_PORT=5434 ./vendor/bin/phpunit --testsuite Unit
 
 # Ejecutar command de cierre de turnos
