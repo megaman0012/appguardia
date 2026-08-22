@@ -410,6 +410,31 @@ con las 25 filas por defecto de Filament, contra **6 constantes** con `with()`.
 
 ---
 
+## Cierre de pendientes (posterior a la Fase 9)
+
+### `procesar_perfil` y `login` exponían permisos del panel web
+
+El catálogo de permisos es compartido con el panel web legacy, y sus secciones
+(`ps_codigo` 1 Administración, 2 Formularios) salían por la API móvil: un
+Vigilante recibía 22 permisos en vez de 21 y un Supervisor 34 en vez de 31,
+incluyendo `administracion/persona.index`. La app los ignoraba porque filtra por
+nombres concretos, pero el conteo que `PerfilScreen` muestra al usuario estaba
+mal y la API entregaba nombres de un panel al que ese cliente no entra.
+
+- `app/Services/PermisosApiService.php` — único lugar donde se resuelven los
+  permisos que ve un cliente de la API. `login` y `procesar_perfil` tenían cada
+  uno su propia consulta escrita a mano; ahora comparten esta.
+- Excluye las secciones web en vez de permitir solo las móviles (10-18), para que
+  un rol de una sección nueva —como el Portal Cliente, la 19— no quede sin
+  permisos por olvido.
+- 3 tests nuevos en `RbacTest` (12 en total). Verificado que 2 de ellos fallan si
+  se quita el filtro.
+- En vivo: Vigilante 22 → **21**, Supervisor 34 → **31**, que son los números
+  documentados en la Fase 6.
+- De paso, quedó sin uso el import de `DB` en `LoginController` y se eliminó.
+
+---
+
 ## Comando Útil para Reanudar
 
 ```bash

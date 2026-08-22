@@ -9,7 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\DB;
+use App\Services\PermisosApiService;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Modules\Administracion\Models\parametros;
@@ -72,14 +72,10 @@ class LoginController extends Controller {
             return $this->message_json('errors', 'El usuario no posee perfiles de acceso');
         }
 
-        // Abilities = permisos granulares de los roles del usuario (Fase 6)
-        $abilities = DB::table('role_has_permissions')
-            ->join('permissions', 'permissions.id', '=', 'role_has_permissions.permission_id')
-            ->whereIn('role_has_permissions.role_id', $pfs->pluck('id'))
-            ->where('permissions.pr_state', 1)
-            ->distinct()
-            ->pluck('permissions.name')
-            ->values();
+        // Abilities = permisos granulares de los roles del usuario (Fase 6),
+        // sin los del panel web legacy (ver PermisosApiService).
+        $abilities = app(PermisosApiService::class)
+            ->paraRoles($pfs->pluck('id')->map(fn ($id) => (int) $id)->all());
 
         $acc = parametros::where('pr_descripcion', 'access')->first();
         if(!$acc){
