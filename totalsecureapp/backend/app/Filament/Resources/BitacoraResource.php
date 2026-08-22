@@ -26,6 +26,13 @@ class BitacoraResource extends Resource
     protected static ?string $navigationLabel = 'Bitacora';
     protected static ?int $navigationSort = 11;
     protected static ?string $model = Bitacora::class;
+
+    /**
+     * Relaciones que usan las columnas de la tabla. Sin esto cada fila
+     * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
+     * 126 consultas en vez de 6.
+     */
+    protected const RELACIONES_TABLA = ['institucion.organizacionSede.organizacion', 'institucion.organizacionSede.sede', 'users'];
     protected static ?string $navigationIcon = 'heroicon-o-collection';
     protected static bool $shouldRegisterNavigation = false;
     public static function form(Form $form): Form { return $form->schema([ ]); }
@@ -94,4 +101,9 @@ class BitacoraResource extends Resource
     public static function canDelete($record): bool { return false; }
 
 
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(self::RELACIONES_TABLA);
+    }
 }

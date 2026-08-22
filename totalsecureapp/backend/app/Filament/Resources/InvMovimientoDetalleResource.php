@@ -21,6 +21,13 @@ class InvMovimientoDetalleResource extends Resource
         return 'Reporteria';
     }
     protected static ?string $model = InvMovimientoDetalle::class;
+
+    /**
+     * Relaciones que usan las columnas de la tabla. Sin esto cada fila
+     * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
+     * 126 consultas en vez de 6.
+     */
+    protected const RELACIONES_TABLA = ['producto'];
     protected static ?int $navigationSort = 14;
     protected static ?string $navigationLabel = 'Movimiento Detalle';
     protected static ?string $navigationIcon = 'heroicon-o-collection';
@@ -103,7 +110,7 @@ class InvMovimientoDetalleResource extends Resource
 
     public static function getEloquentQuery(): Builder {
         $mov_id = request()->query('mov');
-        return parent::getEloquentQuery()
+        return parent::getEloquentQuery()->with(self::RELACIONES_TABLA)
             ->where('md_mov_id', $mov_id );
     }
 }

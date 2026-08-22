@@ -1,6 +1,6 @@
 # RESUMEN DE AVANCE — Total Secure App
 
-> **Última actualización:** 2026-08-21 (Fases 6, 7 y 8 completas ✅ — 81 tests pasando)
+> **Última actualización:** 2026-08-21 (Fases 1 a 9 completas ✅ — 94 tests pasando)
 
 ---
 
@@ -17,7 +17,7 @@
 | 6 | RBAC granular | ✅ Implementación Completada | `FASE6-RBAC.md` |
 | 7 | Offline sync (backend) | ✅ Implementación Completada | `API-OFFLINE-SYNC.md` |
 | 8 | API portal cliente | ✅ Implementación Completada | `openapi.yaml` |
-| 9 | QA + despliegue | ⏳ Pendiente | — |
+| 9 | QA + despliegue | ✅ Implementación Completada | `CHECKLIST-DESPLIEGUE-V2.md` |
 
 ---
 
@@ -35,6 +35,7 @@
 | `FASE6-RBAC.md` | Documentación técnica Fase 6 |
 | `API-OFFLINE-SYNC.md` | Contrato de sincronización offline (Fase 7) |
 | `openapi.yaml` | Especificación OpenAPI de la API del portal cliente (Fase 8) |
+| `CHECKLIST-DESPLIEGUE-V2.md` | Backup, orden de migraciones y rollback por fase (Fase 9) |
 | `RESUMEN-AVANCE.md` | Este archivo |
 
 ---
@@ -353,6 +354,62 @@ adicional de los mismos modelos y servicios.
 
 ---
 
+## Archivos Creados - Fase 9 (QA, performance y despliegue)
+
+### N+1 en el panel
+Solo 1 de 21 resources de Filament hacía eager loading. Medido con volumen real:
+**5N+1 consultas** (51 con 10 filas, 251 con 50), o sea **126 consultas por página**
+con las 25 filas por defecto de Filament, contra **6 constantes** con `with()`.
+
+- 16 resources: constante `RELACIONES_TABLA` + `->with()` en `getEloquentQuery()`
+  (4 de ellos no tenían el método y se creó)
+- `ReporteController` del portal: `puntos_recorridos` pasó de un `count()` por fila
+  a `withCount()`
+- `tests/Unit/EagerLoadingTest.php` (4 tests): compara el costo entre 10 y 30 filas
+  en vez de contra un número fijo, y **descubre los resources del directorio** para
+  que uno nuevo con columnas de relación no pueda omitir su eager loading
+
+### Índices compuestos
+- `database/migrations/2026_08_21_500001_add_composite_indexes.php` — 15 índices en
+  6 tablas, con el orden igualdad→rango para que sirvan al filtro y al ordenamiento
+  a la vez. Derivados de contar los `where`/`orderBy` reales del código, no de
+  suposiciones. `alertas` y `turno` ya traían los suyos de las Fases 3-4.
+- El más valioso: `(ui_usu_id, ui_state)` en `user_has_institucion`, que es la
+  consulta más frecuente del sistema (16 usos) y no tenía ningún índice.
+- Verificado con `EXPLAIN`: `Index Only Scan` en el conteo de puntos por ronda e
+  `Index Scan Backward` en los listados por institución y fecha.
+
+### Caché del dashboard con invalidación por evento
+- `app/Services/DashboardStatsService.php` — contador de versión por institución
+  incluido en la clave, porque `CACHE_DRIVER=file` **no soporta `Cache::tags()`**.
+- `app/Observers/AlertaObserver.php` y `TurnoObserver.php`, registrados en
+  `EventServiceProvider`. Van en observers y no en los services para cubrir también
+  las escrituras del panel Filament y de los seeders.
+- `app/Filament/Widgets/AlertasActivasWidget.php` y `CumplimientoTurnosWidget.php`
+  (los widgets no existían; Filament los autodescubre).
+- `tests/Unit/DashboardCacheTest.php` (9 tests). Verificado que 5 de ellos fallan
+  si se desactivan los observers, o sea que prueban la invalidación y no solo el
+  caché.
+
+### Bugs reales encontrados en la revisión
+1. **`AccesoResource`: el filtro de rango de fechas apuntaba a `ac_crated_at`**
+   (typo, falta la 'e'). Esa columna no existe, así que usar el filtro lanzaba un
+   error SQL en el panel. Corregido en los 2 lugares, más un barrido que confirma
+   que no queda ninguna otra referencia a columna inexistente.
+2. **`ronda_cabecera::detalles()` estaba comentada** desde antes; se activó para
+   poder usar `withCount`.
+
+### Despliegue
+- `CHECKLIST-DESPLIEGUE-V2.md` — backup obligatorio, orden de las 18 migraciones
+  por fase, rollback por fase y verificación post-despliegue. Todos los comandos
+  de backup y de `EXPLAIN`/`pg_stat` fueron ejecutados para comprobar que funcionan.
+- Hallazgo crítico documentado: `ac_nombre_contrato` se borra en la migración de la
+  Fase 5 y **no tiene destino** en `acceso_vehiculo`, así que el `down()` recrea la
+  columna vacía. Ese dato solo se recupera del backup, por eso el checklist incluye
+  un CSV dedicado.
+
+---
+
 ## Comando Útil para Reanudar
 
 ```bash
@@ -387,7 +444,11 @@ DB_PORT=5434 ./vendor/bin/phpunit --testsuite Unit --filter OfflineSyncTest
 # Tests de la API del portal cliente (Fase 8)
 DB_PORT=5434 ./vendor/bin/phpunit --testsuite Unit --filter PortalApiTest
 
-# Suite completa (79 tests). Desde el host se necesita DB_PORT=5434
+# Tests de Fase 9 (N+1 y cache del dashboard)
+DB_PORT=5434 ./vendor/bin/phpunit --testsuite Unit --filter EagerLoadingTest
+DB_PORT=5434 ./vendor/bin/phpunit --testsuite Unit --filter DashboardCacheTest
+
+# Suite completa (94 tests). Desde el host se necesita DB_PORT=5434
 DB_PORT=5434 ./vendor/bin/phpunit --testsuite Unit
 
 # Ejecutar command de cierre de turnos

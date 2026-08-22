@@ -36,6 +36,13 @@ class UserHasRolesResource extends Resource
     protected static ?int $navigationSort = 7;
     protected static ?string $navigationLabel = 'Usuarios > Perfiles';
     protected static ?string $model = user_has_roles::class;
+
+    /**
+     * Relaciones que usan las columnas de la tabla. Sin esto cada fila
+     * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
+     * 126 consultas en vez de 6.
+     */
+    protected const RELACIONES_TABLA = ['roles', 'users'];
     protected static ?string $navigationIcon = 'heroicon-o-user-add';
 
     public static function form(Form $form): Form {
@@ -113,4 +120,9 @@ class UserHasRolesResource extends Resource
         return in_array( Session::get('usuPF'), ['Administrador', 'Administrador General'] );
     }
 
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(self::RELACIONES_TABLA);
+    }
 }

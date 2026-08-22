@@ -40,6 +40,13 @@ class RondaCabeceraResource extends Resource
     protected static ?string $navigationLabel = 'Rondas';
     protected static ?string $model = ronda_cabecera::class;
 
+    /**
+     * Relaciones que usan las columnas de la tabla. Sin esto cada fila
+     * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
+     * 126 consultas en vez de 6.
+     */
+    protected const RELACIONES_TABLA = ['institucion.organizacionSede.organizacion', 'institucion.organizacionSede.sede', 'users'];
+
     protected static ?string $navigationIcon = 'heroicon-o-share';
 
     public static function form(Form $form): Form{ return $form->schema([]); }
@@ -146,7 +153,7 @@ class RondaCabeceraResource extends Resource
     public static function canDelete($record): bool { return false; }
 
     public static function getEloquentQuery(): Builder {
-        $query = parent::getEloquentQuery();
+        $query = parent::getEloquentQuery()->with(self::RELACIONES_TABLA);
         if(in_array( Session::get('usuPF'), ['Supervisor'] )){
             $institucionesCodes = UserHasInstitucion::where('ui_usu_id', Session::get('usuID'))
                 ->where('ui_state', 1)

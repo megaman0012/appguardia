@@ -35,6 +35,13 @@ class OrganizacionSedeResource extends Resource {
     }
 
     protected static ?string $model = OrganizacionSede::class;
+
+    /**
+     * Relaciones que usan las columnas de la tabla. Sin esto cada fila
+     * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
+     * 126 consultas en vez de 6.
+     */
+    protected const RELACIONES_TABLA = ['organizacion', 'sede'];
     protected static ?int $navigationSort = 3;
     protected static ?string $navigationLabel = 'Organizacion < Sede';
     protected static ?string $navigationIcon = 'heroicon-o-view-grid-add';
@@ -116,7 +123,7 @@ class OrganizacionSedeResource extends Resource {
     public static function canDelete($record): bool { return false; }
 
     public static function getEloquentQuery(): Builder {
-        return parent::getEloquentQuery();
+        return parent::getEloquentQuery()->with(self::RELACIONES_TABLA);
         //->whereHas('sede', function ($query) { $query->where('ps_estado', 1); })
         //->whereHas('organizacion', function ($query) { $query->where('org_estado', 1); });
     }

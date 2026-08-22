@@ -4,8 +4,12 @@ namespace App\Providers;
 
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
+use App\Observers\AlertaObserver;
+use App\Observers\TurnoObserver;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Event;
+use Modules\Administracion\Models\Alertas;
+use Modules\Administracion\Models\Turno;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -27,6 +31,8 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
+        // Invalidacion por evento del cache del dashboard (Fase 9).
+        Alertas::observe(AlertaObserver::class);
+        Turno::observe(TurnoObserver::class);
     }
 }

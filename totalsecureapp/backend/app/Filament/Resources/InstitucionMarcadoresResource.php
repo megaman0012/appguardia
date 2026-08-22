@@ -34,6 +34,13 @@ class InstitucionMarcadoresResource extends Resource
         return 'Centros de Operacion';
     }
     protected static ?string $model = InstitucionMarcadores::class;
+
+    /**
+     * Relaciones que usan las columnas de la tabla. Sin esto cada fila
+     * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
+     * 126 consultas en vez de 6.
+     */
+    protected const RELACIONES_TABLA = ['institucion.organizacionSede.organizacion', 'institucion.organizacionSede.sede'];
     protected static ?string $navigationIcon = 'heroicon-o-collection';
     protected static bool $shouldRegisterNavigation = false;
     public static function form(Form $form): Form
@@ -132,7 +139,7 @@ class InstitucionMarcadoresResource extends Resource
 
     public static function getEloquentQuery(): Builder {
         $ins_code = request()->query('codigo');
-        return parent::getEloquentQuery()
+        return parent::getEloquentQuery()->with(self::RELACIONES_TABLA)
         ->where('im_ins_code', $ins_code );
     }
 

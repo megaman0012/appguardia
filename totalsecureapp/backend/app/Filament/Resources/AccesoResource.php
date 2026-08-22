@@ -39,6 +39,13 @@ class AccesoResource extends Resource
     protected static ?int $navigationSort = 9;
     protected static ?string $navigationLabel = 'Acceso';
     protected static ?string $model = Acceso::class;
+
+    /**
+     * Relaciones que usan las columnas de la tabla. Sin esto cada fila
+     * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
+     * 126 consultas en vez de 6.
+     */
+    protected const RELACIONES_TABLA = ['accesoPersona', 'institucion.organizacionSede.organizacion', 'institucion.organizacionSede.sede'];
     protected static ?string $navigationIcon = 'heroicon-o-shield-check';
     public static function form(Form $form): Form{ return $form->schema([]); }
     public static function table(Table $table): Table
@@ -136,12 +143,12 @@ class AccesoResource extends Resource
                             ->when(
                                 $data['from'],
                                 fn (Builder $query, $date) =>
-                                $query->whereDate('ac_crated_at', '>=', $date)
+                                $query->whereDate('ac_created_at', '>=', $date)
                             )
                             ->when(
                                 $data['until'],
                                 fn (Builder $query, $date) =>
-                                $query->whereDate('ac_crated_at', '<=', $date)
+                                $query->whereDate('ac_created_at', '<=', $date)
                             );
                     }),
             ])
@@ -180,7 +187,7 @@ class AccesoResource extends Resource
     public static function canDelete($record): bool { return false; }
 
     public static function getEloquentQuery(): Builder {
-        $query = parent::getEloquentQuery();
+        $query = parent::getEloquentQuery()->with(self::RELACIONES_TABLA);
         if(in_array( Session::get('usuPF'), ['Supervisor'] )){
             $institucionesCodes = UserHasInstitucion::where('ui_usu_id', Session::get('usuID'))
                 ->where('ui_state', 1)

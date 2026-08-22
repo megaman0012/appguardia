@@ -34,6 +34,13 @@ class RondaDetalleResource extends Resource
     protected static ?int $navigationSort = 10;
     protected static ?string $navigationLabel = 'Ronda Detalle';
     protected static ?string $model = ronda_detalle::class;
+
+    /**
+     * Relaciones que usan las columnas de la tabla. Sin esto cada fila
+     * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
+     * 126 consultas en vez de 6.
+     */
+    protected const RELACIONES_TABLA = ['rondaCabecera.institucion.organizacionSede.organizacion', 'rondaCabecera.institucion.organizacionSede.sede', 'users'];
     protected static ?string $navigationIcon = 'heroicon-o-collection';
     protected static bool $shouldRegisterNavigation = false;
 
@@ -119,7 +126,7 @@ class RondaDetalleResource extends Resource
 
     public static function getEloquentQuery(): Builder {
         $ronda_id = request()->query('ronda');
-        return parent::getEloquentQuery()
+        return parent::getEloquentQuery()->with(self::RELACIONES_TABLA)
         ->where('rd_rc_id', $ronda_id );
     }
 
