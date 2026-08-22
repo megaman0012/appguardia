@@ -44,8 +44,9 @@ export const LoginScreen = ({ navigation }: { navigation: any }) => {
           email: data.usuario?.usu_email,
           acc: data.usuario?.usu_acc,
           abilities: data.abilities,
+          perfiles: data.perfiles,
         });
-        navigation.navigate('SeleccionInstitucion');
+        navigation.navigate('ProfileSelection');
       } else {
         Alert.alert('Error', extraerError(data));
       }

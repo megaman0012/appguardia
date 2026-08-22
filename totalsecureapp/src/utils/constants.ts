@@ -27,6 +27,10 @@ export const API_ENDPOINTS = {
     SOLICITUD_PASS: '/solicitud_paswchg',
     PROCESAR_PASS: '/procesar_paswchg',
   },
+  PERFIL: {
+    SELECCIONAR: '/seleccionar_perfil',
+    PROCESAR: '/procesar_perfil',
+  },
   INSTITUCIONES: '/instituciones',
   BIOMETRIA: '/biometria',
   RONDAS: {

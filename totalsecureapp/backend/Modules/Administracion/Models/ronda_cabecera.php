@@ -4,9 +4,14 @@ namespace Modules\Administracion\Models;
 use Modules\Acceso\Models\users;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Traits\BelongsToInstitution;
 use Illuminate\Database\Eloquent\Model;
 
 class ronda_cabecera extends Model {
+    use BelongsToInstitution;
+
+    protected string $institutionColumn = 'rc_ins_code';
+
     use HasFactory;
 
     protected $table = 'ronda_cabecera';

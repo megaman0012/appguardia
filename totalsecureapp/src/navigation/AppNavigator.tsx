@@ -8,6 +8,7 @@ export type RootStackParamList = {
   Login: undefined;
   PasswordResetRequest: undefined;
   PasswordReset: { user_id: number | string };
+  ProfileSelection: undefined;
   SeleccionInstitucion: undefined;
   Home: undefined;
   Perfil: undefined;
@@ -33,6 +34,7 @@ export type RootStackScreenProps<T extends keyof RootStackParamList> = NativeSta
 import { LoginScreen } from '../screens/LoginScreen';
 import { PasswordResetRequestScreen } from '../screens/PasswordResetRequestScreen';
 import { PasswordResetScreen } from '../screens/PasswordResetScreen';
+import { ProfileSelectionScreen } from '../screens/ProfileSelectionScreen';
 import { SeleccionInstitucionScreen } from '../screens/SeleccionInstitucionScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { PerfilScreen } from '../screens/PerfilScreen';
@@ -52,7 +54,7 @@ import { BiometriaScreen } from '../screens/BiometriaScreen';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const AppNavigator = () => {
-  const { token, institucion, isLoading } = useAuth();
+  const { token, institucion, perfil, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -64,9 +66,11 @@ export const AppNavigator = () => {
 
   const initialRoute: keyof RootStackParamList = !token
     ? 'Login'
-    : institucion
-      ? 'Home'
-      : 'SeleccionInstitucion';
+    : !perfil
+      ? 'ProfileSelection'
+      : institucion
+        ? 'Home'
+        : 'SeleccionInstitucion';
 
   return (
     <Stack.Navigator
@@ -78,6 +82,7 @@ export const AppNavigator = () => {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="PasswordResetRequest" component={PasswordResetRequestScreen} />
       <Stack.Screen name="PasswordReset" component={PasswordResetScreen} />
+      <Stack.Screen name="ProfileSelection" component={ProfileSelectionScreen} />
       <Stack.Screen name="SeleccionInstitucion" component={SeleccionInstitucionScreen} />
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="Perfil" component={PerfilScreen} />

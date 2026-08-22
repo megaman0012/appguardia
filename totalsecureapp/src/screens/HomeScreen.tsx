@@ -3,12 +3,11 @@ import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
 export const HomeScreen = ({ navigation }: { navigation: any }) => {
-  const { user, logout } = useAuth();
+  const { user, perfil, logout, can } = useAuth();
 
   const nombres = user?.nombres || user?.usu_nombres || 'Usuario';
   const email = user?.email || user?.usu_email || '';
   const acc = user?.acc || user?.usu_acc || '';
-  const abilities = (user?.abilities || []) as string[];
 
   const handleLogout = async () => {
     try {
@@ -20,15 +19,17 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
     }
   };
 
+  // Cada modulo se muestra solo si el perfil activo tiene el permiso de lectura.
+  // El backend vuelve a validarlo en cada endpoint (middleware permission.api).
   const menu = [
-    { titulo: 'Rondas', accion: () => navigation.navigate('RondaList') },
-    { titulo: 'Accesos', accion: () => navigation.navigate('AccesoList') },
-    { titulo: 'Novedades', accion: () => navigation.navigate('NovedadList') },
-    { titulo: 'Alertas', accion: () => navigation.navigate('Alertas') },
-    { titulo: 'Inventario', accion: () => navigation.navigate('Inventario') },
-    { titulo: 'Biometría', accion: () => navigation.navigate('Biometria') },
-    { titulo: 'Perfil', accion: () => navigation.navigate('Perfil') },
-  ];
+    { titulo: 'Rondas', permiso: 'rondas.ver', accion: () => navigation.navigate('RondaList') },
+    { titulo: 'Accesos', permiso: 'acceso.ver', accion: () => navigation.navigate('AccesoList') },
+    { titulo: 'Novedades', permiso: 'novedades.ver', accion: () => navigation.navigate('NovedadList') },
+    { titulo: 'Alertas', permiso: 'alertas.ver', accion: () => navigation.navigate('Alertas') },
+    { titulo: 'Inventario', permiso: 'inventario.ver', accion: () => navigation.navigate('Inventario') },
+    { titulo: 'Biometría', permiso: 'biometria.marcar', accion: () => navigation.navigate('Biometria') },
+    { titulo: 'Perfil', permiso: 'perfil.ver', accion: () => navigation.navigate('Perfil') },
+  ].filter((item) => can(item.permiso));
 
   return (
     <View style={styles.container}>
@@ -62,10 +63,10 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
             </>
           )}
 
-          {abilities.length > 0 && (
+          {perfil && (
             <>
               <Text style={styles.userInfoLabel}>Perfil:</Text>
-              <Text style={styles.userInfoValue}>{abilities.join(', ')}</Text>
+              <Text style={styles.userInfoValue}>{perfil.nombre}</Text>
             </>
           )}
         </View>
@@ -73,15 +74,21 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
         <View style={styles.menuContainer}>
           <Text style={styles.menuTitle}>Menú Principal</Text>
 
-          {menu.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={item.accion}
-              style={styles.menuItem}
-            >
-              <Text style={styles.menuItemText}>{item.titulo}</Text>
-            </TouchableOpacity>
-          ))}
+          {menu.length === 0 ? (
+            <Text style={styles.menuEmptyText}>
+              El perfil activo no tiene modulos habilitados.
+            </Text>
+          ) : (
+            menu.map((item) => (
+              <TouchableOpacity
+                key={item.permiso}
+                onPress={item.accion}
+                style={styles.menuItem}
+              >
+                <Text style={styles.menuItemText}>{item.titulo}</Text>
+              </TouchableOpacity>
+            ))
+          )}
         </View>
       </View>
     </View>
@@ -157,5 +164,9 @@ const styles = StyleSheet.create({
   menuItemText: {
     fontSize: 16,
     color: '#333',
+  },
+  menuEmptyText: {
+    fontSize: 15,
+    color: '#666',
   },
 });

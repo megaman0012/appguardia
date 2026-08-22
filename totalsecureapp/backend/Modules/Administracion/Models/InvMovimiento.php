@@ -2,11 +2,16 @@
 
 namespace Modules\Administracion\Models;
 
+use App\Traits\BelongsToInstitution;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Acceso\Models\users;
 
 class InvMovimiento extends Model
 {
+    use BelongsToInstitution;
+
+    protected string $institutionColumn = 'mov_ins_code';
+
     protected $table = 'inv_movimientos';
     protected $primaryKey = 'mov_id';
 

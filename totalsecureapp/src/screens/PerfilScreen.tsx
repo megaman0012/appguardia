@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'rea
 import { useAuth } from '../context/AuthContext';
 
 export const PerfilScreen = ({ navigation }: { navigation: any }) => {
-  const { user, institucion, logout } = useAuth();
+  const { user, institucion, perfil, permisos, logout } = useAuth();
 
   const cerrarSesion = async () => {
     Alert.alert('Cerrar sesión', '¿Desea cerrar la sesión?', [
@@ -21,7 +21,7 @@ export const PerfilScreen = ({ navigation }: { navigation: any }) => {
   const nombres = user?.nombres || user?.usu_nombres || 'Usuario';
   const email = user?.email || user?.usu_email || '';
   const acc = user?.acc || user?.usu_acc || '';
-  const abilities = (user?.abilities || []) as string[];
+  const perfilesUsuario = (user?.perfiles || []) as string[];
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -50,11 +50,20 @@ export const PerfilScreen = ({ navigation }: { navigation: any }) => {
           </>
         ) : null}
 
-        {abilities.length > 0 ? (
+        {perfil ? (
           <>
-            <Text style={styles.label}>Perfiles</Text>
+            <Text style={styles.label}>Perfil activo</Text>
+            <Text style={styles.value}>
+              {perfil.nombre} ({permisos.length} permisos)
+            </Text>
+          </>
+        ) : null}
+
+        {perfilesUsuario.length > 0 ? (
+          <>
+            <Text style={styles.label}>Perfiles asignados</Text>
             <View style={styles.badges}>
-              {abilities.map((a) => (
+              {perfilesUsuario.map((a) => (
                 <View key={a} style={styles.badge}>
                   <Text style={styles.badgeText}>{a}</Text>
                 </View>
