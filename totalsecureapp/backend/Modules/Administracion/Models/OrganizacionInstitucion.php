@@ -4,10 +4,13 @@ namespace Modules\Administracion\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToInstitution;
 
 class OrganizacionInstitucion extends Model
 {
     use HasFactory;
+    use BelongsToInstitution;
+
     protected $table = 'organizacion_institucion';
     protected $primaryKey = 'ins_code';
     public $incrementing = true;

@@ -66,6 +66,30 @@ class PortalScopeService
     }
 
     /**
+     * Contexto validado de la consulta, o el motivo del rechazo.
+     *
+     * Es el unico constructor de PortalContext: quien tiene un contexto ya paso
+     * por la validacion de instituciones de resolver().
+     *
+     * @return array{0: ?PortalContext, 1: ?string}  [contexto, motivoDeRechazo]
+     */
+    public function contextoPara(Request $request, int $usuarioId): array
+    {
+        list($instituciones, $motivo) = $this->resolver($request, $usuarioId);
+
+        if ($motivo !== null) {
+            return [null, $motivo];
+        }
+
+        list($desde, $hasta) = $this->rango($request);
+
+        return [
+            new PortalContext($instituciones, $desde, $hasta, $this->porPagina($request)),
+            null,
+        ];
+    }
+
+    /**
      * Rango de fechas del reporte. Por defecto los ultimos 30 dias.
      *
      * @return array{0: string, 1: string}  [desde, hasta] en Y-m-d
