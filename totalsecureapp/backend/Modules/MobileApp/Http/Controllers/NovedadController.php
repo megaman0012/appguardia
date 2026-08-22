@@ -3,6 +3,7 @@
 namespace Modules\MobileApp\Http\Controllers;
 
 use App\generalTrait;
+use App\Services\OfflineSyncService;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,12 +15,22 @@ use Modules\Administracion\Models\UserHasInstitucion;
 class NovedadController extends Controller {
 
     use generalTrait;
+
+    protected OfflineSyncService $offlineSync;
+
+    public function __construct(OfflineSyncService $offlineSync)
+    {
+        $this->offlineSync = $offlineSync;
+    }
+
     protected array $createRules = [
         'rules' => [
             'ins_code' => 'required',
             'nv_observacion' => 'required',
             'nv_lat' => 'required',
             'nv_lng' => 'required',
+            'client_uuid' => 'nullable|uuid',
+            'ocurrido_en' => 'nullable|date',
         ],
         'messages' => [
             'ins_code.required' => 'Campo intitucion es obligatorio',
@@ -42,6 +53,15 @@ class NovedadController extends Controller {
             return $this->message_json('errors', 'Usuario no vinculado a institucion');
         }
 
+        $clientUuid = $request->input('client_uuid');
+
+        // Se corta antes de mover la foto a disco: un reintento no debe dejar
+        // archivos huerfanos ni volver a subir la imagen.
+        $yaSincronizada = $this->offlineSync->buscar(Novedad::class, 'nv_client_uuid', $clientUuid);
+        if ($yaSincronizada !== null) {
+            return $this->respuestaNovedad($yaSincronizada, true);
+        }
+
         try{
 
             $nv = new Novedad();
@@ -59,19 +79,45 @@ class NovedadController extends Controller {
             $nv->nv_ug_code = $tk->tokenable_gs;
             $nv->nv_ins_code = $request->ins_code;
             $nv->nv_observacion = $request->nv_observacion;
-            $nv->nv_fecha_hora = date('Y-m-d H:i:s');
+            $nv->nv_fecha_hora = $this->offlineSync->ocurridoEn($request->input('ocurrido_en'));
             $nv->nv_lat = $request->nv_lat;
             $nv->nv_lng = $request->nv_lng;
             $nv->nv_estado = 1;
+            $nv->nv_client_uuid = $clientUuid;
+            $nv->nv_sincronizado_en = $this->offlineSync->sincronizadoEn();
             $nv->nv_created_user = $us->id;
             $nv->nv_updated_user = $us->id;
-            $nv->save();
 
-            return response()->json([ 'result' => 'success', 'message' => 'Novedad Cargada Correctamente']);
-        }catch (Exception $e){
+            list($nv, $duplicada) = $this->offlineSync->registrar(
+                Novedad::class,
+                'nv_client_uuid',
+                $clientUuid,
+                function () use ($nv) {
+                    $nv->save();
+                    return $nv;
+                }
+            );
+
+            return $this->respuestaNovedad($nv, $duplicada);
+        }catch (\Exception $e){
             return $this->message_json('errors', $e->getMessage());
         }
 
+    }
+
+    /**
+     * Un duplicado responde igual que un alta nueva (200) para que la APK marque
+     * el registro como sincronizado sin mostrar error al guardia.
+     */
+    private function respuestaNovedad(Novedad $nv, bool $duplicada): JsonResponse
+    {
+        return response()->json([
+            'result'      => 'success',
+            'message'     => $duplicada ? 'Novedad ya sincronizada' : 'Novedad Cargada Correctamente',
+            'nv_id'       => $nv->nv_id,
+            'client_uuid' => $nv->nv_client_uuid,
+            'duplicado'   => $duplicada,
+        ]);
     }
 
     protected array $listByDateRules = [

@@ -30,6 +30,8 @@ class ronda_detalle extends Model
         'rd_updated_at',
         'rd_created_user',
         'rd_updated_user',
+        'rd_client_uuid',
+        'rd_sincronizado_en',
     ];
 
     public function getImagenUrlAttribute(){

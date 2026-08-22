@@ -3,6 +3,7 @@
 namespace Modules\MobileApp\Http\Controllers;
 
 use App\generalTrait;
+use App\Services\OfflineSyncService;
 use App\Services\PresenceValidationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,10 +17,12 @@ class BiometriaController extends Controller {
     use generalTrait;
 
     protected PresenceValidationService $presenceService;
+    protected OfflineSyncService $offlineSync;
 
-    public function __construct(PresenceValidationService $presenceService)
+    public function __construct(PresenceValidationService $presenceService, OfflineSyncService $offlineSync)
     {
         $this->presenceService = $presenceService;
+        $this->offlineSync = $offlineSync;
     }
 
     protected $biometrix = [
@@ -29,6 +32,8 @@ class BiometriaController extends Controller {
             'longitud' => 'required|numeric',
             'is_entrada' => 'required|boolean',
             'institucion' => 'required|integer',
+            'client_uuid' => 'nullable|uuid',
+            'ocurrido_en' => 'nullable|date',
         ],
         'messages' => [
             'file.required' => 'Archivo de imagen es obligatorio',
@@ -46,6 +51,16 @@ class BiometriaController extends Controller {
         $validator = Validator::make($request->all(), $this->biometrix['rules'], $this->biometrix['messages']);
         if ($validator->fails()) {
             return response()->json(['success' => false, 'errors' => $validator->errors()]);
+        }
+
+        $clientUuid = $request->input('client_uuid');
+
+        // Antes de validar ubicacion y subir la foto: si el marcaje ya llego, se
+        // responde con el existente. Un reintento no revalida GPS (el guardia ya
+        // no esta ahi) ni vuelve a escribir la imagen.
+        $yaSincronizada = $this->offlineSync->buscar(user_has_biometria::class, 'bio_client_uuid', $clientUuid);
+        if ($yaSincronizada !== null) {
+            return $this->respuestaBiometria($yaSincronizada, true, null);
         }
 
         $validarInst = $this->presenceService->validarUbicacion(
@@ -71,15 +86,39 @@ class BiometriaController extends Controller {
         $biox->bio_is_entrada = $request->is_entrada;
         $biox->bio_ins_code = $request->institucion;
         $biox->bio_state = true;
+        $biox->bio_client_uuid = $clientUuid;
+        $biox->bio_sincronizado_en = $this->offlineSync->sincronizadoEn();
         $biox->bio_created_user = $us->id;
         $biox->bio_updated_user = $us->id;
-        $biox->save();
+        $biox->bio_created_at = $this->offlineSync->ocurridoEn($request->input('ocurrido_en'));
 
+        list($biox, $duplicada) = $this->offlineSync->registrar(
+            user_has_biometria::class,
+            'bio_client_uuid',
+            $clientUuid,
+            function () use ($biox) {
+                $biox->save();
+                return $biox;
+            }
+        );
+
+        return $this->respuestaBiometria($biox, $duplicada, $validarInst['distancia_m']);
+
+    }
+
+    /**
+     * Un duplicado responde 200 igual que un alta nueva, para que la APK lo marque
+     * como sincronizado sin mostrar error al guardia.
+     */
+    private function respuestaBiometria(user_has_biometria $biox, bool $duplicada, $distancia): JsonResponse
+    {
         return response()->json([
-            'message' => 'Biometría cargada con éxito',
-            'distancia_m' => $validarInst['distancia_m'],
+            'message'     => $duplicada ? 'Biometría ya sincronizada' : 'Biometría cargada con éxito',
+            'bio_code'    => $biox->bio_code,
+            'client_uuid' => $biox->bio_client_uuid,
+            'duplicado'   => $duplicada,
+            'distancia_m' => $distancia,
         ]);
-
     }
 
 }

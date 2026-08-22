@@ -37,6 +37,8 @@ class Novedad extends Model
         'nv_updated_at',
         'nv_created_user',
         'nv_updated_user',
+        'nv_client_uuid',
+        'nv_sincronizado_en',
     ];
 
     const CREATED_AT = 'nv_created_at';
