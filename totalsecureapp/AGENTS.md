@@ -10,7 +10,8 @@
 
 ## Backend
 
-- **Importante:** el repositorio es 100% local. No hay `remote origin` configurado y NO debe agregarse uno sin autorización del usuario. No hacer fetch/push/pull.
+- **Git / remote:** el monorepo (`appguardia/`) tiene el remote `origin` = `git@github.com:megaman0012/appguardia.git`, y `main` sigue a `origin/main`. Commitear localmente cuando corresponda, pero **no hacer `push`/`pull`/`fetch` sin autorización explícita del usuario**, y no agregar ni cambiar remotes por iniciativa propia.
+- **Propiedad de archivos:** normalizada a `server-gea` (2026-08-21) con `sudo chown -R server-gea:server-gea` sobre todo el monorepo; git ya no necesita `safe.directory`. Si vuelve a aparecer «posesión dudosa detectada» es que algo corrió como `root` otra vez. Docker sí sigue requiriendo `sudo` (el usuario no está en el grupo `docker`), y `sudo` pide contraseña interactiva, así que **desde una sesión de agente no se puede levantar Docker**: usar el PHP local (8.3) contra Postgres en el puerto host `5434` (`DB_PORT=5434 php artisan ...`), o pedir al usuario que corra el comando en una terminal real.
 - **Ejecución con Docker (recomendado).** Todo el stack (nginx + PHP-FPM 8.3 + PostgreSQL 16) corre con Docker Compose desde `backend/`:
   - `docker compose up -d` — levanta todo. Backend en http://localhost:3031, Postgres en `127.0.0.1:5434` (host) / `db:5432` (red docker).
   - `docker compose exec backend php artisan migrate` — comandos de Laravel dentro del contenedor.
@@ -20,10 +21,20 @@
 - Autenticación API: Sanctum (bearer token). Las rutas de la app están en `backend/Modules/MobileApp/Routes/api.php` (`POST api/login`, `api/instituciones`, `api/rondas`, …). El prefijo real es `api/` (el `i/` del APK original era un alias del proxy).
 - Middleware CORS/seguridad personalizados (`App\Http\Middleware\HandleCors`, `SecurityHeaders`, `App\Services\CorsService`) se corrigieron para funcionar en PHP 8.3.
 - **BD migrada y sembrada.** `php artisan migrate` crea todo el esquema (incluye tablas de negocio de la app). `php artisan db:seed` crea:
-  - Usuario demo: cédula `1234567890` / contraseña `123456` (rol Vigilante, con gestión activa).
+  - Usuario demo: cédula `1234567890` (roles Vigilante **y** Supervisor, con gestión activa). **La contraseña ya no es `123456`**: el login devuelve «Clave Incorrecta» (verificado 2026-08-21), así que fue cambiada en algún momento. Para probar la API sin conocerla, generar un token con `DB_PORT=5434 php artisan tinker --execute='...createToken("probe")->plainTextToken'`.
   - Institución demo con 2 marcadores QR y un checklist de inventario con 2 productos.
   - Parámetro `access` (login) y roles `Supervisor`/`Vigilante`.
 - **Correcciones hechas a migraciones/modelos heredados:** tabla `user_has_gestions` (antes `users_gestions`, columnas `ug_finish`/auditoría añadidas), columnas `tokenable_gs`/`refresh_token`/`expires_at` en `personal_access_tokens`, migración de permisos ya no fuerza `mysql`, `config/auth.php` tiene provider `mobile_users` (el `sanctum` guard valida contra `Modules\MobileApp\Models\users`), y el modelo `users` ya no fuerza la contraseña a `123456` (solo la hashea al cambiarla).
+
+## RBAC (Fase 6)
+
+- Permisos granulares de la app móvil sembrados por la migración `2026_08_21_200001_seed_mobile_permissions` (`ps_codigo` 10-18). La migración **crea los roles `Supervisor`/`Vigilante` si no existen**, porque `DatabaseSeeder` corre después de las migraciones y en una BD nueva todavía no están; sin eso los permisos quedaban creados pero sin asignar.
+- Middleware `permission.api:<permiso>` (`App\Http\Middleware\CheckPermission`) en las rutas de `Modules/MobileApp/Routes/api.php`. Sin token → 401; con token sin el permiso → 403 con `required_permission`.
+- `POST api/seleccionar_perfil` devuelve los roles del usuario; `POST api/procesar_perfil` (`id`) valida que el rol le pertenezca y devuelve sus permisos. Ojo: devuelve **todos** los permisos del rol, incluidos los del panel web legacy (p. ej. `administracion/persona.index`).
+- `POST api/login` devuelve `abilities` (permisos granulares) y `perfiles` (nombres de rol). **`abilities` ya no son nombres de rol**, así que no usarlo para mostrar el perfil en la UI.
+- Frontend: la app guarda perfil y permisos en `AuthContext` (`perfil`, `permisos`, helper `can()`), y `HomeScreen` muestra cada módulo según su permiso de lectura. El flujo es Login → `ProfileSelection` (se salta solo si hay un único perfil) → Selección de institución → Home.
+- Trait `App\Traits\BelongsToInstitution` con scope `forInstitution()` en `ronda_cabecera`, `Alertas`, `Novedad`, `Acceso` e `InvMovimiento` (cada modelo declara su `$institutionColumn`).
+
 ## Interfaz Web (panel)
 
 El backend trae dos capas web sobre el mismo dominio `http://localhost:3031`:

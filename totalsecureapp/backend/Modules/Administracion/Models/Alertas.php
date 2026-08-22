@@ -4,12 +4,17 @@ namespace Modules\Administracion\Models;
 
 use Modules\Acceso\Models\users;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Traits\BelongsToInstitution;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Alertas extends Model
 {
+    use BelongsToInstitution;
+
+    protected string $institutionColumn = 'al_ins_code';
+
     use HasFactory;
 
     protected $table = 'alertas';

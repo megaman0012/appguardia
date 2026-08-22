@@ -5,6 +5,7 @@ namespace Modules\Administracion\Models;
 use Modules\Acceso\Models\users;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Traits\BelongsToInstitution;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Acceso extends Model {
+    use BelongsToInstitution;
+
+    protected string $institutionColumn = 'ac_ins_code';
+
 
     use HasFactory;
 

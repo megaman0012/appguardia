@@ -4,11 +4,16 @@ namespace Modules\Administracion\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Traits\BelongsToInstitution;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Acceso\Models\users;
 
 class Novedad extends Model
 {
+    use BelongsToInstitution;
+
+    protected string $institutionColumn = 'nv_ins_code';
+
     use HasFactory;
     protected $table = 'novedad';
 
