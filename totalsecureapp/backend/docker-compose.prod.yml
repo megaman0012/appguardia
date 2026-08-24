@@ -1,0 +1,41 @@
+# Override de PRODUCCION — no reemplaza docker-compose.yml.
+#
+# Local (sin cambios):   docker compose up -d
+# Produccion:            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Que cambia respecto al local:
+#   - nginx expone 80 y 443 en vez de 3031, y usa prod.conf (los dos vhosts)
+#   - se monta el volumen de certificados de Let's Encrypt
+#   - se agrega el servicio certbot para renovar
+#
+# Postgres sigue publicado solo en 127.0.0.1: la base no debe quedar expuesta al
+# dominio. Si hace falta acceso remoto, tunel SSH, no abrir el puerto.
+
+services:
+  nginx:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx/prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - certbot-etc:/etc/letsencrypt:ro
+      - certbot-web:/var/www/certbot
+
+  # Renovacion automatica. La emision inicial se hace a mano (ver
+  # DESPLIEGUE-DOMINIO.md seccion 3): certbot necesita que el dominio ya
+  # resuelva a este servidor antes de poder validar.
+  certbot:
+    image: certbot/certbot
+    container_name: ts_certbot
+    restart: unless-stopped
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-web:/var/www/certbot
+    # Reintenta cada 12 h; Let's Encrypt renueva recien a los 60 dias, asi que
+    # la mayoria de las corridas no hacen nada.
+    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done'
+
+volumes:
+  certbot-etc:
+  certbot-web:

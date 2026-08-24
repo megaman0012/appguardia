@@ -1,0 +1,38 @@
+{
+  "_comentario": [
+    "PLANTILLA de referencia. NO es un archivo funcional.",
+    "El real se descarga de Firebase Console y va en la raiz de totalsecureapp/",
+    "(o en android/app/). Esta en .gitignore: contiene api_key y project_id",
+    "reales y no debe versionarse.",
+    "El package name DEBE coincidir con expo.android.package de app.json:",
+    "com.dt360.coreapp",
+    "Pasos completos en DESPLIEGUE-DOMINIO.md, seccion 5."
+  ],
+  "project_info": {
+    "project_number": "REEMPLAZAR_SENDER_ID",
+    "project_id": "REEMPLAZAR_PROJECT_ID",
+    "storage_bucket": "REEMPLAZAR_PROJECT_ID.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "REEMPLAZAR_APP_ID",
+        "android_client_info": {
+          "package_name": "com.dt360.coreapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "REEMPLAZAR_API_KEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
