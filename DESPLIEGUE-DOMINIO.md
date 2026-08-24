@@ -9,30 +9,14 @@ producción son adicionales y hay que invocarlos explícitamente.
 
 ---
 
-## 1. ¿Hay que redirigir el dominio al servidor? Sí, pero primero hay un problema
+## 1. DNS
 
-Sí: el dominio necesita registros DNS apuntando a la **IP pública** del servidor.
-Pero hoy este servidor **no tiene IP pública**:
+El servidor de destino tiene IP pública, así que el dominio se apunta directo a
+esa IP. **Nota:** la máquina de desarrollo donde se construyó esto es
+`192.168.100.212`, una dirección privada; el despliegue es sobre el servidor
+público, no sobre ésta.
 
-```
-192.168.100.212/24   -> PRIVADA (detrás de NAT)
-```
-
-Es una dirección de red local. Un registro DNS no puede apuntar ahí: nadie desde
-internet puede alcanzarla. Antes del DNS hay que resolver **cómo se expone el
-servidor**, y hay tres caminos:
-
-| Camino | Qué implica | Cuándo conviene |
-|---|---|---|
-| **A. IP pública fija del ISP** + port forwarding 80/443 en el router | Pedir IP fija al proveedor de internet y abrir dos puertos hacia `192.168.100.212` | El servidor se queda en las instalaciones |
-| **B. Mover el backend a un VPS** | Contratar un VPS, desplegar ahí con el compose de producción | Es lo habitual para producción: IP pública, sin depender del router ni del corte de luz de la oficina |
-| **C. Túnel** (Cloudflare Tunnel, Tailscale Funnel) | Sin abrir puertos ni IP fija; el túnel publica el servicio | Solución rápida o piloto; agrega una dependencia externa |
-
-**Recomendación:** el camino B. El sistema va a recibir marcajes de guardias en
-turnos nocturnos; un servidor detrás del router de la oficina depende de que no
-se corte la luz ni cambie la IP del ISP. Si es un piloto corto, C es aceptable.
-
-### Registros DNS (una vez que haya IP pública)
+### Registros DNS
 
 | Tipo | Nombre | Valor | TTL |
 |---|---|---|---|
@@ -57,10 +41,10 @@ validación consiste en que Let's Encrypt alcance el servidor por el dominio.
 El orden importa y **no** es intercambiable:
 
 ```
-1. Exponer el servidor (camino A, B o C)
+1. Servidor listo: docker instalado y repositorio clonado   (seccion 2.1)
 2. DNS apuntando y verificado con dig
 3. Certbot: emitir certificados          <- necesita 1 y 2 listos
-4. Backend: .env de producción
+4. Backend: .env de producción, migraciones, primer usuario  (seccion 4)
 5. Levantar con el compose de producción
 6. App: apiHost -> dominio, y recompilar el APK   <- último
 ```
@@ -70,6 +54,27 @@ funcionar contra la IP local. Mientras 1-5 no estén arriba, el APK actual
 (`192.168.100.212:3031`) sigue siendo el que funciona.
 
 ---
+
+### 2.1 Arranque en el servidor desde cero
+
+El proyecto está en GitHub, así que el despliegue es un clone. En el servidor:
+
+```bash
+# Requisitos
+sudo apt update && sudo apt install -y docker.io docker-compose-plugin git
+sudo usermod -aG docker $USER      # cerrar y reabrir sesión para que aplique
+
+# Codigo
+git clone git@github.com:megaman0012/appguardia.git
+cd appguardia/totalsecureapp/backend
+```
+
+- [ ] `docker compose version` responde (el plugin, no el `docker-compose` viejo)
+- [ ] El clone trajo `docker-compose.prod.yml` y `docker/nginx/prod.conf`
+
+**Lo que el clone NO trae, a propósito:** el `.env` (está en `.gitignore`), los
+certificados SSL, `google-services.json` y la base de datos. Todo eso se crea en
+el servidor.
 
 ## 3. Certbot — emisión inicial
 
@@ -101,11 +106,50 @@ Los tres van juntos porque `prod.conf` usa un solo certificado para ambos vhosts
 ```bash
 cd totalsecureapp/backend
 cp .env.production.example .env        # ¡en el servidor real, no en el local!
-# completar: APP_KEY, DB_PASSWORD, MAIL_*, ACCESS_PARAM_VALUE
-docker compose run --rm backend php artisan key:generate
+# completar: DB_PASSWORD, MAIL_*, ACCESS_PARAM_VALUE
 
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker compose exec backend php artisan key:generate
 ```
+
+### 4.1 Base de datos y primer usuario
+
+```bash
+# Esquema
+docker compose exec backend php artisan migrate --force
+
+# Datos minimos: parametro 'access', permisos del panel y catalogos.
+# NO usar db:seed en produccion: crea el usuario demo 1234567890, cuya
+# credencial esta publicada en el repositorio, mas una institucion de mentira
+# con marcadores QR y checklist de inventario.
+docker compose exec backend php artisan db:seed --class=ProductionSeeder --force
+```
+
+Después de esto la base tiene roles y permisos pero **ningún usuario**: nadie
+puede entrar todavía. El primero se crea con el comando dedicado:
+
+```bash
+docker compose exec backend php artisan usuario:crear
+```
+
+Pregunta cédula, nombres, apellidos, correo, rol e instituciones, y pide la
+contraseña **sin mostrarla en pantalla** (no queda en el historial del shell).
+Arma las tres piezas que el login exige y que es fácil crear a medias:
+
+1. la fila en `users` con `usu_state = 1`
+2. el rol en `user_has_roles`
+3. una gestión **abierta** en `user_has_gestions`; sin ella el login responde que
+   no hay gestión activa, aunque el usuario y la contraseña sean correctos
+
+Antes de crear el usuario hay que tener al menos una institución, porque el
+vínculo también se hace aquí. Sin instituciones vinculadas la app móvil no puede
+registrar nada y la API del portal responde 403. Las instituciones se crean desde
+el panel (`/admin` → Instituciones) o directamente en la base.
+
+- [ ] `php artisan migrate:status` no deja ninguna en `No`
+- [ ] `select count(*) from users` devuelve solo los usuarios reales creados
+- [ ] **No existe** el usuario `1234567890` en producción
+- [ ] El usuario creado puede entrar en `/acceso/login` y en `POST /api/login`
 
 Lo que cambia respecto al local, y por qué importa:
 
@@ -254,8 +298,10 @@ keystore, que sirve para instalar por fuera pero **no** para publicar.
 | nginx de producción con los dos vhosts y redirección | ✅ hecho |
 | Compose de producción con 443 y renovación de certbot | ✅ hecho |
 | `google-services.json` fuera del versionado + plantilla | ✅ hecho |
-| Exponer el servidor (IP pública, VPS o túnel) | ⏳ decisión + tu proveedor |
-| Registros DNS | ⏳ tu panel de dominio |
+| `ProductionSeeder`: datos mínimos sin el usuario ni la institución demo | ✅ hecho |
+| `php artisan usuario:crear` para el primer usuario real | ✅ hecho |
+| Registros DNS a la IP pública del servidor | ⏳ tu panel de dominio |
+| Docker y clone en el servidor | ⏳ tu acceso al servidor |
 | Emisión inicial de certificados | ⏳ requiere DNS resolviendo + sudo |
 | Proyecto Firebase y credenciales FCM en Expo | ⏳ tu cuenta |
 | Rotar la credencial demo expuesta en el repo | ⏳ ver AGENTS.md |
