@@ -1,11 +1,32 @@
 // Constantes de la aplicacion
 import Constants from 'expo-constants';
 
-const API_PORT = 3031;
+// Puerto del backend en desarrollo (nginx del docker-compose local).
+// En produccion con HTTPS no se usa: el 443 es implicito.
+const API_PORT_DEFECTO = 3031;
+
+interface ExtraConfig {
+  /** Override completo, p. ej. "https://api.totalsecureapp.com". Gana sobre todo lo demas. */
+  apiUrl?: string;
+  /** Host o dominio del backend. */
+  apiHost?: string;
+  /** 'http' (defecto) o 'https'. */
+  apiScheme?: string;
+  /** Puerto explicito. Con https se omite salvo que se indique. */
+  apiPort?: number | string | null;
+}
+
+function getExtra(): ExtraConfig {
+  try {
+    return (Constants.expoConfig?.extra ?? {}) as ExtraConfig;
+  } catch (e) {
+    return {};
+  }
+}
 
 function getHost(): string {
   try {
-    const extraHost = Constants.expoConfig?.extra?.apiHost as string | undefined;
+    const extraHost = getExtra().apiHost;
     if (extraHost) {
       return extraHost;
     }
@@ -19,7 +40,43 @@ function getHost(): string {
   return 'localhost';
 }
 
-export const API_URL = `http://${getHost()}:${API_PORT}/api`;
+/**
+ * URL base de la API.
+ *
+ * Sin configuracion extra se comporta igual que siempre:
+ * http://<apiHost o hostUri>:3031/api
+ *
+ * Para produccion con dominio basta editar `expo.extra` en app.json, sin tocar
+ * este archivo:
+ *   { "apiUrl": "https://api.totalsecureapp.com" }
+ * o bien:
+ *   { "apiHost": "api.totalsecureapp.com", "apiScheme": "https" }
+ *
+ * Con apiScheme 'https' el puerto se omite (443 implicito) salvo que se pase
+ * apiPort explicitamente.
+ */
+function construirApiUrl(): string {
+  const extra = getExtra();
+
+  if (extra.apiUrl) {
+    // Se normaliza para tolerar que venga con o sin '/api' y con o sin barra final.
+    const base = String(extra.apiUrl).replace(/\/+$/, '');
+    return base.endsWith('/api') ? base : `${base}/api`;
+  }
+
+  const scheme = extra.apiScheme === 'https' ? 'https' : 'http';
+
+  let puerto = '';
+  if (extra.apiPort !== undefined && extra.apiPort !== null && extra.apiPort !== '') {
+    puerto = `:${extra.apiPort}`;
+  } else if (scheme === 'http') {
+    puerto = `:${API_PORT_DEFECTO}`;
+  }
+
+  return `${scheme}://${getHost()}${puerto}/api`;
+}
+
+export const API_URL = construirApiUrl();
 
 export const API_ENDPOINTS = {
   AUTH: {

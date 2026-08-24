@@ -15,6 +15,16 @@ expo-env.d.ts
 *.mobileprovision
 *.orig.*
 
+# Firebase: contiene api_key y project_id reales del proyecto. NUNCA versionar.
+# La plantilla de referencia es google-services.json.example.
+google-services.json
+android/app/google-services.json
+GoogleService-Info.plist
+
+# Keystore de release propio (el debug keystore sí se versiona)
+*.keystore
+!debug.keystore
+
 # Misc
 .DS_Store
 npm-debug.*
@@ -22,3 +32,4 @@ npm-debug.*
 .env
 .env.*
 !.env.example
+!.env.production.example
