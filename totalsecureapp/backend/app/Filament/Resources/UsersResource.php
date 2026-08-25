@@ -71,6 +71,20 @@ class UsersResource extends Resource
                     ->label('Estado')
                     ->required()
                     ->default(true),
+
+                TextInput::make('usu_whatsapp')
+                    ->label('WhatsApp')
+                    ->tel()
+                    ->maxLength(20)
+                    // Un número mal formado no da error: el gateway lo acepta y
+                    // el mensaje nunca llega. Por eso se pide con código de país.
+                    ->helperText('Con código de país: 593987654321. También acepta 0987654321.'),
+
+                Toggle::make('usu_acepta_whatsapp')
+                    ->label('Autoriza avisos por WhatsApp')
+                    // Aparte de "quiero turnos extra": aceptar trabajar de más no
+                    // es aceptar que le escriban al teléfono personal.
+                    ->helperText('Debe pedírsele expresamente. Sin esto no se le escribe.'),
             ]);
     }
 
@@ -99,6 +113,15 @@ class UsersResource extends Resource
                     ->sortable()
                     ->toggleable()
                     ->searchable(false),
+                TextColumn::make('usu_whatsapp')
+                    ->label('WhatsApp')
+                    ->toggleable()
+                    ->searchable()
+                    // Sin número no hay a dónde mandarle el aviso, y eso hay que
+                    // poder verlo de un vistazo al armar la lista de cobertura.
+                    ->formatStateUsing(fn ($state, $record) => $state
+                        ? ($record->usu_acepta_whatsapp ? $state : $state . ' (sin autorizar)')
+                        : '—'),
             ])
             ->filters([])
             ->actions([

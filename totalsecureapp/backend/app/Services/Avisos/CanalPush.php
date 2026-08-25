@@ -23,10 +23,20 @@ class CanalPush implements CanalDeAviso
         return 'push';
     }
 
-    public function enviar(int $usuarioId, string $titulo, string $cuerpo, array $datos = []): bool
+    public function enviar(int $usuarioId, string $titulo, string $cuerpo, array $datos = []): ResultadoDeAviso
     {
         $r = $this->expo->sendToUser($usuarioId, $titulo, $cuerpo, $datos);
 
-        return (bool) ($r['success'] ?? false);
+        if ($r['success'] ?? false) {
+            return ResultadoDeAviso::enviado();
+        }
+
+        $motivo = $r['message'] ?? 'Sin detalle';
+
+        // Un guardia que nunca abrió la app no tiene token: no es una falla del
+        // sistema, es que no hay a dónde mandarlo.
+        return str_contains($motivo, 'tokens')
+            ? ResultadoDeAviso::omitido('El usuario no tiene la app registrada')
+            : ResultadoDeAviso::fallido($motivo);
     }
 }

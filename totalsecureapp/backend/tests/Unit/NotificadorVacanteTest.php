@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Services\Avisos\CanalDeAviso;
+use App\Services\Avisos\ResultadoDeAviso;
 use App\Services\NotificadorVacante;
 use App\Services\VacanteService;
 use Carbon\Carbon;
@@ -31,7 +32,7 @@ class CanalDePrueba implements CanalDeAviso
         return 'prueba';
     }
 
-    public function enviar(int $usuarioId, string $titulo, string $cuerpo, array $datos = []): bool
+    public function enviar(int $usuarioId, string $titulo, string $cuerpo, array $datos = []): ResultadoDeAviso
     {
         if (self::$falla) {
             throw new \RuntimeException('Canal caído');
@@ -43,7 +44,7 @@ class CanalDePrueba implements CanalDeAviso
             'tipo'    => $datos['tipo'] ?? '',
         ];
 
-        return true;
+        return ResultadoDeAviso::enviado();
     }
 }
 
@@ -242,6 +243,38 @@ class NotificadorVacanteTest extends TestCase
             $this->avisadosDe('cobertura_asignada_a_otro'),
             'Quedarse esperando una respuesta que no llega es peor que un "ya está cubierto"'
         );
+    }
+
+    // ── Queda constancia de a quién se le avisó ──
+
+    public function test_cada_intento_queda_registrado(): void
+    {
+        $vacante = app(VacanteService::class)->abrir($this->vacante(), $this->supervisor);
+
+        $registro = \Modules\Administracion\Models\AvisoEnvio::where('ae_usu_id', $this->guardiaDelLocal)
+            ->where('ae_tipo', 'vacante_abierta')
+            ->first();
+
+        $this->assertNotNull($registro);
+        $this->assertSame('prueba', $registro->ae_canal);
+        $this->assertSame(\Modules\Administracion\Models\AvisoEnvio::ENVIADO, $registro->ae_resultado);
+        $this->assertSame($vacante->tv_id, (int) $registro->ae_tv_id);
+    }
+
+    public function test_el_aviso_que_no_salio_tambien_queda_registrado(): void
+    {
+        // Es el registro más importante de todos: un aviso que falló en silencio
+        // es indistinguible de uno que llegó, y la diferencia se descubre cuando
+        // el puesto amanece vacío.
+        CanalDePrueba::$falla = true;
+
+        app(VacanteService::class)->abrir($this->vacante(), $this->supervisor);
+
+        $registro = \Modules\Administracion\Models\AvisoEnvio::where('ae_usu_id', $this->guardiaDelLocal)->first();
+
+        $this->assertNotNull($registro);
+        $this->assertSame(\Modules\Administracion\Models\AvisoEnvio::FALLIDO, $registro->ae_resultado);
+        $this->assertStringContainsString('Canal caído', $registro->ae_detalle);
     }
 
     // ── El aviso nunca manda sobre la operación ──

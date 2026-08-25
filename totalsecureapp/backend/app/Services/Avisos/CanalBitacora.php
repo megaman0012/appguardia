@@ -18,7 +18,7 @@ class CanalBitacora implements CanalDeAviso
         return 'bitacora';
     }
 
-    public function enviar(int $usuarioId, string $titulo, string $cuerpo, array $datos = []): bool
+    public function enviar(int $usuarioId, string $titulo, string $cuerpo, array $datos = []): ResultadoDeAviso
     {
         Log::channel(config('avisos.canal_log', 'stack'))->info('[aviso] ' . $titulo, [
             'usuario' => $usuarioId,
@@ -26,6 +26,6 @@ class CanalBitacora implements CanalDeAviso
             'datos'   => $datos,
         ]);
 
-        return true;
+        return ResultadoDeAviso::enviado();
     }
 }

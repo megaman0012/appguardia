@@ -20,7 +20,8 @@ class users extends Authenticatable implements FilamentUser, HasName{
     use HasRoles;
 
     protected $fillable = [
-        'id', 'usu_cedula', 'usu_password', 'usu_tipdoc', 'usu_nmbcom', 'usu_ape1', 'usu_ape2', 'usu_nmb1', 'usu_nmb2', 'usu_email', 'usu_state'
+        'id', 'usu_cedula', 'usu_password', 'usu_tipdoc', 'usu_nmbcom', 'usu_ape1', 'usu_ape2', 'usu_nmb1', 'usu_nmb2', 'usu_email', 'usu_state',
+        'usu_whatsapp', 'usu_acepta_whatsapp', 'usu_acepta_extras'
     ];
 
     protected $hidden = [

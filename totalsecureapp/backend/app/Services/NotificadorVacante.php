@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Services\Avisos\CanalDeAviso;
+use App\Services\Avisos\ResultadoDeAviso;
+use Modules\Administracion\Models\AvisoEnvio;
 use Illuminate\Support\Facades\DB;
 use Modules\Administracion\Models\TurnoPostulacion;
 use Modules\Administracion\Models\TurnoVacante;
@@ -161,6 +163,39 @@ class NotificadorVacante
     }
 
     /**
+     * Deja constancia del intento, haya salido o no.
+     *
+     * Lo que no salió es justamente lo que hay que poder ver: cuando un puesto
+     * amanece vacío, la pregunta es si el guardia se enteró.
+     */
+    private function registrar(
+        int $usuarioId,
+        CanalDeAviso $canal,
+        ResultadoDeAviso $resultado,
+        string $titulo,
+        string $cuerpo,
+        TurnoVacante $vacante,
+        string $tipo
+    ): void {
+        try {
+            AvisoEnvio::create([
+                'ae_usu_id'    => $usuarioId,
+                'ae_canal'     => $canal->nombre(),
+                'ae_tipo'      => $tipo,
+                'ae_titulo'    => $titulo,
+                'ae_cuerpo'    => $cuerpo,
+                'ae_destino'   => $resultado->destino,
+                'ae_resultado' => $resultado->resultado,
+                'ae_detalle'   => $resultado->detalle,
+                'ae_tv_id'     => $vacante->tv_id,
+            ]);
+        } catch (\Throwable $e) {
+            // Ni siquiera el registro puede tumbar la operación.
+            report($e);
+        }
+    }
+
+    /**
      * @param int[] $usuarios
      * @return int cuántos avisos salieron por al menos un canal
      */
@@ -180,11 +215,16 @@ class NotificadorVacante
 
             foreach ($this->canales as $canal) {
                 try {
-                    $llego = $canal->enviar((int) $usuarioId, $titulo, $cuerpo, $datos) || $llego;
+                    $resultado = $canal->enviar((int) $usuarioId, $titulo, $cuerpo, $datos);
                 } catch (\Throwable $e) {
                     // Un canal caído no puede tumbar al resto ni a la operación.
                     report($e);
+                    $resultado = ResultadoDeAviso::fallido($e->getMessage());
                 }
+
+                $this->registrar((int) $usuarioId, $canal, $resultado, $titulo, $cuerpo, $vacante, $tipo);
+
+                $llego = $resultado->ok() || $llego;
             }
 
             $enviados += $llego ? 1 : 0;
