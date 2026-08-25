@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources;
 
+use App\Support\PerfilPanel;
+
 use App\Filament\Resources\OrganizacionSedeResource\Pages;
 use App\Filament\Resources\OrganizacionSedeResource\RelationManagers;
 use Modules\Administracion\Models\OrganizacionSede;
@@ -129,7 +131,19 @@ class OrganizacionSedeResource extends Resource {
     }
 
     protected static function shouldRegisterNavigation(): bool {
-        return in_array( Session::get('usuPF'), ['Administrador', 'Administrador General'] );
+        return PerfilPanel::puedeConfigurarSistema();
+    }
+
+    /**
+     * Bloquea la RUTA, no solo el menu.
+     *
+     * shouldRegisterNavigation() solo oculta el item del menu lateral: quien
+     * escribiera la URL a mano entraba igual. Filament aborta con 403 cuando
+     * canViewAny() es false (Pages\Page::authorizeResourceAccess).
+     */
+    public static function canViewAny(): bool
+    {
+        return PerfilPanel::puedeConfigurarSistema();
     }
 
 }

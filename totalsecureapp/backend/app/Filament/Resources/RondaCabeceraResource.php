@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources;
 
+use App\Support\PerfilPanel;
+
 use App\Filament\Resources\RondaCabeceraResource\Pages;
 use App\Filament\Resources\RondaCabeceraResource\RelationManagers;
 use Filament\Forms\Components\DatePicker;
@@ -154,7 +156,7 @@ class RondaCabeceraResource extends Resource
 
     public static function getEloquentQuery(): Builder {
         $query = parent::getEloquentQuery()->with(self::RELACIONES_TABLA);
-        if(in_array( Session::get('usuPF'), ['Supervisor'] )){
+        if(PerfilPanel::alcanceEsPorInstitucion()){
             $institucionesCodes = UserHasInstitucion::where('ui_usu_id', Session::get('usuID'))
                 ->where('ui_state', 1)
                 ->pluck('ui_ins_code');

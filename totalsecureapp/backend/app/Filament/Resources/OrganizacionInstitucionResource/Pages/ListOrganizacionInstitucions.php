@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\OrganizacionInstitucionResource\Pages;
 
+use App\Support\PerfilPanel;
+
 use App\Filament\Resources\OrganizacionInstitucionResource;
 use Filament\Pages\Actions;
 use Filament\Resources\Pages\ListRecords;
@@ -12,7 +14,7 @@ class ListOrganizacionInstitucions extends ListRecords {
 
     protected function getActions(): array {
         return [ Actions\CreateAction::make()->label('Nueva Institucion')
-            ->visible(fn () => in_array( Session::get('usuPF'), ['Administrador', 'Administrador General'] )), ];
+            ->visible(fn () => PerfilPanel::puedeAdministrarLocales()), ];
     }
 
     protected function getTitle(): string {
