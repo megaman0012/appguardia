@@ -13,6 +13,9 @@
 
 services:
   nginx:
+    # Fijada: 'http2 on;' de prod.conf requiere nginx >= 1.25.1, y una imagen
+    # 'alpine' sin version podria resolver a una cacheada mas vieja.
+    image: nginx:1.27-alpine
     ports:
       - "80:80"
       - "443:443"
