@@ -4,12 +4,15 @@ namespace Modules\MobileApp\Http\Controllers;
 
 use App\generalTrait;
 use App\Services\OfflineSyncService;
+use App\Services\TurnoService;
+use Carbon\Carbon;
 use App\Services\PresenceValidationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Routing\Controller;
 
+use Modules\Administracion\Models\Turno;
 use Modules\Administracion\Models\user_has_biometria;
 
 class BiometriaController extends Controller {
@@ -18,11 +21,16 @@ class BiometriaController extends Controller {
 
     protected PresenceValidationService $presenceService;
     protected OfflineSyncService $offlineSync;
+    protected TurnoService $turnoService;
 
-    public function __construct(PresenceValidationService $presenceService, OfflineSyncService $offlineSync)
-    {
+    public function __construct(
+        PresenceValidationService $presenceService,
+        OfflineSyncService $offlineSync,
+        TurnoService $turnoService
+    ) {
         $this->presenceService = $presenceService;
         $this->offlineSync = $offlineSync;
+        $this->turnoService = $turnoService;
     }
 
     protected $biometrix = [
@@ -102,22 +110,83 @@ class BiometriaController extends Controller {
             }
         );
 
-        return $this->respuestaBiometria($biox, $duplicada, $validarInst['distancia_m']);
+        // El marcaje se vincula al turno programado aqui mismo. Antes exigia una
+        // llamada aparte a turnos-vincular-marcaje que la app nunca hacia, asi
+        // que tu_marcada_entrada quedaba en null: el cumplimiento marcaba 0% y el
+        // cierre automatico declaraba ausentes a guardias que si trabajaron.
+        $turno = $duplicada ? null : $this->vincularConTurno($biox, $request, $us->id);
 
+        return $this->respuestaBiometria($biox, $duplicada, $validarInst['distancia_m'], $turno);
+
+    }
+
+    /**
+     * Enlaza el marcaje con el turno del dia, si lo hay.
+     *
+     * Nunca hace fallar el marcaje: si no hay turno (la institucion no los usa)
+     * o algo sale mal, la biometria ya quedo guardada y eso es lo que no se
+     * puede perder.
+     */
+    private function vincularConTurno(user_has_biometria $biox, Request $request, int $usuarioId): ?Turno
+    {
+        try {
+            // La hora del EVENTO, no la de llegada al servidor: con un marcaje
+            // sincronizado horas despues, usar "ahora" inventaria una tardanza.
+            $momento = Carbon::parse($this->offlineSync->ocurridoEn($request->input('ocurrido_en')));
+            $esEntrada = (bool) $request->is_entrada;
+
+            $turno = $this->turnoService->buscarTurnoParaMarcaje(
+                $usuarioId,
+                (int) $request->institucion,
+                $momento,
+                $esEntrada
+            );
+
+            if (!$turno) {
+                return null;
+            }
+
+            $turno = $esEntrada
+                ? $this->turnoService->vincularEntrada($turno, $biox->bio_code, $momento)
+                : $this->turnoService->vincularSalida($turno, $biox->bio_code, $momento);
+
+            // Enlace en el otro sentido, para poder ir del marcaje a su turno.
+            $biox->bio_tu_code = $turno->tu_id;
+            $biox->save();
+
+            return $turno;
+        } catch (\Throwable $e) {
+            report($e);
+            return null;
+        }
     }
 
     /**
      * Un duplicado responde 200 igual que un alta nueva, para que la APK lo marque
      * como sincronizado sin mostrar error al guardia.
      */
-    private function respuestaBiometria(user_has_biometria $biox, bool $duplicada, $distancia): JsonResponse
-    {
+    private function respuestaBiometria(
+        user_has_biometria $biox,
+        bool $duplicada,
+        $distancia,
+        ?Turno $turno = null
+    ): JsonResponse {
         return response()->json([
             'message'     => $duplicada ? 'Biometría ya sincronizada' : 'Biometría cargada con éxito',
             'bio_code'    => $biox->bio_code,
             'client_uuid' => $biox->bio_client_uuid,
             'duplicado'   => $duplicada,
             'distancia_m' => $distancia,
+            // El guardia ve en el acto si su marcaje quedo enlazado al turno y
+            // con cuanta tardanza, en vez de enterarse despues por un reporte.
+            'turno'       => $turno ? [
+                'tu_id'            => $turno->tu_id,
+                'puesto'           => optional($turno->puesto)->pu_nombre,
+                'hora_prevista'    => $turno->tu_hora_inicio_prevista,
+                'estado'           => $turno->tu_estado,
+                'minutos_tardanza' => $turno->tu_minutos_tardanza,
+                'minutos_extras'   => $turno->tu_minutos_extras,
+            ] : null,
         ]);
     }
 

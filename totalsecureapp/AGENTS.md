@@ -104,7 +104,10 @@ Cinco roles. **No escribir listas de perfiles a mano**: usar `App\Support\Perfil
 - `turno.tu_puesto_id` es **nullable**: no todos los locales dividen el trabajo en puestos. La FK va con `restrict` para que reorganizar puestos no borre el historial de turnos cumplidos.
 - **Ojo con `tu_estado` vs `tu_state`**: `tu_estado` es varchar (`programado`, `en_curso`, `completado`, `ausente`, `inasistente`) y `tu_state` es el booleano de activo. Filtrar los activos con `where('tu_estado', true)` **no falla: devuelve 0 filas en silencio**. Fue el bug que dejaba al guardia sin ver su turno en la app.
 - `TurnoResource` existe desde 2026-08-24. Antes **nada creaba turnos** —`TurnoService` solo vincula marcajes y cierra el día— así que la tabla estaba vacía y el widget "Cumplimiento de turnos" mostraba siempre cero.
-- **El marcaje NO se vincula solo al turno.** `BiometriaController` guarda el marcaje; enlazarlo al turno exige una llamada aparte a `POST api/turnos-vincular-marcaje`. **La app móvil no la hace**: los tres endpoints de turnos existen en el backend pero ninguna pantalla los consume y ni siquiera están en `constants.ts`. Mientras eso siga así, `tu_marcada_entrada` queda en null y el cumplimiento marca 0% aunque el guardia haya marcado.
+- **El marcaje se vincula al turno automáticamente** (`BiometriaController::vincularConTurno`, desde 2026-08-25). Antes exigía una llamada aparte a `turnos-vincular-marcaje` que la app nunca hacía, así que `tu_marcada_entrada` quedaba en null y el cumplimiento marcaba 0%. `turnos-vincular-marcaje` sigue existiendo para el caso manual.
+  - Elegir el turno usa `TurnoService::buscarTurnoParaMarcaje()`, no `buscarTurnoProgramado()`: con dos turnos en el día (mañana y noche) hay que tomar el de hora más cercana, no el primero.
+  - La tardanza se calcula contra **`ocurrido_en`** (la hora real del evento), no contra la de llegada al servidor: un marcaje sincronizado horas después inventaría una tardanza.
+  - La vinculación **nunca hace fallar el marcaje**: si no hay turno o algo revienta, la biometría ya quedó guardada, que es lo que no se puede perder.
 - Programar turnos y definir puestos es de quien administra locales (Administrador y Líder Operativo). El Supervisor los consulta: es su tablero, no su planificación.
 
 ## Interfaz Web (panel)
