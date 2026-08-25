@@ -190,8 +190,8 @@ class RbacTest extends TestCase
 
     /**
      * @test
-     * La BD de pruebas no corre el seeder web, asi que se siembra a mano un
-     * permiso de seccion legacy para comprobar que la API no lo devuelve.
+     * El permiso del panel web ('admin') no debe salir por la API movil: la app
+     * no tiene esa pantalla.
      */
     public function procesar_perfil_no_devuelve_permisos_del_panel_web()
     {
@@ -199,24 +199,10 @@ class RbacTest extends TestCase
         $token = $this->tokenPara($user);
         $roleId = DB::table('roles')->where('name', 'Vigilante')->value('id');
 
-        DB::table('permission_section')->updateOrInsert(
-            ['ps_codigo' => 1],
-            ['ps_nombre' => 'Administración', 'ps_posicion' => 1, 'created_at' => now(), 'updated_at' => now()]
-        );
-        DB::table('permissions')->updateOrInsert(
-            ['name' => 'administracion/persona.index'],
-            [
-                'ps_codigo'         => 1,
-                'pr_descripcion'    => 'Personas',
-                'pr_subdescripcion' => 'Listado de personas del panel web',
-                'pr_icono'          => 'users',
-                'pr_posicion'       => 99,
-                'pr_state'          => 1,
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]
-        );
-        $permisoWeb = DB::table('permissions')->where('name', 'administracion/persona.index')->value('id');
+        // 'admin' es el permiso del panel web (seccion 3), creado por la migracion.
+        // Se le asigna al Vigilante solo para esta prueba.
+        $permisoWeb = DB::table('permissions')->where('name', 'admin')->value('id');
+        $this->assertNotNull($permisoWeb, "El permiso 'admin' deberia existir por migracion");
         DB::table('role_has_permissions')->updateOrInsert(
             ['permission_id' => $permisoWeb, 'role_id' => $roleId],
             []
@@ -229,7 +215,7 @@ class RbacTest extends TestCase
         $permisos = $response->json('permisos');
 
         // El permiso web existe y esta asignado al rol, pero no sale por la API.
-        $this->assertNotContains('administracion/persona.index', $permisos);
+        $this->assertNotContains('admin', $permisos);
         $this->assertContains('acceso.registrar', $permisos);
         $this->assertCount(21, $permisos, 'Deberian seguir siendo los 21 permisos moviles');
     }
@@ -240,24 +226,7 @@ class RbacTest extends TestCase
         $roleId = DB::table('roles')->where('name', 'Vigilante')->value('id');
         $this->userConRol('Vigilante');
 
-        DB::table('permission_section')->updateOrInsert(
-            ['ps_codigo' => 2],
-            ['ps_nombre' => 'Formularios', 'ps_posicion' => 2, 'created_at' => now(), 'updated_at' => now()]
-        );
-        DB::table('permissions')->updateOrInsert(
-            ['name' => 'formularios/epicrisis.index'],
-            [
-                'ps_codigo'         => 2,
-                'pr_descripcion'    => 'Epicrisis',
-                'pr_subdescripcion' => 'Formulario de epicrisis del panel web',
-                'pr_icono'          => 'document',
-                'pr_posicion'       => 98,
-                'pr_state'          => 1,
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]
-        );
-        $permisoWeb = DB::table('permissions')->where('name', 'formularios/epicrisis.index')->value('id');
+        $permisoWeb = DB::table('permissions')->where('name', 'admin')->value('id');
         DB::table('role_has_permissions')->updateOrInsert(
             ['permission_id' => $permisoWeb, 'role_id' => $roleId],
             []
@@ -265,7 +234,7 @@ class RbacTest extends TestCase
 
         $abilities = app(\App\Services\PermisosApiService::class)->paraRoles([(int) $roleId]);
 
-        $this->assertNotContains('formularios/epicrisis.index', $abilities);
+        $this->assertNotContains('admin', $abilities);
         $this->assertContains('rondas.ver', $abilities);
     }
 
