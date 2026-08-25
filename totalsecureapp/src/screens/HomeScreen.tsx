@@ -28,6 +28,7 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
     { titulo: 'Alertas', permiso: 'alertas.ver', accion: () => navigation.navigate('Alertas') },
     { titulo: 'Inventario', permiso: 'inventario.ver', accion: () => navigation.navigate('Inventario') },
     { titulo: 'Biometría', permiso: 'biometria.marcar', accion: () => navigation.navigate('Biometria') },
+    { titulo: 'Turnos disponibles', permiso: 'vacantes.ver', accion: () => navigation.navigate('Vacantes') },
     { titulo: 'Perfil', permiso: 'perfil.ver', accion: () => navigation.navigate('Perfil') },
   ].filter((item) => can(item.permiso));
 

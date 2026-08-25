@@ -11,6 +11,7 @@ use Modules\MobileApp\Http\Controllers\RondaController;
 use Modules\MobileApp\Http\Controllers\NotificacionController;
 use Modules\MobileApp\Http\Controllers\AlertaController;
 use Modules\MobileApp\Http\Controllers\TurnoController;
+use Modules\MobileApp\Http\Controllers\VacanteController;
 use Modules\MobileApp\Http\Controllers\PerfilController;
 
 Route::post('login', [LoginController::class, 'login']);
@@ -94,6 +95,18 @@ Route::middleware('api.auth')->group(function () {
         ->middleware('permission.api:inventario.finalizar');
     Route::post('/inventario/registrar-baja', [InventarioController::class, 'registrarBaja'])
         ->middleware('permission.api:inventario.registrar');
+
+    // === COBERTURA DE TURNOS ===
+    Route::post('/vacantes-disponibles', [VacanteController::class, 'disponibles'])
+        ->middleware('permission.api:vacantes.ver');
+    Route::post('/vacantes-mis-postulaciones', [VacanteController::class, 'misPostulaciones'])
+        ->middleware('permission.api:vacantes.ver');
+    Route::post('/vacantes-postular', [VacanteController::class, 'postular'])
+        ->middleware('permission.api:vacantes.postular');
+    Route::post('/vacantes-retirar', [VacanteController::class, 'retirar'])
+        ->middleware('permission.api:vacantes.postular');
+    Route::post('/perfil-extras', [VacanteController::class, 'aceptarExtras'])
+        ->middleware('permission.api:perfil.editar');
 
     // === TURNOS === (sin permiso granular: funcionalidad base de todo guardia)
     Route::post('/turnos-del-dia', [TurnoController::class, 'turnosDelDia']);

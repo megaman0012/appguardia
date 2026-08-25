@@ -72,7 +72,7 @@ class BitacoraController extends Controller {
             $bt->save();
 
             return response()->json([ 'result' => 'success', 'message' => 'Bitacora Cargada Correctamente']);
-        }catch (Exception $e){
+        }catch (\Exception $e){
             return $this->message_json('errors', $e->getMessage());
         }
 

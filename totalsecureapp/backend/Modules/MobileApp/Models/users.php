@@ -23,6 +23,13 @@ class users extends Authenticatable {
         'usu_password', 'remember_token', 'usu_email_verified_at'
     ];
 
+    protected $casts = [
+        // Postgres devuelve el booleano como 't'/'f' por PDO en algunos casos;
+        // sin el cast, un 'f' seria truthy y el guardia veria turnos extra que
+        // no pidio.
+        'usu_acepta_extras' => 'boolean',
+    ];
+
     public function roles(): BelongsToMany {
         return $this->belongsToMany(Role::class,'user_has_roles','user_id','role_id');
     }

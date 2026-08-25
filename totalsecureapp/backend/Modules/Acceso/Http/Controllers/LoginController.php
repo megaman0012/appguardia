@@ -70,7 +70,7 @@ class LoginController extends Controller{
             } else {
                 return $this->message_json('errors', 'Credenciales Ingresadas Incorrectas');
             }
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return $this->message_json('errors', $e->getLine().': '.$e->getMessage());
         }
     }
@@ -203,7 +203,7 @@ class LoginController extends Controller{
             } else {
                 return $this->message_json('errors', 'Cedula No Valida' );
             }
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return $this->message_json('errors', $e->getMessage() );
         }
     }

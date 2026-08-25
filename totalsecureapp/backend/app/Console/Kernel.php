@@ -16,6 +16,10 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('turnos:cerrar-dia')->dailyAt('23:55');
+
+        // Cada 5 minutos: un puesto vacío hay que verlo mientras todavía se
+        // puede cubrir, no en el cierre del día.
+        $schedule->command('turnos:revisar-cobertura')->everyFiveMinutes()->withoutOverlapping();
     }
 
     /**

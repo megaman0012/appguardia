@@ -109,7 +109,10 @@ class LoginController extends Controller {
             'usuario'       => array(
                 'usu_nombres' => $user->usu_nmbcom,
                 'usu_email' => $user->usu_email,
-                'usu_acc' => $acc->pr_value
+                'usu_acc' => $acc->pr_value,
+                // Interruptor de "quiero cubrir turnos extra": viaja en el login
+                // para que la pantalla de perfil lo muestre sin otra consulta.
+                'usu_acepta_extras' => (bool) $user->usu_acepta_extras
             ),
             'abilities' => $abilities,
             'perfiles'  => $pfs->pluck('name')->values()
@@ -156,7 +159,7 @@ class LoginController extends Controller {
             } else {
                 return $this->message_json('errors', 'Cedula No Valida' );
             }
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return $this->message_json('errors', $e->getMessage() );
         }
     }
@@ -200,7 +203,7 @@ class LoginController extends Controller {
             $rsUsuario->save();
 
             return response()->json(['success' => true, 'message' => 'Clave cambiada correctamente']);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return $this->message_json('errors', $e->getMessage());
         }
     }

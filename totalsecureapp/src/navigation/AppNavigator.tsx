@@ -24,6 +24,7 @@ export type RootStackParamList = {
   Inventario: undefined;
   InventarioDetalle: { lp_id: number | string; lp_nombre: string };
   Biometria: undefined;
+  Vacantes: undefined;
 };
 
 export type RootStackScreenProps<T extends keyof RootStackParamList> = NativeStackScreenProps<
@@ -50,6 +51,7 @@ import { AlertasScreen } from '../screens/AlertasScreen';
 import { InventarioScreen } from '../screens/InventarioScreen';
 import { InventarioDetalleScreen } from '../screens/InventarioDetalleScreen';
 import { BiometriaScreen } from '../screens/BiometriaScreen';
+import { VacantesScreen } from '../screens/VacantesScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -98,6 +100,7 @@ export const AppNavigator = () => {
       <Stack.Screen name="Inventario" component={InventarioScreen} />
       <Stack.Screen name="InventarioDetalle" component={InventarioDetalleScreen} />
       <Stack.Screen name="Biometria" component={BiometriaScreen} />
+      <Stack.Screen name="Vacantes" component={VacantesScreen} />
     </Stack.Navigator>
   );
 };
