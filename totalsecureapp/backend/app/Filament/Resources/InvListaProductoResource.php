@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources;
 
+use App\Support\PerfilPanel;
+
 use Filament\Forms\Components\Select;
 use Illuminate\Database\Eloquent\Builder;
 use Modules\Administracion\Models\UserHasInstitucion;
@@ -44,7 +46,7 @@ class InvListaProductoResource extends Resource
                     'institucion',
                     'ins_descripcion',
                     function ($query) {
-                        if (in_array(Session::get('usuPF'), ['Supervisor'])) {
+                        if (PerfilPanel::alcanceEsPorInstitucion()) {
                             $institucionesCodes = UserHasInstitucion::where('ui_usu_id', Session::get('usuID'))
                                 ->where('ui_state', 1)
                                 ->pluck('ui_ins_code');
@@ -134,12 +136,24 @@ class InvListaProductoResource extends Resource
     public static function canDelete($record): bool { return false; }
 
     protected static function shouldRegisterNavigation(): bool {
-        return in_array( Session::get('usuPF'), ['Administrador', 'Administrador General', 'Supervisor'] );
+        return PerfilPanel::puedeOperar();
+    }
+
+    /**
+     * Bloquea la RUTA, no solo el menu.
+     *
+     * shouldRegisterNavigation() solo oculta el item del menu lateral: quien
+     * escribiera la URL a mano entraba igual. Filament aborta con 403 cuando
+     * canViewAny() es false (Pages\Page::authorizeResourceAccess).
+     */
+    public static function canViewAny(): bool
+    {
+        return PerfilPanel::puedeOperar();
     }
 
     public static function getEloquentQuery(): Builder {
         $query = parent::getEloquentQuery()->with(self::RELACIONES_TABLA);
-        if(in_array( Session::get('usuPF'), ['Supervisor'] )){
+        if(PerfilPanel::alcanceEsPorInstitucion()){
             $institucionesCodes = UserHasInstitucion::where('ui_usu_id', Session::get('usuID'))
                 ->where('ui_state', 1)
                 ->pluck('ui_ins_code');

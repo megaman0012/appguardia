@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources;
 
+use App\Support\PerfilPanel;
+
 use App\Filament\Resources\OrganizacionInstitucionResource\Pages;
 use App\Filament\Resources\OrganizacionInstitucionResource\RelationManagers\InstitucionMarcadoresRelationManager;
 use Modules\Administracion\Models\OrganizacionInstitucion;
@@ -154,11 +156,16 @@ class OrganizacionInstitucionResource extends Resource
             ->filters([])
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->visible(fn () => in_array( Session::get('usuPF'), ['Administrador', 'Administrador General'] )),
+                    ->visible(fn () => PerfilPanel::puedeAdministrarLocales()),
                 Action::make('marcadores')
                 ->label('Marcadores')
-                ->icon('heroicon-o-map')  // Icono de editar
-                ->url(fn ($record) => route('filament.resources.organizacion-institucions.edit', $record))
+                ->icon('heroicon-o-map')
+                // Quien puede editar va a la edicion; el Supervisor a la vista de
+                // solo lectura, que muestra los mismos marcadores sin permitir
+                // modificarlos.
+                ->url(fn ($record) => PerfilPanel::puedeAdministrarLocales()
+                    ? route('filament.resources.organizacion-institucions.edit', $record)
+                    : route('filament.resources.organizacion-institucions.view', $record))
                 ->color('primary')
             ])
             ->bulkActions([]);
@@ -174,6 +181,7 @@ class OrganizacionInstitucionResource extends Resource
         return [
             'index' => Pages\ListOrganizacionInstitucions::route('/'),
             'create' => Pages\CreateOrganizacionInstitucion::route('/create'),
+            'view' => Pages\ViewOrganizacionInstitucion::route('/{record}'),
             'edit' => Pages\EditOrganizacionInstitucion::route('/{record}/edit'),
             //'marcadores' => Pages\MarcadoresPage::route('/{record}/marcadores'),
         ];
@@ -181,13 +189,46 @@ class OrganizacionInstitucionResource extends Resource
 
     public static function canDelete($record): bool { return false; }
 
+    /**
+     * Crear y editar locales es del Administrador y del Lider Operativo.
+     * El Supervisor los ve pero no los modifica: observa la operacion, no la
+     * define. Se aplica aqui y no solo ocultando botones, para que tampoco
+     * pueda entrar por URL.
+     */
+    public static function canView(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return PerfilPanel::puedeOperar();
+    }
+
+    public static function canCreate(): bool
+    {
+        return PerfilPanel::puedeAdministrarLocales();
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return PerfilPanel::puedeAdministrarLocales();
+    }
+
     protected static function shouldRegisterNavigation(): bool {
-        return in_array( Session::get('usuPF'), ['Administrador', 'Administrador General', 'Supervisor'] );
+        return PerfilPanel::puedeOperar();
+    }
+
+    /**
+     * Bloquea la RUTA, no solo el menu.
+     *
+     * shouldRegisterNavigation() solo oculta el item del menu lateral: quien
+     * escribiera la URL a mano entraba igual. Filament aborta con 403 cuando
+     * canViewAny() es false (Pages\Page::authorizeResourceAccess).
+     */
+    public static function canViewAny(): bool
+    {
+        return PerfilPanel::puedeOperar();
     }
 
     public static function getEloquentQuery(): Builder {
         $query = parent::getEloquentQuery()->with(self::RELACIONES_TABLA);
-        if(in_array( Session::get('usuPF'), ['Supervisor'] )){
+        if(PerfilPanel::alcanceEsPorInstitucion()){
             $institucionesCodes = UserHasInstitucion::where('ui_usu_id', Session::get('usuID'))
                 ->where('ui_state', 1)
                 ->pluck('ui_ins_code');

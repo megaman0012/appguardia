@@ -1,6 +1,8 @@
 <?php
 
 namespace Modules\Acceso\Models;
+
+use App\Support\PerfilPanel;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Notifications\Notifiable;
@@ -45,7 +47,7 @@ class users extends Authenticatable implements FilamentUser, HasName{
     }
 
     public function canAccessFilament(): bool{
-        return in_array(Session::get('usuPF'), ['Administrador General', 'Administrador', 'Supervisor']);
+        return PerfilPanel::puedeEntrarAlPanel();
     }
 
     /*public static function boot() {

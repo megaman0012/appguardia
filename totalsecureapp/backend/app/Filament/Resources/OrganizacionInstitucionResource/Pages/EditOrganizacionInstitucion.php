@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\OrganizacionInstitucionResource\Pages;
 
+use App\Support\PerfilPanel;
+
 use App\Filament\Resources\OrganizacionInstitucionResource;
 use App\helpers;
 use Filament\Forms\Components\Tabs\Tab;
@@ -42,7 +44,7 @@ class EditOrganizacionInstitucion extends EditRecord {
     protected function getFormActions(): array {
         return [
             $this->getSaveFormAction()
-                ->visible(fn () => in_array( Session::get('usuPF'), ['Administrador', 'Administrador General'] )),
+                ->visible(fn () => PerfilPanel::puedeAdministrarLocales()),
         ];
     }
 

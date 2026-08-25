@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources;
 
+use App\Support\PerfilPanel;
+
 use App\Filament\Resources\UsersResource\Pages;
 use App\Filament\Resources\UsersResource\RelationManagers;
 use Modules\Acceso\Models\users;
@@ -118,7 +120,19 @@ class UsersResource extends Resource
     public static function canDelete($record): bool { return false; }
 
     protected static function shouldRegisterNavigation(): bool {
-        return in_array( Session::get('usuPF'), ['Administrador', 'Administrador General'] );
+        return PerfilPanel::puedeGestionarPersonal();
+    }
+
+    /**
+     * Bloquea la RUTA, no solo el menu.
+     *
+     * shouldRegisterNavigation() solo oculta el item del menu lateral: quien
+     * escribiera la URL a mano entraba igual. Filament aborta con 403 cuando
+     * canViewAny() es false (Pages\Page::authorizeResourceAccess).
+     */
+    public static function canViewAny(): bool
+    {
+        return PerfilPanel::puedeGestionarPersonal();
     }
 
 }
