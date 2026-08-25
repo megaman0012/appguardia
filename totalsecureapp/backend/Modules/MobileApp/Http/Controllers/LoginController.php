@@ -67,8 +67,16 @@ class LoginController extends Controller {
             return $this->message_json('errors', 'El usuario no posee perfil alguno asignado');
         }*/
 
-        $pfs = $user->roles()->whereIn('name', ['Supervisor', 'Vigilante'])->get();
-        if(!$pfs){
+        // Todos los roles activos del usuario, no una lista fija.
+        // Antes estaba hardcodeado a ['Supervisor','Vigilante'], asi que un
+        // Cliente del portal (o un Administrador) recibia perfiles y abilities
+        // vacios. La autorizacion real la hace CheckPermission contra la base,
+        // por eso el portal igual funcionaba, pero la respuesta del login
+        // mentia sobre lo que el usuario puede hacer.
+        $pfs = $user->roles()->where('estado', 1)->get();
+        if($pfs->isEmpty()){
+            // isEmpty() y no !$pfs: una Collection vacia es truthy, asi que la
+            // comprobacion anterior nunca se disparaba.
             return $this->message_json('errors', 'El usuario no posee perfiles de acceso');
         }
 
