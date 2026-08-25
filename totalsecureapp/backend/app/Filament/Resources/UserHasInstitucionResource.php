@@ -68,19 +68,35 @@ class UserHasInstitucionResource extends Resource
                     ->disabledOn('edit')
                     ->required(),
                 Select::make('ui_ins_code')
-                    ->label('Institucion')
+                    ->label('Local')
+                    // Al crear se pueden elegir varios de una vez: asignar un
+                    // guardia a cuatro locales exigia repetir el alta cuatro
+                    // veces. Al editar sigue siendo uno, porque cada fila de
+                    // user_has_institucion es un vinculo concreto.
+                    ->multiple(fn (string $context) => $context === 'create')
                     ->options(
-                        OrganizacionInstitucion::where('ins_estado', 1)->get()
+                        OrganizacionInstitucion::where('ins_estado', 1)
+                            ->with('ciudad.provincia.pais')
+                            ->orderBy('ins_descripcion')
+                            ->get()
                             ->mapWithKeys(function ($item) {
-                                return [$item->ins_code => $item->ins_descripcion];
+                                // Se muestra la ubicacion porque hay locales con
+                                // el mismo nombre en distintas ciudades.
+                                $ciudad = optional($item->ciudad)->cd_nombre;
+                                $pais = optional(optional(optional($item->ciudad)->provincia))->pais;
+                                $ubic = $ciudad
+                                    ? sprintf(' — %s, %s', $ciudad, optional($pais)->pa_nombre ?? 's/país')
+                                    : ' — sin ciudad asignada';
+
+                                return [$item->ins_code => $item->ins_descripcion . $ubic];
                             })
                     )
                     ->searchable()
                     ->disabledOn('edit')
                     ->required()
-                    ->unique(table: static::$model, callback: function ($rule, $get) {
-                        return $rule->where('ui_usu_id', $get('ui_usu_id'));
-                    }, ignoreRecord: true),
+                    ->helperText(fn (string $context) => $context === 'create'
+                        ? 'Se puede seleccionar más de un local: se crea un vínculo por cada uno'
+                        : null),
             ]);
     }
 
