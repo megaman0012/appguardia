@@ -78,7 +78,64 @@ Después, `php artisan config:clear`.
 queda registrado como «no se intentó». No hace falta comentar ni sacar nada del
 código para operar sin WhatsApp.
 
-## 4. Verificar
+## 4. Configurar el webhook (respuestas de los guardias)
+
+Sin esto los avisos salen pero **nadie puede contestarlos**, que es la mitad que
+importa: el guardia que puede cubrir está franco y no tiene la app.
+
+En el `.env` del backend:
+
+```
+WHATSAPP_WEBHOOK_TOKEN=una-cadena-larga-y-aleatoria-distinta-de-la-api-key
+```
+
+Y en Evolution, apuntá el webhook a esa URL:
+
+```bash
+curl -X POST http://localhost:8080/webhook/set/totalsecure \
+  -H "apikey: una-clave-larga-y-aleatoria" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "webhook": {
+          "enabled": true,
+          "url": "http://TU-BACKEND/api/whatsapp/webhook/una-cadena-larga-y-aleatoria-distinta-de-la-api-key",
+          "events": ["MESSAGES_UPSERT"]
+        }
+      }'
+```
+
+> El token va **en la URL**, así que esa URL es una credencial: quien la tenga
+> puede simular que un guardia aceptó un turno. Si el backend y Evolution están
+> en el mismo servidor, que la URL sea interna.
+
+Con el token vacío, la ruta responde 404 y el sistema funciona igual: los avisos
+salen, pero las respuestas hay que cargarlas a mano desde el panel.
+
+### Qué entiende el sistema
+
+La convocatoria que recibe el guardia dice:
+
+```
+Hay un turno por cubrir:
+Terminal de carga
+Garita principal, 25/08/2026 de 06:00 a 14:00
+
+Para tomarlo responda: SI 4821
+Si no puede, responda: NO 4821
+```
+
+- Con **una sola** convocatoria abierta, un «si» alcanza.
+- Con **dos o más**, sin el número pide aclaración en vez de adivinar: mandar a
+  alguien al puesto equivocado es peor que preguntar.
+- Un «no» no lo postula, pero queda registrado para que la central deje de
+  esperar esa respuesta.
+- Si ya no puede cubrirlo (le programaron otro turno mientras tanto), se le
+  responde el motivo concreto.
+
+Cuando un guardia acepta, la **Consola y el Líder Operativo** reciben el aviso en
+el momento.
+
+## 5. Verificar
 
 En el panel, **Operación → Avisos enviados**. Arriba hay una tarjeta con el estado
 del canal:
@@ -94,7 +151,7 @@ del canal:
 Con perfil Administrador aparece además **Probar WhatsApp**, que manda un mensaje
 a un número que escribas. Conviene usarlo después de cada reconexión.
 
-## 5. Cargar los números
+## 6. Cargar los números
 
 En **Usuarios**, cada guardia tiene dos campos nuevos:
 
@@ -106,7 +163,7 @@ En **Usuarios**, cada guardia tiene dos campos nuevos:
   Aceptar trabajar de más no es aceptar que le escriban al teléfono personal.
   Sin esta casilla, no se le escribe.
 
-## 6. Operación
+## 7. Operación
 
 - **La sesión se cae sola cada tanto.** Es normal en clientes no oficiales. La
   tarjeta de estado lo muestra, pero conviene mirarla o montar un chequeo del
@@ -116,7 +173,7 @@ En **Usuarios**, cada guardia tiene dos campos nuevos:
   (se arregla cargando un dato) y «el gateway no respondió» (se arregla levantando
   un servicio).
 
-## 7. Bajar el riesgo de bloqueo
+## 8. Bajar el riesgo de bloqueo
 
 - **Número dedicado, nunca el operativo de la empresa.** Si el número baneado es
   por el que escriben los clientes, el daño supera largamente el beneficio.

@@ -91,11 +91,14 @@ Cinco roles. **No escribir listas de perfiles a mano**: usar `App\Support\Perfil
 | `Administrador` | ✅ | Sistemas: todo, incluida la configuración (clientes, geografía, catálogos) | **Todo, sin filtro** |
 | `Lider Operativo` | ✅ | Da de alta guardias, asigna rol/local/puesto. Crea locales | **Los locales de su(s) país(es)** (`user_has_pais`) |
 | `Supervisor` | ✅ | Observa guardias y turnos, atiende alertas. Locales en **solo lectura** | Sus locales (`user_has_institucion`) |
+| `Consola` | ✅ | Central **24/7**: consigue el reemplazo cuando falta un guardia y confirma la cobertura | **Todo, sin filtro** |
 | `Vigilante` | ❌ | App móvil | Sus locales |
 | `Cliente` | ❌ | Portal de solo lectura | Sus locales |
 
 - `PerfilPanel::localesDelUsuario()` devuelve `null` = sin filtro, `[]` = **no ve nada**. Un líder sin países asignados cae en `[]`, no en `null`: una configuración incompleta no debe convertirse en acceso global.
 - Un local **sin ciudad** no pertenece a ningún país, así que ningún líder lo ve. Es deliberado: mejor que falte a que se cuele en el alcance de un país ajeno.
+- **`puedeAsignarCobertura()` es una capacidad propia**, no se deduce de `puedeAdministrarLocales()`. Asignar una cobertura es del Líder Operativo, pero una falta a las tres de la mañana no espera a que despierte: la Consola trabaja 24/7 y también asigna. Lo que la Consola **no** hace es crear locales, puestos ni cuadrantes, ni dar de alta personal (`/admin/users` le responde 403).
+- La Consola tiene **alcance global** a propósito: acotarla a un local o a un país la dejaría sin ver justo la falta que tiene que resolver de madrugada.
 - `shouldRegisterNavigation()` **solo oculta el menú**. Para bloquear la ruta hace falta `canViewAny()`, que es lo que Filament consulta para abortar con 403.
 
 ## Puesto de trabajo y turnos
@@ -147,6 +150,24 @@ formas de abrirse. `turno_postulacion` guarda quién se ofrece.
 - **Cubrir la falta no borra la falta.** El turno original queda del que no llegó, en estado `ausente`; se crea un turno **nuevo** para quien cubre. Reasignar el turno borraría el dato que después hay que poder mirar.
 - **El turno de cobertura lleva `tu_plantilla_id` en null** a propósito, como los cargados a mano: si quedara marcado como generado por la plantilla, republicar el cuadrante lo borraría y el puesto volvería a quedar vacío. Hay un test que lo fija.
 - Postularse es idempotente (`tp_client_uuid`) como los cinco endpoints de campo. Una postulación sincronizada tarde sobre una vacante ya cubierta responde con un mensaje claro, no con un error.
+### Dónde vive la app (esto cambia todo el diseño de avisos)
+
+**La app corre en tablets que están EN los puestos, no en el teléfono personal
+del guardia.** No se distribuye al público ni se instala en dispositivos propios.
+
+De ahí se desprende casi todo lo demás:
+
+- El guardia que puede cubrir un turno **está franco, en su casa, sin la app**.
+  Una notificación push no lo alcanza: sonaría en una tablet de un puesto.
+- **WhatsApp no es un canal más, es EL canal** para convocar reemplazos. Por eso
+  el número y el consentimiento del guardia no son un dato opcional.
+- Su respuesta tiene que **volver a entrar sola** por el webhook. Si alguien
+  tuviera que leer los mensajes y cargarlos a mano, a las tres de la mañana no
+  pasaría.
+- La pantalla «Turnos disponibles» de la app sigue existiendo y sirve —un guardia
+  en su puesto puede tomar un turno extra desde la tablet— pero **no es el camino
+  principal**. No hay que optimizar esa pantalla a costa de WhatsApp.
+
 ### Avisos
 
 - `NotificadorVacante` decide **a quién** se le avisa; `config/avisos.php` decide **por dónde**. Los canales implementan `App\Services\Avisos\CanalDeAviso`: hoy `CanalPush` (Expo) y `CanalWhatsApp` (Evolution). `CanalBitacora` existe para depurar sin base de datos, pero no está en la lista por defecto.
@@ -163,6 +184,19 @@ formas de abrirse. `turno_postulacion` guarda quién se ofrece.
 - **Un aviso nunca puede tumbar la operación.** Hay dos capas de protección y las dos tienen test: `NotificadorVacante` atrapa el fallo de cada canal por separado, y `VacanteService::avisar()` atrapa el fallo del notificador entero (por ejemplo, un canal mal escrito en el config). El envío de la confirmación va **fuera** de la transacción que asigna el turno.
 - **Al escalar solo se avisa a los que antes no podían ver la vacante.** Repetirle el aviso a quien ya lo recibió y no se postuló no agrega información.
 - La falta recién detectada **no se le avisa a los guardias**, solo al líder y al supervisor del local: todavía no está confirmada y podría ser un teléfono sin señal.
+
+### Respuestas por WhatsApp (webhook)
+
+- `POST api/whatsapp/webhook/{token}` recibe los mensajes entrantes de Evolution. **Fuera de `auth:sanctum`** (Evolution no tiene token de usuario) y protegido por `WHATSAPP_WEBHOOK_TOKEN`: sin ese valor la ruta responde **404**. Quien tenga el token puede simular que un guardia aceptó un turno.
+- Siempre responde **200** salvo token inválido. Un error haría que Evolution reintente el mismo mensaje en bucle.
+- Ignora: mensajes propios (`key.fromMe` — los salientes vuelven por el webhook y el sistema se contestaría a sí mismo), grupos (`@g.us`) y mensajes sin texto.
+- `RespuestaWhatsapp` interpreta la respuesta. La convocatoria lleva el **número de la vacante** (`Para tomarlo responda: SI 4821`) porque un guardia puede tener dos ofertas abiertas a la vez.
+  - Con **una sola** oferta vigente, un «si» pelado alcanza.
+  - Con **dos o más** y sin código, **pide aclaración en vez de adivinar**: elegir mal manda a alguien al puesto equivocado.
+  - Un «no» no postula pero **queda registrado**: la central deja de esperar esa respuesta.
+  - Antes de aceptar se revalida `motivoParaNoCubrir()`, y si no puede se le dice **por qué** («ya tiene un turno a esa hora» es información útil; «no se pudo» no).
+- Las ofertas vigentes salen de `aviso_envio` (WhatsApp, enviados, últimas 24 h), así que no hace falta otra tabla para saber a quién se le ofreció qué.
+- Al aceptar se dispara `postulacionRecibida()` → **Consola y Líder**. Sin eso, la respuesta del guardia quedaría esperando a que alguien entre al panel a mirar.
 
 ### Avisar con tiempo, y bajas
 

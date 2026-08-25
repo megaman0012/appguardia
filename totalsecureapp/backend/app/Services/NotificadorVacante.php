@@ -54,15 +54,39 @@ class NotificadorVacante
         );
     }
 
-    /** El turno se ofrece: se le avisa a los guardias que pueden tomarlo. */
+    /**
+     * El turno se ofrece: se le avisa a los guardias que pueden tomarlo.
+     *
+     * El mensaje pide una respuesta porque el guardia que puede cubrir está
+     * **franco, en su casa**: la app vive en las tablets de los puestos, no en su
+     * teléfono. WhatsApp es el único camino hasta él, así que el aviso tiene que
+     * poder contestarse desde WhatsApp.
+     */
     public function vacanteAbierta(TurnoVacante $vacante): int
     {
         return $this->avisarA(
             $this->vacantes->elegibles($vacante)->pluck('id')->all(),
-            'Turno disponible',
-            sprintf('Hay un turno por cubrir: %s. Puede postularse desde la app.', $vacante->descripcion),
+            'Turno por cubrir',
+            $this->convocatoria($vacante),
             $vacante,
             'vacante_abierta'
+        );
+    }
+
+    /**
+     * Texto de la convocatoria.
+     *
+     * Lleva el número de la vacante porque un guardia puede tener dos ofertas
+     * abiertas a la vez; sin el código no habría forma de saber cuál aceptó.
+     */
+    public function convocatoria(TurnoVacante $vacante): string
+    {
+        return sprintf(
+            "Hay un turno por cubrir:\n%s\n%s\n\nPara tomarlo responda: SI %d\nSi no puede, responda: NO %d",
+            optional($vacante->institucion)->ins_descripcion ?? 'Local',
+            $vacante->descripcion,
+            $vacante->tv_id,
+            $vacante->tv_id
         );
     }
 
@@ -81,10 +105,30 @@ class NotificadorVacante
 
         return $this->avisarA(
             $nuevos,
-            'Turno disponible en su ciudad',
-            sprintf('Hay un turno por cubrir en otro local: %s.', $vacante->descripcion),
+            'Turno por cubrir en su ciudad',
+            "Es en otro local de su ciudad.\n\n" . $this->convocatoria($vacante),
             $vacante,
             'vacante_escalada'
+        );
+    }
+
+    /**
+     * Un guardia contestó que puede cubrir.
+     *
+     * Le llega a la Consola y al Líder, que son quienes deciden. Sin esto, la
+     * respuesta del guardia quedaría esperando a que alguien entre al panel a
+     * mirar, que es justo lo que no pasa a las tres de la mañana.
+     */
+    public function postulacionRecibida(TurnoVacante $vacante, int $usuarioId): int
+    {
+        $guardia = DB::table('users')->where('id', $usuarioId)->value('usu_nmbcom') ?? "Usuario {$usuarioId}";
+
+        return $this->avisarA(
+            $this->responsables($vacante),
+            'Un guardia aceptó cubrir',
+            sprintf('%s puede cubrir %s. Confírmelo en el panel.', $guardia, $vacante->descripcion),
+            $vacante,
+            'postulacion_recibida'
         );
     }
 
@@ -155,7 +199,16 @@ class NotificadorVacante
             ->where('r.name', 'Supervisor')
             ->pluck('u.id');
 
-        return $lideres->merge($supervisores)
+        // La Consola atiende toda la operación: no se acota por local ni por
+        // país, porque de madrugada es la única que va a estar mirando.
+        $consola = DB::table('users as u')
+            ->join('user_has_roles as ur', 'ur.user_id', '=', 'u.id')
+            ->join('roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('u.usu_state', 1)
+            ->where('r.name', 'Consola')
+            ->pluck('u.id');
+
+        return $consola->merge($lideres)->merge($supervisores)
             ->unique()
             ->map(fn ($id) => (int) $id)
             ->values()

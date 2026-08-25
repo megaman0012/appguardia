@@ -46,6 +46,13 @@ return [
 
         // Para completar números cargados en formato local (0987654321).
         'codigo_pais' => env('WHATSAPP_CODIGO_PAIS', '593'),
+
+        /*
+         * Token del webhook por donde entran las respuestas de los guardias.
+         * Vacío = la ruta responde 404. Debe ser largo y aleatorio: quien lo
+         * tenga puede simular que un guardia aceptó un turno.
+         */
+        'webhook_token' => env('WHATSAPP_WEBHOOK_TOKEN', ''),
     ],
 
 ];

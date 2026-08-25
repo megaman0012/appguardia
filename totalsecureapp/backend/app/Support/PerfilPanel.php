@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Session;
  *
  *   Vigilante        app movil, no entra al panel
  *   Supervisor       observa guardias y turnos, atiende alertas. Ve solo sus locales
+ *   Consola          central 24/7: consigue el reemplazo cuando falta un guardia
  *   Lider Operativo  da de alta guardias y los asigna. Ve solo su(s) pais(es)
  *   Administrador    departamento de Sistemas: todo, sin filtro
  *   Cliente          portal de solo lectura (API), no entra al panel
@@ -32,6 +33,7 @@ final class PerfilPanel
     public const ADMINISTRADOR_GENERAL = 'Administrador General';
     public const LIDER_OPERATIVO       = 'Lider Operativo';
     public const SUPERVISOR            = 'Supervisor';
+    public const CONSOLA               = 'Consola';
 
     /** Configuracion del sistema: clientes, geografia, catalogos, parametros. */
     private const SISTEMAS = [self::ADMINISTRADOR, self::ADMINISTRADOR_GENERAL];
@@ -49,6 +51,23 @@ final class PerfilPanel
         self::ADMINISTRADOR_GENERAL,
         self::LIDER_OPERATIVO,
         self::SUPERVISOR,
+        self::CONSOLA,
+    ];
+
+    /**
+     * Quien puede decidir que un guardia cubra un turno vacio.
+     *
+     * Es del Lider Operativo, pero una falta a las tres de la mañana no espera a
+     * que el lider despierte: la Consola trabaja 24/7 y es quien consigue el
+     * reemplazo. Por eso esta capacidad es propia y no se deduce de
+     * puedeAdministrarLocales(): la Consola asigna coberturas, pero no crea
+     * locales, ni puestos, ni cuadrantes.
+     */
+    private const COBERTURA = [
+        self::ADMINISTRADOR,
+        self::ADMINISTRADOR_GENERAL,
+        self::LIDER_OPERATIVO,
+        self::CONSOLA,
     ];
 
     /** Perfil elegido en la seleccion posterior al login web. */
@@ -98,6 +117,12 @@ final class PerfilPanel
         return in_array(self::actual(), self::OPERACION, true);
     }
 
+    /** Elegir que guardia cubre una vacante. */
+    public static function puedeAsignarCobertura(): bool
+    {
+        return in_array(self::actual(), self::COBERTURA, true);
+    }
+
     // ── Que datos ve ──
 
     /** Supervisor: solo los locales que tiene asignados en user_has_institucion. */
@@ -112,10 +137,15 @@ final class PerfilPanel
         return self::es(self::LIDER_OPERATIVO);
     }
 
-    /** Sistemas ve el total, sin filtro. */
+    /**
+     * Sistemas y la Consola ven el total, sin filtro.
+     *
+     * La Consola atiende toda la operacion de madrugada: acotarla a un local o a
+     * un pais la dejaria sin ver justo la falta que tiene que resolver.
+     */
     public static function alcanceEsGlobal(): bool
     {
-        return in_array(self::actual(), self::SISTEMAS, true);
+        return in_array(self::actual(), self::SISTEMAS, true) || self::es(self::CONSOLA);
     }
 
     /**
