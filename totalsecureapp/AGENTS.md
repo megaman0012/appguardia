@@ -110,6 +110,14 @@ Cinco roles. **No escribir listas de perfiles a mano**: usar `App\Support\Perfil
   - La vinculación **nunca hace fallar el marcaje**: si no hay turno o algo revienta, la biometría ya quedó guardada, que es lo que no se puede perder.
 - Programar turnos y definir puestos es de quien administra locales (Administrador y Líder Operativo). El Supervisor los consulta: es su tablero, no su planificación.
 
+## Cuadrante de turnos (plantilla)
+
+- **`plantilla` → `plantilla_franja` → `plantilla_asignacion`**: patrón **semanal**, no lista de fechas. Un cuadrante real se repite ("Juan cubre Garita, lunes a viernes, 06–14"); modelarlo fecha por fecha obligaría a rehacerlo cada mes. `pf_dia_semana` es ISO (1=lunes…7=domingo), igual que `Carbon::dayOfWeekIso`.
+- La salida son filas en `turno`. **`turno.tu_plantilla_id` marca cuáles generó una plantilla**, y es lo que permite regenerar sin tocar los turnos cargados a mano (quedan con ese campo en null).
+- **Regenerar nunca pisa lo ya ocurrido**: se borran solo los turnos de esa plantilla **sin marcaje**; los que el guardia ya marcó se conservan y se informan. Rehacer el cuadrante a mitad de mes no puede borrar lo que pasó.
+- `PlantillaTurnoService::validar()` corre antes de generar. **Errores bloquean** (guardia en dos turnos a la vez, guardia sin vínculo al local, puesto de otro local) y **avisos no** (franja sin cubrir, descanso corto): eso último son decisiones del negocio, no datos inválidos.
+- `turno` no tiene ninguna restricción de solape en base, por eso la validación de solapes vive en el servicio.
+
 ## Interfaz Web (panel)
 
 El backend trae dos capas web sobre el mismo dominio `http://localhost:3031`:
