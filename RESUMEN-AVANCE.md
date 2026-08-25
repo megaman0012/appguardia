@@ -38,6 +38,7 @@
 | `CHECKLIST-DESPLIEGUE-V2.md` | Backup, orden de migraciones y rollback por fase (Fase 9) |
 | `DESPLIEGUE-DOMINIO.md` | Paso a producción con dominio, SSL y Firebase |
 | `PROPUESTA-JERARQUIA-Y-ROLES.md` | Propuesta: País/Provincia/Ciudad/Puesto y rol Líder Operativo |
+| `PROPUESTA-PLANTILLA-TURNOS.md` | Análisis: cuadrante de cobertura y carga de plantilla de turnos |
 | `RESUMEN-AVANCE.md` | Este archivo |
 
 ---
