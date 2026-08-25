@@ -16,8 +16,9 @@ use Illuminate\Support\Facades\DB;
  * Este seeder deja solo lo que el sistema necesita para arrancar:
  *   - el parametro 'access', sin el cual POST /api/login responde
  *     "Parametro acceso no definido"
- *   - las secciones y permisos del panel web, de los que se arma el menu
- *   - los catalogos que usan los formularios del panel
+ *
+ * Los permisos del panel y los de la app y el portal los crean las migraciones,
+ * asi que aqui no se repiten.
  *
  * Los roles y los permisos de la app y del portal los crean las migraciones
  * (2026_08_21_200001 y 2026_08_21_400001), asi que aqui no se repiten.
@@ -31,7 +32,6 @@ class ProductionSeeder extends Seeder
     public function run()
     {
         $this->seedParametroAcceso();
-        $this->call(EssentialDataSeeder::class);
     }
 
     private function seedParametroAcceso(): void

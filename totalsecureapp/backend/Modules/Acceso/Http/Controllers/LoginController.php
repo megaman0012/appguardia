@@ -46,43 +46,6 @@ class LoginController extends Controller{
         Session::forget('url');
     }
 
-    public function login_check_temp(Request $request){
-
-        $credentials = $request->only('usu_cedula', 'password');
-
-        try {
-
-            $usuario = DB::connection('intranet')->table('tbl_usuario')
-            ->join('permisos_aplicaciones', 'usu_id', '=', 'perm_usu_id')
-            ->where('usu_user', $credentials['usu_cedula'])
-            ->where('usu_pwd' , sha1($credentials['password']))
-            ->where('usu_estado' , 1)
-            ->where('perm_epicrisis' , 1)
-            ->first();
-
-            if (!$usuario) { return $this->message_json('errors', 'Usuario Incorrecto - Intranet'); }
-
-            $usersystem = users::where('usu_cedula', $usuario->usu_user)->first();
-            if(!$usersystem){ return $this->message_json('errors', 'Usuario No Existe - HagpAsist'); }
-            if ($usersystem->usu_state !== 1){ return $this->message_json('errors', 'La cuenta no está activa'); }
-
-            $usges = user_has_gestions::where('ug_user_id', $usersystem->id )->where('ug_finish', 0)->first();
-            if(!$usges){ return $this->message_json('errors', 'Usuario No Posee Gestion Asignada'); }
-
-            Auth::login($usersystem);
-            Session::put('usuID', $usersystem->id);
-            Session::put('usuGS', $usges->ug_code);
-            Session::put('usuName', $usersystem->usu_nmbcom);
-            Session::put('usuDN', $usersystem->usu_cedula);
-            $this->control_trafico($request);
-            return response()->json(array('success' => 'Informacion correcta, transfiriendo '));
-
-        } catch (Exception $e) {
-            return $this->message_json('errors', $e->getLine().': '.$e->getMessage());
-        }
-
-    }
-
     public function login_check(Request $request){
         $credentials = $request->only('usu_cedula', 'password');
         try {

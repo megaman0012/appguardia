@@ -63,6 +63,18 @@
 - Tras desplegar índices, correr `ANALYZE`: sin estadísticas frescas el planner los ignora.
 - `CHECKLIST-DESPLIEGUE-V2.md` (raíz del monorepo) tiene el backup obligatorio, el orden de las migraciones y el rollback por fase. **La migración `2026_08_21_100002` borra `ac_nombre_contrato` sin destino**, así que su `down()` no lo recupera: solo el backup.
 
+## Limpieza del sistema de salud heredado (2026-08-24)
+
+El backend venía de `coredt360`/HagpAsist, un sistema hospitalario, y arrastraba código que no era de guardias. Se eliminó por completo (migración `2026_08_24_100001`, reversible):
+
+- Módulo `Formularios` entero: Epicrisis (formulario 006 del MSP) y Referencia (053). No funcionaban: consultaban tablas de un HIS (`capbas`, `epiman`, `ingresos`, `maedia`…) sobre una conexión `hagphosv` que nunca existió.
+- Pantalla de Personas (`administracion/persona.index`), su controlador, vistas y assets.
+- 7 tablas y sus modelos: `persona`, `tipo_documento`, `tipo_genero`, `tipo_pais`, `tipo_especialidad`, `tipo_servicio`, `referencia_motivo`. Ninguna la usaba el sistema de guardias.
+- `LoginController@login_check_temp`: login contra la intranet del hospital (`DB::connection('intranet')`, `perm_epicrisis`), código muerto sin ruta.
+- Secciones de permisos 1 (Administración) y 2 (Formularios), reemplazadas por la 3 (Panel) con el permiso `admin`.
+
+**Al agregar permisos web, no reutilizar `ps_codigo` 1 ni 2.** `PermisosApiService::SECCIONES_WEB` sigue listando 1, 2 y 3 para que una base vieja que aún las tenga no filtre permisos web hacia la API.
+
 ## Interfaz Web (panel)
 
 El backend trae dos capas web sobre el mismo dominio `http://localhost:3031`:
@@ -70,7 +82,7 @@ El backend trae dos capas web sobre el mismo dominio `http://localhost:3031`:
 - **Panel legacy (`/acceso/login`)** — login por cédula (web `login_check` → selección de perfil → menú). Usa las vistas AdminLTE de `Modules/{Acceso,Administracion,Formularios}`.
   - Usuario demo: cédula `1234567890` (misma credencial unificada del 18/08/2026, ver la sección Backend; **no** es `123456`). Tiene perfiles `Vigilante` y `Supervisor`.
   - El menú se arma desde `role_has_permissions → permissions → permission_section` (seeder `seedWebAccess`).
-  - Páginas operativas: `administracion/persona.index` (personas + datatable), `formularios/epicrisis.index`, `formularios/referencia.index` (catálogos `tipo_documento`, `tipo_genero`, `tipo_especialidad`, `tipo_servicio`, `referencia_motivo` sembrados).
+  - Tras elegir el perfil Supervisor el login redirige **directo a `/admin`** (el permiso `admin`, sección `ps_codigo` 3, es la ruta de destino: el JS hace `location.href = urlbase + '/' + data.link`). El perfil Vigilante no tiene permisos web a propósito — usa la app móvil — así que si lo selecciona en la web recibe «No tiene los permisos necesarios».
 - **Panel Filament (`/admin`)** — el panel de administración real del negocio de la app (Rondas, Accesos, Novedades, Alertas, Inventario, Bitácora, Usuarios, Perfiles, Instituciones, Sedes, etc.). Está protegido por `canAccessFilament()` (requiere perfil `Supervisor`/`Administrador`), por lo que se entra **después** de hacer el login web y seleccionar el perfil Supervisor. El login propio de Filament apunta a `usu_email` (`App\Http\Livewire\Auth\Login`) y además la ruta `/admin/login` redirige a `/acceso/login` (diseño intencional).
 
 Fixes aplicados a la web (commit `d42858a`):
@@ -124,5 +136,4 @@ Se verificó el estado completo del proyecto:
 - **Firebase/Google Play:** falta `google-services.json` para notificaciones push en dispositivos reales en producción (la app ya registra el token; sin Firebase no llega la notificación a teléfonos). Se debe evitar versionar el archivo con credenciales reales en el repo.
 - **Cambio de contraseña por email:** la app puede completar el flujo porque la API devuelve el token; si se quiere estricto por correo, usar deep linking (`Linking` + scheme).
 - **Compilar APK:** el APK **release standalone** ya se compiló (`android/app/build/outputs/apk/release/app-release.apk`, ~99 MB, firmado con debug keystore, `com.dt360.coreapp` v1.0.0, targetSdk 36). Para producción real: generar keystore propio y usar `npx expo prebuild`/EAS. El APK debug (`app-debug.apk`, ~190 MB) solo funciona con Metro levantado (`npx expo start`).
-- **Páginas legacy (Persona/Epicrisis/Referencia):** provienen de la app original (`coredt360`/HagpAsist). Los catálogos están sembrados, pero los flujos de captura (`getbydoc`, `document`, guardado) apuntan a tablas de salud que no forman parte de este proyecto → fuera de alcance.
 - **Unificar `Role` con `roles`** (`Modules/Acceso/Models/`): no son duplicados exactos, `Role` es el modelo de Spatie declarado en `config/permission.php` y `roles` es el `$model` de `RolesResource` de Filament. Unificarlos exige refactorizar el resource; queda pendiente de decisión.

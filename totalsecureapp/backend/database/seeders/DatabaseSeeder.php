@@ -13,8 +13,6 @@ class DatabaseSeeder extends Seeder
         $this->seedParametros();
         $this->seedRoles();
         $this->seedTestUser();
-        // Datos base compartidos con produccion (ver EssentialDataSeeder).
-        $this->call(EssentialDataSeeder::class);
         $this->asignarSupervisorAlUsuarioDemo();
         $this->seedDemoData();
     }
@@ -76,8 +74,7 @@ class DatabaseSeeder extends Seeder
 
     /**
      * El usuario demo tambien recibe el rol Supervisor, para poder entrar al
-     * panel Filament. Vive aqui y no en EssentialDataSeeder porque en produccion
-     * no existe ese usuario.
+     * panel Filament. Vive aqui porque en produccion no existe ese usuario.
      */
     private function asignarSupervisorAlUsuarioDemo(): void
     {
@@ -96,25 +93,6 @@ class DatabaseSeeder extends Seeder
 
     private function seedDemoData()
     {
-        // Persona de ejemplo para las pantallas legacy del panel web.
-        DB::table('persona')->updateOrInsert(
-            ['pt_documento' => '1234567890'],
-            [
-                'pt_tip_doc' => '1',
-                'pt_nmb_comp' => 'Guardia de Prueba',
-                'pt_ape1' => 'Prueba',
-                'pt_ape2' => 'TS',
-                'pt_nmb1' => 'Guardia',
-                'pt_nmb2' => 'Sistema',
-                'pt_fch_nac' => '1990-01-01',
-                'pt_pais' => 'Ecuador',
-                'pt_provincia' => 'Guayas',
-                'pt_ciudad' => 'Guayaquil',
-                'pt_parroquia' => 'Centro',
-                'pt_direccion' => 'Av. Principal 100',
-                'pt_estado' => 1,
-            ]
-        );
 
         $user = users::where('usu_cedula', '1234567890')->first();
 
