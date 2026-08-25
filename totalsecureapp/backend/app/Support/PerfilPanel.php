@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 
 /**
@@ -115,5 +116,55 @@ final class PerfilPanel
     public static function alcanceEsGlobal(): bool
     {
         return in_array(self::actual(), self::SISTEMAS, true);
+    }
+
+    /**
+     * Paises asignados al usuario en sesion (user_has_pais).
+     *
+     * Un lider puede llevar mas de uno. Devuelve [] si no tiene ninguno, y el
+     * llamador debe tratarlo como "no ve nada", no como "ve todo": sin esta
+     * distincion un lider mal configurado terminaria con acceso global.
+     *
+     * @return int[]
+     */
+    public static function paisesDelUsuario(): array
+    {
+        $usuId = Session::get('usuID');
+        if (!$usuId) {
+            return [];
+        }
+
+        return DB::table('user_has_pais')
+            ->where('up_usu_id', $usuId)
+            ->where('up_estado', true)
+            ->pluck('up_pa_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
+     * Locales que el usuario en sesion puede ver, o null si no corresponde
+     * acotar (Sistemas, o un perfil cuyo alcance se resuelve de otra forma).
+     *
+     * @return int[]|null
+     */
+    public static function localesDelUsuario(): ?array
+    {
+        if (!self::alcanceEsPorPais()) {
+            return null;
+        }
+
+        $paises = self::paisesDelUsuario();
+        if (empty($paises)) {
+            return [];
+        }
+
+        return DB::table('organizacion_institucion')
+            ->join('ciudad', 'ciudad.cd_id', '=', 'organizacion_institucion.ins_cd_id')
+            ->join('provincia', 'provincia.pr_id', '=', 'ciudad.cd_pr_id')
+            ->whereIn('provincia.pr_pa_id', $paises)
+            ->pluck('organizacion_institucion.ins_code')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 }

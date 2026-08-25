@@ -242,6 +242,16 @@ class InvMovimientoResource extends Resource
             }
             return $query->whereIn('mov_ins_code', $institucionesCodes);
         }
+
+        // El Lider Operativo ve los locales de su(s) pais(es). Sin paises
+        // asignados no ve nada: un lider mal configurado no debe terminar
+        // con acceso global.
+        $localesDelPais = PerfilPanel::localesDelUsuario();
+        if ($localesDelPais !== null) {
+            return empty($localesDelPais)
+                ? $query->whereRaw('1 = 0')
+                : $query->whereIn('mov_ins_code', $localesDelPais);
+        }
         return $query;
     }
 

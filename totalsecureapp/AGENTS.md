@@ -80,6 +80,22 @@ El backend venía de `coredt360`/HagpAsist, un sistema hospitalario, y arrastrab
 - **`FILAMENT_LIVEWIRE` debe quedar VACÍO en el `.env`.** Livewire arma la URL de su JS como `<valor>/vendor/livewire/livewire.js`. Traía `http://localhost:3031/coredt360/public` (resto de la instalación original en subdirectorio), así que el JS daba **404** y el panel se renderizaba pero **no respondía a nada**: el selector de columnas, los filtros, la búsqueda y los modales quedaban muertos. Vacío produce la ruta relativa, que funciona en cualquier host. No poner el dominio con `/admin`.
 - **Shim en `AppServiceProvider::registrarShimDeRouteBinding()`.** Filament 2.17 llama a `$model->resolveRouteBindingQuery(...)`, método que Eloquent recién trae desde Laravel 9; en 8.75 no existe y **todas** las páginas de edición del panel respondían 500. Se registra como macro del Builder (`Model::__call` reenvía ahí), lo que cubre los ~20 modelos sin tocarlos. El shim se autodesactiva si el método existe, así que al subir a Laravel 9+ se puede borrar.
 
+## Roles y alcance de datos
+
+Cinco roles. **No escribir listas de perfiles a mano**: usar `App\Support\PerfilPanel`, que centraliza lo que antes vivía en 24 comprobaciones repartidas en 20 archivos.
+
+| Rol | Panel | Qué hace | Ve |
+|---|---|---|---|
+| `Administrador` | ✅ | Sistemas: todo, incluida la configuración (clientes, geografía, catálogos) | **Todo, sin filtro** |
+| `Lider Operativo` | ✅ | Da de alta guardias, asigna rol/local/puesto. Crea locales | **Los locales de su(s) país(es)** (`user_has_pais`) |
+| `Supervisor` | ✅ | Observa guardias y turnos, atiende alertas. Locales en **solo lectura** | Sus locales (`user_has_institucion`) |
+| `Vigilante` | ❌ | App móvil | Sus locales |
+| `Cliente` | ❌ | Portal de solo lectura | Sus locales |
+
+- `PerfilPanel::localesDelUsuario()` devuelve `null` = sin filtro, `[]` = **no ve nada**. Un líder sin países asignados cae en `[]`, no en `null`: una configuración incompleta no debe convertirse en acceso global.
+- Un local **sin ciudad** no pertenece a ningún país, así que ningún líder lo ve. Es deliberado: mejor que falte a que se cuele en el alcance de un país ajeno.
+- `shouldRegisterNavigation()` **solo oculta el menú**. Para bloquear la ruta hace falta `canViewAny()`, que es lo que Filament consulta para abortar con 403.
+
 ## Interfaz Web (panel)
 
 El backend trae dos capas web sobre el mismo dominio `http://localhost:3031`:
