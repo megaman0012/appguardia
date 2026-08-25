@@ -1,6 +1,8 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView, Switch } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
+import { API_ENDPOINTS } from '../utils/constants';
 
 export const PerfilScreen = ({ navigation }: { navigation: any }) => {
   const { user, institucion, perfil, permisos, logout } = useAuth();
@@ -16,6 +18,27 @@ export const PerfilScreen = ({ navigation }: { navigation: any }) => {
         },
       },
     ]);
+  };
+
+  // Quien no active esto no recibe avisos de turnos por cubrir. Es a propósito:
+  // si se le avisara a todos, en dos semanas nadie miraría los avisos.
+  const [aceptaExtras, setAceptaExtras] = useState<boolean>(!!user?.usu_acepta_extras);
+  const [guardandoExtras, setGuardandoExtras] = useState(false);
+
+  const cambiarExtras = async (valor: boolean) => {
+    setGuardandoExtras(true);
+    setAceptaExtras(valor);
+    try {
+      const { data } = await api.post(API_ENDPOINTS.VACANTES.ACEPTAR_EXTRAS, { acepta: valor });
+      setAceptaExtras(!!data?.acepta_extras);
+    } catch (error: any) {
+      // Se vuelve al valor anterior: mostrar el interruptor encendido cuando el
+      // servidor no lo registró haría que el guardia espere avisos que no llegan.
+      setAceptaExtras(!valor);
+      Alert.alert('Error', 'No se pudo guardar la preferencia. Intente de nuevo.');
+    } finally {
+      setGuardandoExtras(false);
+    }
   };
 
   const nombres = user?.nombres || user?.usu_nombres || 'Usuario';
@@ -81,6 +104,23 @@ export const PerfilScreen = ({ navigation }: { navigation: any }) => {
         ) : null}
       </View>
 
+      <View style={styles.card}>
+        <View style={styles.switchRow}>
+          <View style={styles.switchTexto}>
+            <Text style={styles.switchTitulo}>Quiero cubrir turnos extra</Text>
+            <Text style={styles.switchAyuda}>
+              Al activarlo verá los turnos que quedaron sin cubrir y podrá postularse.
+              Postularse no le asigna el turno: lo confirma el supervisor.
+            </Text>
+          </View>
+          <Switch
+            value={aceptaExtras}
+            onValueChange={cambiarExtras}
+            disabled={guardandoExtras}
+          />
+        </View>
+      </View>
+
       <TouchableOpacity style={styles.logoutButton} onPress={cerrarSesion}>
         <Text style={styles.logoutText}>Cerrar sesión</Text>
       </TouchableOpacity>
@@ -108,6 +148,10 @@ const styles = StyleSheet.create({
     padding: 20,
     margin: 20,
   },
+  switchRow: { flexDirection: 'row', alignItems: 'center' },
+  switchTexto: { flex: 1, paddingRight: 12 },
+  switchTitulo: { fontSize: 16, fontWeight: '600', color: '#333' },
+  switchAyuda: { fontSize: 13, color: '#666', marginTop: 4, lineHeight: 18 },
   label: {
     fontSize: 13,
     color: '#666',

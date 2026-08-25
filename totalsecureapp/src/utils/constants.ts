@@ -95,6 +95,13 @@ export const API_ENDPOINTS = {
     VINCULAR_MARCAJE: '/turnos-vincular-marcaje',
     CUMPLIMIENTO: '/turnos-cumplimiento',
   },
+  VACANTES: {
+    DISPONIBLES: '/vacantes-disponibles',
+    POSTULAR: '/vacantes-postular',
+    RETIRAR: '/vacantes-retirar',
+    MIS_POSTULACIONES: '/vacantes-mis-postulaciones',
+    ACEPTAR_EXTRAS: '/perfil-extras',
+  },
   RONDAS: {
     LIST: '/rondas',
     GESTION: '/rondas_gestion',

@@ -79,6 +79,18 @@ class Turno extends Model
         return $this->belongsTo(user_has_biometria::class, 'tu_bio_salida_code', 'bio_code');
     }
 
+    /**
+     * Vacantes vivas de este turno.
+     *
+     * Es lo que evita que el detector, que corre cada pocos minutos, abra una
+     * vacante nueva en cada pasada por el mismo turno sin marcar.
+     */
+    public function vacantesVivas(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(TurnoVacante::class, 'tv_turno_id', 'tu_id')
+            ->whereIn('tv_estado', [TurnoVacante::DETECTADA, TurnoVacante::ABIERTA, TurnoVacante::CUBIERTA]);
+    }
+
     // === SCOPES ===
 
     public function scopeDelDia($query, $fecha = null)

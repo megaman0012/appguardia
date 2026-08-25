@@ -194,7 +194,7 @@ class RondaController extends Controller {
                 return response()->json([ 'result' => 'success', 'message' => 'Ronda '.$request->rc_estado_ronda.' Correctamente', 'estado'=>$request->rc_estado_ronda ]);
 
             }
-        }catch (Exception $e){
+        }catch (\Exception $e){
             return $this->message_json('errors', $e->getMessage());
         }
     }

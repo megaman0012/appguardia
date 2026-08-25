@@ -171,6 +171,16 @@ class RbacTest extends TestCase
         $response->assertJsonPath('perfiles.0.nombre', 'Vigilante');
     }
 
+    /** Cuantos permisos NO web tiene el rol, que es lo que la API debe devolver. */
+    private function permisosMovilesDelRol(int $roleId): int
+    {
+        return DB::table('role_has_permissions')
+            ->join('permissions', 'permissions.id', '=', 'role_has_permissions.permission_id')
+            ->where('role_id', $roleId)
+            ->whereNotIn('permissions.ps_codigo', \App\Services\PermisosApiService::SECCIONES_WEB)
+            ->count();
+    }
+
     /** @test */
     public function procesar_perfil_retorna_permisos_del_rol()
     {
@@ -183,7 +193,10 @@ class RbacTest extends TestCase
 
         $response->assertStatus(200);
         $permisos = $response->json('permisos');
-        $this->assertCount(21, $permisos);
+        // La cantidad se calcula, no se escribe: agregar una seccion movil nueva
+        // (como la 21, cobertura de turnos) no puede romper este test, pero
+        // filtrar de mas o de menos si tiene que romperlo.
+        $this->assertCount($this->permisosMovilesDelRol($roleId), $permisos);
         $this->assertContains('acceso.registrar', $permisos);
         $this->assertNotContains('alertas.crear', $permisos);
     }
@@ -217,7 +230,11 @@ class RbacTest extends TestCase
         // El permiso web existe y esta asignado al rol, pero no sale por la API.
         $this->assertNotContains('admin', $permisos);
         $this->assertContains('acceso.registrar', $permisos);
-        $this->assertCount(21, $permisos, 'Deberian seguir siendo los 21 permisos moviles');
+        $this->assertCount(
+            $this->permisosMovilesDelRol($roleId),
+            $permisos,
+            'Deberian seguir siendo todos sus permisos moviles, sin el web'
+        );
     }
 
     /** @test */

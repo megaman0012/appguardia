@@ -128,6 +128,37 @@ Cinco roles. **No escribir listas de perfiles a mano**: usar `App\Support\Perfil
 - El archivo subido se borra apenas se vuelca en la plantilla: conservarlo solo acumularía copias del cuadrante en disco.
 - **El Supervisor no puede abrir el editor del cuadrante** (`canEdit` → 403), así que no alcanza con ocultarle los botones de carga: hoy directamente no ve el detalle. Su vista de solo lectura del cuadrante es la grilla pendiente.
 
+## Cobertura de turnos (vacantes)
+
+Qué hacer cuando un puesto queda vacío. Un turno se descubre por tres motivos
+—el guardia no llegó, avisó que no viene, o el cliente pidió refuerzo— pero el
+problema es el mismo, así que hay **un solo objeto**: `turno_vacante`, con tres
+formas de abrirse. `turno_postulacion` guarda quién se ofrece.
+
+- **El sistema detecta la falta, pero no la declara.** `turnos:revisar-cobertura` corre cada 5 minutos y deja la vacante en estado `detectada`: no se le avisa a nadie hasta que una persona confirma. Los marcajes se pueden hacer sin señal y sincronizar horas después, así que «no marcó» no significa «no vino»; si el reloj abriera convocatorias solo, publicaríamos vacantes por un teléfono sin cobertura.
+  - Existe aparte de `turnos:cerrar-dia`, que corre a las 23:55 y marca las ausencias del día. Enterarse a esa hora de que el puesto de las 06:00 quedó vacío no sirve para cubrirlo.
+  - Lo que descarta una vacante es que el turno **termine**, no que empiece: toda cobertura de una falta llega tarde por definición.
+  - Un índice único **parcial** (`turno_vacante_turno_viva_unique`) impide que dos pasadas del detector abran dos vacantes para el mismo turno.
+- **El aviso sale en dos olas.** Primero los guardias del propio local, que ya tienen la acreditación del cliente; a los 30 minutos sin postulantes se abre al resto de la ciudad. Los locales con `ins_requiere_acreditacion` **nunca escalan**: ofrecerle un turno a alguien que no puede entrar al sitio es peor que no ofrecerlo, porque se presenta y lo paran en el control.
+- **Elegibilidad**: rol Vigilante, `usu_acepta_extras` activo, vinculado a un local del alcance, sin turno solapado y con 8 h de descanso. Son las mismas reglas que valida el cuadrante, en `VacanteService::motivoParaNoCubrir()`.
+- **`usu_acepta_extras` es un opt-in.** Si se le avisara a todos, en dos semanas nadie miraría los avisos. Viaja en la respuesta del login para que la app lo muestre sin otra consulta.
+- **Confirma el supervisor, no gana el más rápido.** Cubrir un puesto ante el cliente es responsabilidad de la empresa. El panel muestra las horas ya programadas del mes de cada postulante, para que la cobertura no caiga siempre en el que más mira el teléfono.
+- **Cubrir la falta no borra la falta.** El turno original queda del que no llegó, en estado `ausente`; se crea un turno **nuevo** para quien cubre. Reasignar el turno borraría el dato que después hay que poder mirar.
+- **El turno de cobertura lleva `tu_plantilla_id` en null** a propósito, como los cargados a mano: si quedara marcado como generado por la plantilla, republicar el cuadrante lo borraría y el puesto volvería a quedar vacío. Hay un test que lo fija.
+- Postularse es idempotente (`tp_client_uuid`) como los cinco endpoints de campo. Una postulación sincronizada tarde sobre una vacante ya cubierta responde con un mensaje claro, no con un error.
+- **Hoy el aviso no suena en el teléfono**: falta `google-services.json`. La pantalla «Turnos disponibles» de la app no depende de eso y funciona igual; el push es un acelerador, no el canal.
+- Endpoints móviles en la sección de permisos **21** (`vacantes.ver`, `vacantes.postular`), asignados al rol Vigilante. El panel no usa esos permisos sino `PerfilPanel`.
+- `VacanteResource` declara `$slug = 'vacantes'`; sin eso Filament derivaría la ruta del modelo y quedaría `/admin/turno-vacantes`.
+
+## Datos de ejemplo
+
+`CuadranteEjemploSeeder` **no** se llama desde `DatabaseSeeder`: se corre a mano
+con `php artisan db:seed --class=CuadranteEjemploSeeder`. Es idempotente. Siembra
+3 puestos, 5 guardias (uno volante, sin franjas fijas, para que la pantalla de
+cobertura tenga a quién ofrecerle algo) y un cuadrante semanal con los turnos del
+mes. La contraseña de esos guardias **se copia del hash de un usuario existente**
+en vez de escribir una clave nueva en el repositorio.
+
 ## Interfaz Web (panel)
 
 El backend trae dos capas web sobre el mismo dominio `http://localhost:3031`:
