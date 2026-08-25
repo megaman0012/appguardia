@@ -244,6 +244,13 @@ docker compose exec -T db psql -U totalsecure -d coredt360 -c "
 
 - [ ] El cron del scheduler está activo (`* * * * * php artisan schedule:run`)
 - [ ] `php artisan turnos:cerrar-dia` corre sin error (se agenda a las 23:55)
+- [ ] `php artisan turnos:revisar-cobertura` corre sin error (se agenda cada 5 min)
+
+  > **Sin el cron, la cobertura de turnos no funciona.** Las faltas se detectan
+  > ahí: si el scheduler no corre, nadie se entera de que un puesto quedó vacío
+  > hasta el cierre del día, que es cuando ya no se puede cubrir. Las vacantes
+  > cargadas a mano por el supervisor sí siguen funcionando, pero pierden el
+  > escalado a la ciudad y el cierre de las vencidas.
 
 ## 6. Riesgos conocidos y cómo se mitigan
 
