@@ -9,6 +9,7 @@ use Filament\Http\Responses\Auth\LogoutResponse;
 use Filament\Navigation\UserMenuItem;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Stringable;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -30,7 +31,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        $this->registrarShimDeRouteBinding();
+        $this->registrarShimsDeLaravel9();
 
         $this->app->singleton(LogoutResponseContract::class, CustomLogoutResponse::class);
 
@@ -70,14 +71,25 @@ class AppServiceProvider extends ServiceProvider
      * metodo y el macro dejaria de usarse (Model::__call solo se dispara con
      * metodos que no existen).
      */
-    private function registrarShimDeRouteBinding(): void
+    private function registrarShimsDeLaravel9(): void
     {
-        if (method_exists(\Illuminate\Database\Eloquent\Model::class, 'resolveRouteBindingQuery')) {
-            return;
+        if (!method_exists(\Illuminate\Database\Eloquent\Model::class, 'resolveRouteBindingQuery')) {
+            Builder::macro('resolveRouteBindingQuery', function ($query, $value, $field = null) {
+                return $query->where($field ?? $this->getModel()->getRouteKeyName(), $value);
+            });
         }
 
-        Builder::macro('resolveRouteBindingQuery', function ($query, $value, $field = null) {
-            return $query->where($field ?? $this->getModel()->getRouteKeyName(), $value);
-        });
+        // Stringable::toHtmlString() tambien llego en Laravel 9. Filament la usa al
+        // renderizar helperText y hint de los formularios:
+        //   Str::of($helperText)->markdown()->sanitizeHtml()->toHtmlString()
+        // Sin ella, cualquier formulario con helperText responde 500. Se noto al
+        // agregar los formularios de Pais, Provincia, Ciudad y Local, que fueron
+        // los primeros en usarla. sanitizeHtml() no hace falta: la registra el
+        // propio Filament en SupportServiceProvider.
+        if (!method_exists(Stringable::class, 'toHtmlString')) {
+            Stringable::macro('toHtmlString', function () {
+                return new HtmlString($this->value);
+            });
+        }
     }
 }
