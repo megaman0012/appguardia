@@ -18,6 +18,7 @@ class Turno extends Model
         'tu_ins_code',
         'tu_usu_id',
         'tu_marcador_code',
+        'tu_puesto_id',
         'tu_fecha',
         'tu_hora_inicio_prevista',
         'tu_hora_fin_prevista',
@@ -54,6 +55,12 @@ class Turno extends Model
     public function institucion(): BelongsTo
     {
         return $this->belongsTo(OrganizacionInstitucion::class, 'tu_ins_code', 'ins_code');
+    }
+
+    /** Puesto que cubre este turno. Nullable: no todos los locales los usan. */
+    public function puesto(): BelongsTo
+    {
+        return $this->belongsTo(Puesto::class, 'tu_puesto_id', 'pu_id');
     }
 
     public function marcador(): BelongsTo

@@ -98,6 +98,14 @@ Cinco roles. **No escribir listas de perfiles a mano**: usar `App\Support\Perfil
 - Un local **sin ciudad** no pertenece a ningún país, así que ningún líder lo ve. Es deliberado: mejor que falte a que se cuele en el alcance de un país ajeno.
 - `shouldRegisterNavigation()` **solo oculta el menú**. Para bloquear la ruta hace falta `canViewAny()`, que es lo que Filament consulta para abortar con 403.
 
+## Puesto de trabajo y turnos
+
+- **`puesto`**: la posición concreta dentro de un local (garita, andén, sala de monitoreo). **No confundir con `institucion_marcadores`**: un marcador es un punto QR que el guardia escanea al pasar en una ronda; un puesto es donde se queda durante su turno. Por eso son tablas distintas y `turno` referencia a las dos.
+- `turno.tu_puesto_id` es **nullable**: no todos los locales dividen el trabajo en puestos. La FK va con `restrict` para que reorganizar puestos no borre el historial de turnos cumplidos.
+- **Ojo con `tu_estado` vs `tu_state`**: `tu_estado` es varchar (`programado`, `en_curso`, `completado`, `ausente`, `inasistente`) y `tu_state` es el booleano de activo. Filtrar los activos con `where('tu_estado', true)` **no falla: devuelve 0 filas en silencio**. Fue el bug que dejaba al guardia sin ver su turno en la app.
+- `TurnoResource` existe desde 2026-08-24. Antes **nada creaba turnos** —`TurnoService` solo vincula marcajes y cierra el día— así que la tabla estaba vacía y el widget "Cumplimiento de turnos" mostraba siempre cero.
+- Programar turnos y definir puestos es de quien administra locales (Administrador y Líder Operativo). El Supervisor los consulta: es su tablero, no su planificación.
+
 ## Interfaz Web (panel)
 
 El backend trae dos capas web sobre el mismo dominio `http://localhost:3031`:

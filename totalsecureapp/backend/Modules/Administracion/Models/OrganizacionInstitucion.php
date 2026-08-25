@@ -57,6 +57,12 @@ class OrganizacionInstitucion extends Model
     }
 
 
+    /** Puestos de trabajo definidos en este local. */
+    public function puestos()
+    {
+        return $this->hasMany(Puesto::class, 'pu_ins_code', 'ins_code');
+    }
+
     // ── Jerarquía territorial ──
 
     /** Ciudad donde está el local. De aquí se sube a provincia y país. */
