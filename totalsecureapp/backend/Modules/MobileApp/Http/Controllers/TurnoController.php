@@ -48,10 +48,11 @@ class TurnoController extends Controller
             return $this->message_json('errors', 'Usuario no vinculado a institucion');
         }
 
-        $turnos = Turno::where('tu_usu_id', $us->id)
+        $turnos = Turno::with('puesto')
+            ->where('tu_usu_id', $us->id)
             ->where('tu_ins_code', $request->ins_code)
             ->where('tu_fecha', Carbon::today()->toDateString())
-            ->where('tu_estado', true)
+            ->where('tu_state', true)
             ->orderBy('tu_hora_inicio_prevista', 'asc')
             ->get();
 
@@ -59,6 +60,7 @@ class TurnoController extends Controller
         foreach ($turnos as $t) {
             $res[] = [
                 'tu_id' => $t->tu_id,
+                'puesto' => optional($t->puesto)->pu_nombre,
                 'tu_hora_inicio_prevista' => $t->tu_hora_inicio_prevista,
                 'tu_hora_fin_prevista' => $t->tu_hora_fin_prevista,
                 'tu_marcada_entrada' => $t->tu_marcada_entrada,
@@ -100,7 +102,7 @@ class TurnoController extends Controller
         $turno = Turno::where('tu_id', $request->tu_id)
             ->where('tu_usu_id', $us->id)
             ->where('tu_ins_code', $request->ins_code)
-            ->where('tu_estado', true)
+            ->where('tu_state', true)
             ->first();
         if (!$turno) {
             return $this->message_json('errors', 'Turno no encontrado o no pertenece al usuario');
@@ -173,10 +175,10 @@ class TurnoController extends Controller
 
         $fecha = $request->fecha ?? Carbon::today()->toDateString();
 
-        $turnos = Turno::with(['usuario', 'institucion'])
+        $turnos = Turno::with(['usuario', 'institucion', 'puesto'])
             ->where('tu_ins_code', $request->ins_code)
             ->where('tu_fecha', $fecha)
-            ->where('tu_estado', true)
+            ->where('tu_state', true)
             ->orderBy('tu_hora_inicio_prevista', 'asc')
             ->get();
 
@@ -188,6 +190,7 @@ class TurnoController extends Controller
                 'guardia' => $usuario ? trim($usuario->usu_nmbcom ?? $usuario->usu_nmb1 . ' ' . $usuario->usu_ape1) : 'N/A',
                 'cedula' => $usuario->usu_cedula ?? 'N/A',
                 'institucion' => $t->institucion->ins_descripcion ?? 'N/A',
+                'puesto' => optional($t->puesto)->pu_nombre,
                 'turno_esperado' => $t->tu_hora_inicio_prevista . ' - ' . $t->tu_hora_fin_prevista,
                 'marco_entrada' => $t->tu_marcada_entrada,
                 'marco_salida' => $t->tu_marcada_salida,
