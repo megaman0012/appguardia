@@ -36,6 +36,8 @@
 | `API-OFFLINE-SYNC.md` | Contrato de sincronización offline (Fase 7) |
 | `openapi.yaml` | Especificación OpenAPI de la API del portal cliente (Fase 8) |
 | `CHECKLIST-DESPLIEGUE-V2.md` | Backup, orden de migraciones y rollback por fase (Fase 9) |
+| `DESPLIEGUE-DOMINIO.md` | Paso a producción con dominio, SSL y Firebase |
+| `PROPUESTA-JERARQUIA-Y-ROLES.md` | Propuesta: País/Provincia/Ciudad/Puesto y rol Líder Operativo |
 | `RESUMEN-AVANCE.md` | Este archivo |
 
 ---
