@@ -1,4 +1,4 @@
-# Propuesta: jerarquía territorial y nivel de Líder Operativo
+# Propuesta: jerarquía territorial y modelo de cinco roles
 
 Análisis del estado actual y propuesta de mejora, a partir del modelo de negocio
 real: empresa de seguridad con operaciones en aeropuertos, clientes
@@ -98,6 +98,43 @@ Una cadena literal `cliente → país → provincia → ciudad → local` obliga
 crear un registro "DHL-Ecuador" y otro "DHL-Colombia", con el nombre del cliente
 repetido y sin ninguna ventaja.
 
+### El análisis global del cliente: por eso NO se separan
+
+La preocupación es correcta y es justamente la razón de esta decisión. Si se
+crearan "DHL Ecuador" y "DHL Colombia" como **clientes distintos**, una consulta
+de gerencia sobre DHL tendría que saber de antemano cuántas filiales existen y
+sumarlas a mano; al abrir un tercer país, cualquier reporte que no se actualice
+quedaría incompleto **sin avisar**.
+
+Con el diseño propuesto, DHL es **un solo registro**. El país no está en el
+cliente: está en la ciudad del local. Los tres cortes salen de la misma tabla:
+
+```sql
+-- Global del cliente (lo que pide gerencia)
+SELECT count(*) FROM alertas a
+  JOIN organizacion_institucion l ON l.ins_code = a.al_ins_code
+ WHERE l.ins_cliente_id = :dhl;
+
+-- El mismo cliente, un país
+SELECT count(*) FROM alertas a
+  JOIN organizacion_institucion l ON l.ins_code = a.al_ins_code
+  JOIN ciudad c    ON c.cd_id = l.ins_cd_id
+  JOIN provincia p ON p.pr_id = c.cd_pr_id
+ WHERE l.ins_cliente_id = :dhl AND p.pr_pa_id = :ecuador;
+
+-- Comparar países del mismo cliente, en una sola consulta
+SELECT pa.pa_nombre, count(*) FROM alertas a
+  JOIN organizacion_institucion l ON l.ins_code = a.al_ins_code
+  JOIN ciudad c    ON c.cd_id  = l.ins_cd_id
+  JOIN provincia p ON p.pr_id  = c.cd_pr_id
+  JOIN pais pa     ON pa.pa_id = p.pr_pa_id
+ WHERE l.ins_cliente_id = :dhl
+ GROUP BY pa.pa_nombre;
+```
+
+Abrir un país nuevo es insertar una fila en `ciudad`. **Ningún reporte existente
+se toca**, y el global de DHL los incluye automáticamente.
+
 ### Puesto de trabajo
 
 Hoy lo más parecido es `turno.tu_marcador_code`, pero los marcadores son **puntos
@@ -133,7 +170,7 @@ cliente duplicado por país, y ningún corte que la propuesta A no dé. No aport
 
 ---
 
-## 5. Nivel de Líder Operativo
+## 5. Roles
 
 ### Hallazgo: el panel **ya** está diseñado para tres niveles
 
@@ -159,36 +196,91 @@ el vacío descrito: no hay quién dé de alta a un guardia.
 O sea: la separación que se pide **ya está implementada**, solo falta crear el
 rol y decidir cómo se llama.
 
-### Propuesta
+### Propuesta: cinco roles
 
-Crear el rol con nombre propio del negocio —**`Lider Operativo`**— en vez de
-reutilizar `Administrador`, que no dice nada sobre la operación. Eso exige
-actualizar las 11 listas de perfiles y `canAccessFilament()`.
+| Rol | Para quién | Qué hace | Alcance de datos |
+|---|---|---|---|
+| **Vigilante** | Guardia en terreno | App móvil: rondas, accesos, novedades, biometría | Sus locales |
+| **Supervisor** | Jefe de turno / zona | Observa el estado de guardias y turnos, atiende y escala alertas | Sus locales |
+| **Líder Operativo** | Jefe de operaciones | **Da de alta guardias**, les asigna rol, local y puesto. Crea locales y puestos | *A definir — ver abajo* |
+| **Administrador** | Departamento de Sistemas | Todo, incluida la configuración técnica: clientes, geografía, catálogos, parámetros, bitácora | **Global, sin filtro** |
+| **Cliente** | Dueño de la organización | Portal de solo lectura (API Fase 8) | Sus locales |
 
-**Y centralizarlas.** Hoy los perfiles autorizados están escritos a mano en 12
-archivos como `in_array(Session::get('usuPF'), ['Administrador', ...])`. Agregar
-un rol obliga a tocar los 12 y olvidarse de uno deja una pantalla mal expuesta o
-inaccesible. Propuesta: un único lugar (config o helper) del tipo
-`PerfilPanel::puedeGestionarUsuarios()`, y que los resources lo consulten.
+La separación que se pidió queda explícita: el **Supervisor observa y responde**;
+el **Líder Operativo da de alta y asigna**. Los permisos del **Vigilante quedan
+intactos**.
 
-### Reparto de responsabilidades propuesto
+### El rol `Administrador` ya está cableado
 
-| Acción | Vigilante | Supervisor | Líder Operativo | Cliente |
-|---|---|---|---|---|
-| App móvil: rondas, accesos, novedades, biometría | ✅ | ✅ | — | — |
-| Ver estado de guardias y turnos | — | ✅ | ✅ | — |
-| Atender y escalar alertas | — | ✅ | ✅ | — |
-| **Crear y editar usuarios (guardias)** | — | **❌** | **✅** | — |
-| **Asignar guardia a local / puesto** | — | **❌** | **✅** | — |
-| **Asignar roles** | — | **❌** | **✅** | — |
-| Crear locales y puestos | — | ❌ | ✅ | — |
-| Catálogo de productos de inventario | — | ❌ | ✅ | — |
-| Reportería de su propio cliente | — | — | — | ✅ |
+Las 11 pantallas administrativas ya exigen `Administrador` o
+`Administrador General`. Crear el rol **`Administrador`** con ese nombre exacto
+las habilita **sin tocar una línea de código**. Es literalmente insertar una fila.
 
-El Supervisor **observa y responde**; el Líder Operativo **da de alta y asigna**.
-Es la separación que se pidió.
+`Administrador General` puede quedar como sinónimo sin usar, o eliminarse de las
+listas para no confundir.
 
-Los permisos actuales del **Vigilante quedan intactos**, como se indicó.
+### El `Líder Operativo` sí exige tocar código
+
+Ese nombre no aparece en ninguna lista. Hay que agregarlo a las pantallas que le
+correspondan y a `canAccessFilament()`. Reparto sugerido:
+
+| Pantalla | Administrador | Líder Operativo | Supervisor |
+|---|---|---|---|
+| Usuarios, asignar rol, vincular a local, gestiones | ✅ | ✅ | — |
+| Locales y Puestos | ✅ | ✅ | solo lectura |
+| Clientes, País/Provincia/Ciudad | ✅ | — | — |
+| Catálogo de productos de inventario | ✅ | — | — |
+| Rondas, accesos, alertas, novedades, inventario | ✅ | ✅ | ✅ |
+| Parámetros, bitácora, logs | ✅ | — | — |
+
+La diferencia de fondo: el **Líder Operativo mueve personas**; el
+**Administrador además define el mundo** (clientes, geografía, catálogos) y ve el
+total para Sistemas.
+
+### Centralizar los perfiles antes de crear los roles
+
+Hoy los perfiles autorizados están escritos a mano en **12 archivos**, así:
+
+```php
+in_array(Session::get('usuPF'), ['Administrador', 'Administrador General'])
+```
+
+Con cinco roles esto se vuelve frágil: agregar uno obliga a tocar los doce, y
+olvidar uno deja una pantalla mal expuesta o inaccesible — que es exactamente
+cómo `UsersResource` terminó invisible para todos.
+
+**Antes de crear los roles**, llevar esas listas a un solo lugar:
+
+```php
+PerfilPanel::puedeGestionarUsuarios()   // Administrador, Lider Operativo
+PerfilPanel::puedeConfigurarSistema()   // Administrador
+PerfilPanel::puedeOperar()              // + Supervisor
+```
+
+### ⚠️ Punto abierto: ¿el Líder Operativo es global o acotado?
+
+**Hoy el panel filtra los datos SOLO para el perfil `Supervisor`.** Cualquier
+otro perfil que entre ve **todo, sin filtro** (`getEloquentQuery()` devuelve la
+consulta sin acotar).
+
+Para el `Administrador` eso es justo lo que se quiere: ve el total.
+
+Para el `Líder Operativo` **hay que decidirlo**, y cambia el trabajo:
+
+- **Opción 1 — global.** Un solo líder para toda la empresa. No hay nada que
+  programar: hereda el comportamiento actual.
+- **Opción 2 — acotado por país.** Un líder de Ecuador y otro de Colombia, cada
+  uno gestiona solo a los suyos. Exige una tabla `user_has_pais` (o similar) y
+  aplicar ese filtro en las pantallas de gestión.
+- **Opción 3 — acotado por cliente.** Un líder por cuenta grande (p. ej. todo
+  DHL). Exige `user_has_cliente` y el filtro equivalente.
+
+`user_has_institucion` **no sirve** para esto: es a nivel de local, demasiado
+granular para alguien que gestiona una operación entera.
+
+Dado que ya hay operaciones en Ecuador y Colombia, la **opción 2** parece la más
+probable, pero conviene confirmarlo antes de implementar: es la diferencia entre
+no programar nada y agregar una dimensión de alcance nueva.
 
 ### Permisos nuevos a sembrar
 
@@ -200,13 +292,12 @@ usuarios.editar                 usuarios.asignar_rol
 usuarios.asignar_institucion    usuarios.asignar_puesto
 ```
 
-Todos para `Lider Operativo`. Ninguno para `Supervisor`.
+Para `Administrador` y `Lider Operativo`. Ninguno para `Supervisor`.
 
 ### Punto a decidir
 
 Hoy el `Supervisor` puede **editar** locales (`OrganizacionInstitucionResource`).
-Bajo el reparto propuesto eso debería ser **solo lectura** para él: crear y
-modificar locales es del Líder Operativo. Conviene confirmarlo.
+Bajo este reparto debería ser **solo lectura** para él.
 
 ---
 
@@ -214,9 +305,10 @@ modificar locales es del Líder Operativo. Conviene confirmarlo.
 
 Cada paso deja el sistema funcionando; no hace falta hacerlos todos de una vez.
 
-1. **Líder Operativo** — crear el rol, centralizar las listas de perfiles,
-   sembrar los permisos. Desbloquea de inmediato las pantallas que ya existen.
-   *Es el de mayor beneficio por esfuerzo: el código ya está hecho.*
+1. **Roles** — centralizar las listas de perfiles, crear `Administrador` (que ya
+   está cableado y no exige código) y `Lider Operativo`, sembrar los permisos.
+   Desbloquea de inmediato pantallas que ya existen. *Mayor beneficio por
+   esfuerzo.* Requiere antes decidir el alcance del Líder Operativo.
 2. **Geografía** — `pais`, `provincia`, `ciudad` + sus resources y el selector en
    el formulario del Local. Resuelve la observación del país.
 3. **Cliente** — enganchar el local a `organizacion`, exponer el formulario del
