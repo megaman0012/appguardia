@@ -43,6 +43,32 @@ class VacanteService
     {
     }
 
+    /**
+     * El notificador se resuelve al usarlo, no en el constructor.
+     *
+     * NotificadorVacante necesita este servicio para saber a quién avisar, así
+     * que inyectarlo acá sería una dependencia circular. Resolverlo al vuelo
+     * también deja el aviso desactivable en los tests sin tocar el dominio.
+     */
+    private function notificador(): NotificadorVacante
+    {
+        return app(NotificadorVacante::class);
+    }
+
+    /** Un aviso que falla no puede tumbar la operación que lo originó. */
+    private function avisar(callable $envio): void
+    {
+        if (!config('avisos.activos', true)) {
+            return;
+        }
+
+        try {
+            $envio($this->notificador());
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
     // ── Detección ──
 
     /**
@@ -90,8 +116,12 @@ class VacanteService
                 continue;
             }
 
-            if ($this->crearDesdeTurno($turno)) {
+            $vacante = $this->crearDesdeTurno($turno);
+
+            if ($vacante) {
                 $detectadas++;
+                // El punto de detectar es que alguien se entere a tiempo.
+                $this->avisar(fn (NotificadorVacante $n) => $n->faltaDetectada($vacante));
             }
         }
 
@@ -124,6 +154,108 @@ class VacanteService
         }
     }
 
+    /**
+     * El guardia avisa con tiempo que no va a poder cubrir su turno.
+     *
+     * Queda "por confirmar", no se ofrece sola: si bastara con avisar para que
+     * el sistema convoque a otro, cualquiera podría soltar su turno sin que
+     * nadie lo revise. Lo confirma quien responde por el puesto.
+     *
+     * @return array{vacante: ?TurnoVacante, duplicada: bool}
+     */
+    public function avisarAusencia(
+        Turno $turno,
+        string $motivo,
+        ?string $observacion = null,
+        ?string $clientUuid = null,
+        ?string $ocurridoEn = null
+    ): array {
+        if (!in_array($motivo, TurnoVacante::MOTIVOS_DEL_GUARDIA, true)) {
+            $motivo = 'aviso';
+        }
+
+        // Un aviso repetido (o reenviado al recuperar señal) no abre otra
+        // vacante: el índice único parcial lo impide y acá se informa.
+        $existente = TurnoVacante::where('tv_turno_id', $turno->tu_id)->vivas()->first();
+        if ($existente) {
+            return ['vacante' => $existente, 'duplicada' => true];
+        }
+
+        $vacante = $this->crearDesdeTurno($turno, $motivo);
+
+        if (!$vacante) {
+            return ['vacante' => TurnoVacante::where('tv_turno_id', $turno->tu_id)->vivas()->first(), 'duplicada' => true];
+        }
+
+        $vacante->tv_observaciones = $observacion;
+        $vacante->save();
+
+        // Avisar con tiempo es justamente lo que permite cubrir sin apuro: el
+        // responsable tiene que enterarse ya, no en la próxima pasada del
+        // detector (que además no lo detectaría, porque la hora aún no pasó).
+        $this->avisar(fn (NotificadorVacante $n) => $n->faltaDetectada($vacante));
+
+        return ['vacante' => $vacante, 'duplicada' => false];
+    }
+
+    /**
+     * El guardia deja la empresa: se liberan todos sus turnos futuros.
+     *
+     * Una renuncia no es una falta de un día. Sin esto, el cuadrante seguiría
+     * mostrándolo asignado semanas enteras y cada mañana alguien descubriría el
+     * puesto vacío de nuevo.
+     *
+     * @return array{vacantes: int, turnos: int, asignaciones: int}
+     */
+    public function darDeBaja(
+        int $usuarioId,
+        Carbon $desde,
+        string $observacion,
+        ?int $porUsuario = null
+    ): array {
+        return DB::transaction(function () use ($usuarioId, $desde, $observacion, $porUsuario) {
+            // Se cierra su vigencia en el cuadrante en vez de borrar la
+            // asignación: el histórico de quién cubría qué no se toca.
+            $asignaciones = DB::table('plantilla_asignacion')
+                ->where('pa_usu_id', $usuarioId)
+                ->where(function ($q) use ($desde) {
+                    $q->whereNull('pa_hasta')->orWhere('pa_hasta', '>=', $desde->toDateString());
+                })
+                ->update(['pa_hasta' => $desde->copy()->subDay()->toDateString()]);
+
+            $turnos = Turno::where('tu_usu_id', $usuarioId)
+                ->where('tu_state', true)
+                ->where('tu_estado', 'programado')
+                ->whereNull('tu_marcada_entrada')
+                ->where('tu_fecha', '>=', $desde->toDateString())
+                ->get();
+
+            $vacantes = 0;
+
+            foreach ($turnos as $turno) {
+                $vacante = $this->crearDesdeTurno($turno, TurnoVacante::BAJA);
+
+                if (!$vacante) {
+                    continue;
+                }
+
+                $vacante->tv_observaciones = $observacion;
+                $vacante->save();
+
+                // La baja ya la confirmó quien la registró: no hace falta que
+                // otra persona vuelva a confirmar cada turno uno por uno.
+                $this->abrir($vacante, $porUsuario);
+                $vacantes++;
+            }
+
+            return [
+                'vacantes'     => $vacantes,
+                'turnos'       => $turnos->count(),
+                'asignaciones' => $asignaciones,
+            ];
+        });
+    }
+
     // ── Ciclo de vida ──
 
     /** El supervisor confirma que la falta es real y la ofrece. */
@@ -134,6 +266,8 @@ class VacanteService
         $vacante->tv_abierta_por = $usuarioId;
         $vacante->tv_abierta_en = Carbon::now();
         $vacante->save();
+
+        $this->avisar(fn (NotificadorVacante $n) => $n->vacanteAbierta($vacante));
 
         return $vacante;
     }
@@ -179,9 +313,15 @@ class VacanteService
                 continue;
             }
 
+            // Se toma la lista ANTES de escalar para no volver a avisarle a los
+            // del local, que ya recibieron el primer aviso y no se postularon.
+            $yaAvisados = $this->elegibles($vacante)->pluck('id')->all();
+
             $vacante->tv_alcance = TurnoVacante::ALCANCE_CIUDAD;
             $vacante->save();
             $escaladas++;
+
+            $this->avisar(fn (NotificadorVacante $n) => $n->vacanteEscalada($vacante, $yaAvisados));
         }
 
         return $escaladas;
@@ -380,8 +520,8 @@ class VacanteService
      */
     public function confirmar(TurnoVacante $vacante, int $postulacionId, ?int $confirmadorId = null): array
     {
-        return DB::transaction(function () use ($vacante, $postulacionId, $confirmadorId) {
-            // Dos supervisores confirmando a la vez no pueden crear dos turnos.
+        $resultado = DB::transaction(function () use ($vacante, $postulacionId, $confirmadorId) {
+            // Dos personas confirmando a la vez no pueden crear dos turnos.
             $vacante = TurnoVacante::where('tv_id', $vacante->tv_id)->lockForUpdate()->first();
 
             if ($vacante->tv_estado !== TurnoVacante::ABIERTA) {
@@ -427,8 +567,17 @@ class VacanteService
 
             $this->marcarAusencia($vacante, $confirmadorId);
 
-            return ['turno' => $turno, 'vacante' => $vacante];
+            return ['turno' => $turno, 'vacante' => $vacante, 'postulacion' => $postulacion];
         });
+
+        // Fuera de la transacción a propósito: un envío lento o caído no puede
+        // dejar abierta la transacción que asigna el turno.
+        $this->avisar(fn (NotificadorVacante $n) => $n->coberturaConfirmada(
+            $resultado['vacante'],
+            $resultado['postulacion']
+        ));
+
+        return $resultado;
     }
 
     /**
@@ -449,8 +598,21 @@ class VacanteService
             return;
         }
 
-        $turno->tu_estado = 'ausente';
-        $turno->tu_observaciones = 'Cubierto por otro guardia (vacante #' . $vacante->tv_id . ')';
+        // Una baja no es una ausencia del guardia: ya no trabaja acá. El turno
+        // se desactiva en vez de contarle una falta por cada día que le
+        // quedaba programado.
+        if ($vacante->tv_motivo === TurnoVacante::BAJA) {
+            $turno->tu_state = false;
+            $turno->tu_observaciones = 'Baja del guardia (vacante #' . $vacante->tv_id . ')';
+        } else {
+            $turno->tu_estado = 'ausente';
+            $turno->tu_observaciones = sprintf(
+                '%s. Cubierto por otro guardia (vacante #%d)',
+                TurnoVacante::MOTIVOS[$vacante->tv_motivo] ?? 'Sin cubrir',
+                $vacante->tv_id
+            );
+        }
+
         $turno->tu_updated_user = $usuarioId;
         $turno->save();
     }

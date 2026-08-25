@@ -100,6 +100,8 @@ export const API_ENDPOINTS = {
     POSTULAR: '/vacantes-postular',
     RETIRAR: '/vacantes-retirar',
     MIS_POSTULACIONES: '/vacantes-mis-postulaciones',
+    MIS_PROXIMOS_TURNOS: '/turnos-proximos',
+    AVISAR_AUSENCIA: '/turnos-avisar-ausencia',
     ACEPTAR_EXTRAS: '/perfil-extras',
   },
   RONDAS: {

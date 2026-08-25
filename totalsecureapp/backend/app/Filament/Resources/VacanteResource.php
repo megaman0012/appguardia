@@ -116,7 +116,17 @@ class VacanteResource extends Resource
                 BadgeColumn::make('tv_motivo')
                     ->label('Motivo')
                     ->enum(TurnoVacante::MOTIVOS)
-                    ->colors(['warning' => 'falta', 'secondary' => 'aviso', 'primary' => 'refuerzo']),
+                    ->colors([
+                        'danger'  => 'falta',
+                        'primary' => 'refuerzo',
+                        // Avisados con tiempo: el que avisa no es el que falta.
+                        'warning' => static fn ($state): bool => in_array(
+                            $state,
+                            ['aviso', 'enfermedad', 'permiso'],
+                            true
+                        ),
+                        'secondary' => TurnoVacante::BAJA,
+                    ]),
                 BadgeColumn::make('tv_estado')
                     ->label('Estado')
                     ->enum(TurnoVacante::ESTADOS)
@@ -132,6 +142,11 @@ class VacanteResource extends Resource
                             true
                         ),
                     ]),
+                TextColumn::make('tv_observaciones')
+                    ->size('sm')
+                    ->label('Detalle')
+                    ->limit(40)
+                    ->toggleable(),
                 TextColumn::make('tv_alcance')
                     ->size('sm')
                     ->label('Alcance')
@@ -175,12 +190,15 @@ class VacanteResource extends Resource
                             ->send();
                     }),
 
+                // Elegir quién cubre es del Líder Operativo: cubrir un puesto
+                // ante el cliente es su responsabilidad. El Supervisor confirma
+                // la falta y ve a los postulados, pero no asigna.
                 Tables\Actions\Action::make('confirmarCobertura')
                     ->label('Elegir quién cubre')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(fn (TurnoVacante $record) => $record->tv_estado === TurnoVacante::ABIERTA
-                        && PerfilPanel::puedeOperar())
+                        && PerfilPanel::puedeAdministrarLocales())
                     ->form(fn (TurnoVacante $record) => [
                         Select::make('tp_id')
                             ->label('Guardia que cubre')

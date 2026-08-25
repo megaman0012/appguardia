@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Validator;
+use Modules\Administracion\Models\Turno;
 use Modules\Administracion\Models\TurnoPostulacion;
 use Modules\Administracion\Models\TurnoVacante;
 
@@ -198,6 +199,112 @@ class VacanteController extends Controller
         }
 
         return response()->json(['success' => true, 'postulaciones' => $res]);
+    }
+
+    /**
+     * POST /api/turnos-proximos
+     *
+     * Los turnos que el guardia tiene por delante. `turnos-del-dia` solo trae
+     * los de hoy, y avisar una ausencia sirve justamente para los que vienen.
+     */
+    public function proximos(Request $request): JsonResponse
+    {
+        list($us, $tk) = $this->getSanctumSession($request);
+
+        $dias = min(30, max(1, (int) $request->input('dias', 14)));
+
+        $turnos = Turno::with(['puesto', 'institucion'])
+            ->where('tu_usu_id', $us->id)
+            ->where('tu_state', true)
+            ->where('tu_estado', 'programado')
+            ->whereNull('tu_marcada_entrada')
+            ->whereBetween('tu_fecha', [
+                Carbon::today()->toDateString(),
+                Carbon::today()->addDays($dias)->toDateString(),
+            ])
+            ->orderBy('tu_fecha')
+            ->orderBy('tu_hora_inicio_prevista')
+            ->get();
+
+        $avisados = TurnoVacante::whereIn('tv_turno_id', $turnos->pluck('tu_id'))
+            ->vivas()
+            ->pluck('tv_motivo', 'tv_turno_id');
+
+        $res = [];
+        foreach ($turnos as $t) {
+            $res[] = [
+                'tu_id'       => $t->tu_id,
+                'local'       => optional($t->institucion)->ins_descripcion,
+                'puesto'      => optional($t->puesto)->pu_nombre,
+                'fecha'       => $t->tu_fecha->toDateString(),
+                'hora_inicio' => substr((string) $t->tu_hora_inicio_prevista, 0, 5),
+                'hora_fin'    => substr((string) $t->tu_hora_fin_prevista, 0, 5),
+                // Si ya avisó, la app muestra el estado en vez de volver a
+                // ofrecer el botón.
+                'avisado'     => $avisados->has($t->tu_id),
+            ];
+        }
+
+        return response()->json(['success' => true, 'turnos' => $res]);
+    }
+
+    /**
+     * POST /api/turnos-avisar-ausencia
+     *
+     * El guardia avisa con tiempo que no va a poder cubrir su turno.
+     *
+     * Es lo que separa un puesto cubierto de uno vacío: avisar la noche
+     * anterior deja horas para conseguir reemplazo; que se descubra a las 06:20
+     * deja minutos.
+     */
+    public function avisarAusencia(Request $request): JsonResponse
+    {
+        list($us, $tk) = $this->getSanctumSession($request);
+
+        $validator = Validator::make($request->all(), [
+            'tu_id'  => 'required|integer',
+            'motivo' => 'required|string',
+        ], [
+            'tu_id.required'  => 'Campo turno es obligatorio',
+            'motivo.required' => 'Indique el motivo',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()]);
+        }
+
+        $turno = Turno::where('tu_id', $request->tu_id)
+            ->where('tu_usu_id', $us->id)
+            ->where('tu_state', true)
+            ->first();
+
+        if (!$turno) {
+            return $this->message_json('errors', 'Ese turno no existe o no es suyo');
+        }
+
+        if ($turno->tu_marcada_entrada) {
+            return $this->message_json('errors', 'Ese turno ya tiene entrada marcada');
+        }
+
+        if ($turno->tu_estado !== 'programado') {
+            return $this->message_json('errors', 'Ese turno ya no está programado');
+        }
+
+        $r = $this->vacantes->avisarAusencia(
+            $turno,
+            $request->input('motivo'),
+            $request->input('observacion'),
+            $request->input('client_uuid'),
+            $request->input('ocurrido_en')
+        );
+
+        return response()->json([
+            'success'   => true,
+            'duplicado' => $r['duplicada'],
+            'tv_id'     => optional($r['vacante'])->tv_id,
+            'message'   => $r['duplicada']
+                ? 'Su aviso ya estaba registrado.'
+                : 'Aviso registrado. Su supervisor buscará quién cubra el turno.',
+        ]);
     }
 
     /**

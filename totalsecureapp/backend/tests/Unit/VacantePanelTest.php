@@ -36,8 +36,18 @@ class VacantePanelTest extends TestCase
     {
         parent::setUp();
 
-        $this->local      = $this->crearLocal('Terminal');
-        $this->localAjeno = $this->crearLocal('Local ajeno');
+        // El Líder Operativo tiene alcance por país, así que los locales
+        // necesitan ciudad para que los vea.
+        $ecuador = (int) DB::table('pais')->where('pa_iso2', 'EC')->value('pa_id');
+        $provincia = DB::table('provincia')->where('pr_pa_id', $ecuador)->value('pr_id');
+        $ciudad = DB::table('ciudad')->where('cd_pr_id', $provincia)->value('cd_id')
+            ?: DB::table('ciudad')->insertGetId([
+                'cd_pr_id' => $provincia, 'cd_nombre' => 'Ciudad de prueba', 'cd_estado' => true,
+                'created_at' => now(), 'updated_at' => now(),
+            ], 'cd_id');
+
+        $this->local      = $this->crearLocal('Terminal', $ciudad);
+        $this->localAjeno = $this->crearLocal('Local ajeno', $ciudad);
 
         $this->crearUsuario($this->supervisor, '1111111111', 'Sofia Supervisora', null);
         $this->crearUsuario($this->guardia, '2222222222', 'Ruth Volante', 'Vigilante');
@@ -54,12 +64,25 @@ class VacantePanelTest extends TestCase
         Session::put('usuPF', 'Supervisor');
     }
 
-    private function crearLocal(string $nombre): int
+    private function crearLocal(string $nombre, $ciudadId): int
     {
         return DB::table('organizacion_institucion')->insertGetId([
-            'ins_descripcion' => $nombre, 'ins_estado' => true,
+            'ins_descripcion' => $nombre, 'ins_estado' => true, 'ins_cd_id' => $ciudadId,
             'created_at' => now(), 'updated_at' => now(),
         ], 'ins_code');
+    }
+
+    /** Pasa la sesión al perfil de Líder Operativo, con su país asignado. */
+    private function comoLider(): void
+    {
+        $ecuador = (int) DB::table('pais')->where('pa_iso2', 'EC')->value('pa_id');
+
+        DB::table('user_has_pais')->updateOrInsert(
+            ['up_usu_id' => $this->supervisor, 'up_pa_id' => $ecuador],
+            ['up_estado' => true]
+        );
+
+        Session::put('usuPF', 'Lider Operativo');
     }
 
     private function crearUsuario(int $id, string $cedula, string $nombre, ?string $rol): void
@@ -153,13 +176,14 @@ class VacantePanelTest extends TestCase
         $this->assertTrue($vacante->admitePostulaciones());
     }
 
-    public function test_elegir_quien_cubre_crea_el_turno_de_cobertura(): void
+    public function test_el_lider_elige_quien_cubre_y_se_crea_el_turno(): void
     {
         $vacante = $this->vacante();
         $servicio = app(VacanteService::class);
         $servicio->abrir($vacante, $this->supervisor);
         $servicio->postular($vacante, $this->guardia);
         $postulacion = TurnoPostulacion::first();
+        $this->comoLider();
 
         $this->pantalla()
             ->call('mountTableAction', 'confirmarCobertura', $vacante->tv_id)
@@ -171,6 +195,38 @@ class VacantePanelTest extends TestCase
             $this->guardia,
             (int) Turno::where('tu_observaciones', 'like', 'Cobertura%')->first()->tu_usu_id
         );
+    }
+
+    public function test_el_supervisor_no_asigna_la_cobertura(): void
+    {
+        // Cubrir un puesto ante el cliente es responsabilidad del Líder
+        // Operativo. El Supervisor confirma la falta y ve a los postulados,
+        // pero la asignación no es suya.
+        $vacante = $this->vacante();
+        $servicio = app(VacanteService::class);
+        $servicio->abrir($vacante, $this->supervisor);
+        $servicio->postular($vacante, $this->guardia);
+
+        $this->pantalla()
+            ->call('mountTableAction', 'confirmarCobertura', $vacante->tv_id)
+            ->set('mountedTableActionData.tp_id', TurnoPostulacion::first()->tp_id)
+            ->call('callMountedTableAction');
+
+        $this->assertSame(TurnoVacante::ABIERTA, $vacante->fresh()->tv_estado);
+        $this->assertSame(0, Turno::where('tu_observaciones', 'like', 'Cobertura%')->count());
+    }
+
+    public function test_el_supervisor_si_confirma_la_falta(): void
+    {
+        // Lo que sí es suyo: es quien está mirando el turno y puede llamar al
+        // guardia para saber si viene o no.
+        $vacante = $this->vacante();
+
+        $this->pantalla()
+            ->call('mountTableAction', 'abrir', $vacante->tv_id)
+            ->call('callMountedTableAction');
+
+        $this->assertSame(TurnoVacante::ABIERTA, $vacante->fresh()->tv_estado);
     }
 
     public function test_cerrar_la_vacante_cuando_el_guardia_aparece(): void

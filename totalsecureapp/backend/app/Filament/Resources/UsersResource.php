@@ -103,6 +103,73 @@ class UsersResource extends Resource
             ->filters([])
             ->actions([
                 Tables\Actions\EditAction::make(),
+
+                /*
+                 * Una renuncia no es la falta de un día.
+                 *
+                 * Sin esto, el cuadrante seguiría mostrando al guardia asignado
+                 * semanas enteras y cada mañana alguien descubriría el puesto
+                 * vacío otra vez, uno por uno. Acá se libera todo de una vez.
+                 */
+                Tables\Actions\Action::make('darDeBaja')
+                    ->label('Registrar baja')
+                    ->icon('heroicon-o-user-remove')
+                    ->color('danger')
+                    ->modalHeading('Registrar la baja del guardia')
+                    ->modalSubheading('Se cierran sus asignaciones del cuadrante y se abre una vacante por cada turno futuro que tenía programado.')
+                    ->form([
+                        Select::make('motivo')
+                            ->label('Motivo')
+                            ->options([
+                                'Renuncia'        => 'Renuncia',
+                                'Desvinculación'  => 'Desvinculación',
+                                'Traslado'        => 'Traslado a otro local',
+                                'Otro'            => 'Otro',
+                            ])
+                            ->default('Renuncia')
+                            ->required(),
+                        Forms\Components\DatePicker::make('desde')
+                            ->label('A partir de')
+                            ->default(now())
+                            ->required()
+                            ->helperText('Sus turnos desde esta fecha quedan sin cubrir'),
+                        Forms\Components\Textarea::make('observacion')
+                            ->label('Observación')
+                            ->rows(2)
+                            ->columnSpan(2),
+                        Toggle::make('desactivar')
+                            ->label('Desactivar el usuario')
+                            ->default(true)
+                            ->helperText('Deja de poder entrar a la app. Su historial se conserva.'),
+                    ])
+                    ->visible(fn () => PerfilPanel::puedeGestionarPersonal())
+                    ->action(function (users $record, array $data) {
+                        $observacion = trim($data['motivo'] . '. ' . ($data['observacion'] ?? ''));
+
+                        $r = app(\App\Services\VacanteService::class)->darDeBaja(
+                            (int) $record->id,
+                            \Carbon\Carbon::parse($data['desde']),
+                            $observacion,
+                            Session::get('usuID')
+                        );
+
+                        if (!empty($data['desactivar'])) {
+                            $record->usu_state = 0;
+                            $record->save();
+                        }
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Baja registrada')
+                            ->body(sprintf(
+                                '%d turnos liberados y %d vacantes abiertas. %d asignaciones del cuadrante quedaron cerradas.',
+                                $r['turnos'],
+                                $r['vacantes'],
+                                $r['asignaciones']
+                            ))
+                            ->success()
+                            ->persistent()
+                            ->send();
+                    }),
             ])
             ->bulkActions([]);
     }
