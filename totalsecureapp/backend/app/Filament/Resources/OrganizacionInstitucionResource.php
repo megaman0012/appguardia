@@ -45,7 +45,7 @@ class OrganizacionInstitucionResource extends Resource
      * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
      * 126 consultas en vez de 6.
      */
-    protected const RELACIONES_TABLA = ['organizacionsede.organizacion', 'organizacionsede.sede'];
+    protected const RELACIONES_TABLA = ['organizacionsede.organizacion', 'organizacionsede.sede', 'ciudad.provincia.pais', 'cliente'];
     protected static ?int $navigationSort = 4;
     protected static ?string $navigationLabel = 'Organizacion > Institucion';
     protected static ?string $navigationIcon = 'heroicon-o-flag';
@@ -87,10 +87,32 @@ class OrganizacionInstitucionResource extends Resource
                 ->required()
                 ->maxLength(255),
 
-            TextInput::make('ins_ciudad')
+            Select::make('ins_cliente_id')
+                ->label('Cliente')
+                ->relationship('cliente', 'org_descripcion')
+                ->searchable()
+                ->preload()
+                ->helperText('Un cliente es uno solo aunque opere en varios países'),
+
+            Select::make('ins_cd_id')
                 ->label('Ciudad')
-                ->required()
-                ->maxLength(250),
+                ->relationship('ciudad', 'cd_nombre')
+                ->searchable()
+                ->preload()
+                // De la ciudad se sube a provincia y país: es lo que define el
+                // alcance del Líder Operativo y los cortes de reportería.
+                ->getOptionLabelFromRecordUsing(fn ($record) => sprintf(
+                    '%s — %s, %s',
+                    $record->cd_nombre,
+                    optional($record->provincia)->pr_nombre ?? 's/provincia',
+                    optional(optional($record->provincia)->pais)->pa_nombre ?? 's/país'
+                ))
+                ->helperText('Si falta la ciudad, se crea en Ubicación Geográfica'),
+
+            TextInput::make('ins_ciudad')
+                ->label('Ciudad (texto libre, en desuso)')
+                ->maxLength(250)
+                ->helperText('Reemplazado por el selector de Ciudad. Se conserva por los datos ya cargados'),
 
             TextInput::make('ins_telefono')
                 ->label('Telefono')
@@ -134,6 +156,12 @@ class OrganizacionInstitucionResource extends Resource
                 TextColumn::make('ins_descripcion')->size('sm')
                     ->label('Institución')
                     ->searchable(),
+                TextColumn::make('cliente.org_descripcion')->size('sm')
+                    ->label('Cliente')->sortable()->searchable()->toggleable(),
+                TextColumn::make('ciudad.provincia.pais.pa_nombre')->size('sm')
+                    ->label('País')->sortable()->toggleable(),
+                TextColumn::make('ciudad.cd_nombre')->size('sm')
+                    ->label('Ciudad')->sortable()->toggleable(),
                 TextColumn::make('ins_ciudad')->size('sm')
                     ->label('Ciudad/Estado')
                     ->searchable(false)
