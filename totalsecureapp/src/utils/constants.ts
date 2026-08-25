@@ -90,6 +90,11 @@ export const API_ENDPOINTS = {
   },
   INSTITUCIONES: '/instituciones',
   BIOMETRIA: '/biometria',
+  TURNOS: {
+    DEL_DIA: '/turnos-del-dia',
+    VINCULAR_MARCAJE: '/turnos-vincular-marcaje',
+    CUMPLIMIENTO: '/turnos-cumplimiento',
+  },
   RONDAS: {
     LIST: '/rondas',
     GESTION: '/rondas_gestion',

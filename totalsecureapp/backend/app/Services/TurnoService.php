@@ -21,6 +21,54 @@ class TurnoService
             ->first();
     }
 
+    /**
+     * Turno al que corresponde un marcaje concreto.
+     *
+     * buscarTurnoProgramado() devuelve el primero que encuentre, que alcanza
+     * cuando hay un solo turno en el dia. Si el guardia cubre dos (mañana y
+     * noche) hay que elegir bien:
+     *
+     *   entrada -> el turno 'programado' cuya hora de inicio esta mas cerca del
+     *              marcaje. Marcar a las 05:50 debe abrir el de las 06:00, no el
+     *              de las 14:00.
+     *   salida  -> el que esta 'en_curso', que es el que el guardia abrio.
+     *
+     * Devuelve null si no hay turno: no todas las instituciones los usan, y el
+     * marcaje debe guardarse igual.
+     */
+    public function buscarTurnoParaMarcaje(
+        int $usuarioId,
+        int $institucionId,
+        Carbon $momento,
+        bool $esEntrada
+    ): ?Turno {
+        $base = Turno::where('tu_usu_id', $usuarioId)
+            ->where('tu_ins_code', $institucionId)
+            ->where('tu_fecha', $momento->toDateString())
+            ->where('tu_state', true);
+
+        if (!$esEntrada) {
+            return (clone $base)->where('tu_estado', 'en_curso')
+                ->orderByDesc('tu_marcada_entrada')
+                ->first();
+        }
+
+        $candidatos = (clone $base)->where('tu_estado', 'programado')
+            ->orderBy('tu_hora_inicio_prevista')
+            ->get();
+
+        if ($candidatos->isEmpty()) {
+            return null;
+        }
+
+        $minutosMarcaje = (int) $momento->format('H') * 60 + (int) $momento->format('i');
+
+        return $candidatos->sortBy(function (Turno $turno) use ($minutosMarcaje) {
+            [$h, $m] = array_pad(explode(':', (string) $turno->tu_hora_inicio_prevista), 2, 0);
+            return abs(((int) $h * 60 + (int) $m) - $minutosMarcaje);
+        })->first();
+    }
+
     public function vincularEntrada(
         Turno $turno,
         int $biometriaCode,
