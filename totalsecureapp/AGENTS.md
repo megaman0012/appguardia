@@ -75,6 +75,11 @@ El backend venía de `coredt360`/HagpAsist, un sistema hospitalario, y arrastrab
 
 **Al agregar permisos web, no reutilizar `ps_codigo` 1 ni 2.** `PermisosApiService::SECCIONES_WEB` sigue listando 1, 2 y 3 para que una base vieja que aún las tenga no filtre permisos web hacia la API.
 
+## Panel: dos fallos de compatibilidad ya resueltos (2026-08-24)
+
+- **`FILAMENT_LIVEWIRE` debe quedar VACÍO en el `.env`.** Livewire arma la URL de su JS como `<valor>/vendor/livewire/livewire.js`. Traía `http://localhost:3031/coredt360/public` (resto de la instalación original en subdirectorio), así que el JS daba **404** y el panel se renderizaba pero **no respondía a nada**: el selector de columnas, los filtros, la búsqueda y los modales quedaban muertos. Vacío produce la ruta relativa, que funciona en cualquier host. No poner el dominio con `/admin`.
+- **Shim en `AppServiceProvider::registrarShimDeRouteBinding()`.** Filament 2.17 llama a `$model->resolveRouteBindingQuery(...)`, método que Eloquent recién trae desde Laravel 9; en 8.75 no existe y **todas** las páginas de edición del panel respondían 500. Se registra como macro del Builder (`Model::__call` reenvía ahí), lo que cubre los ~20 modelos sin tocarlos. El shim se autodesactiva si el método existe, así que al subir a Laravel 9+ se puede borrar.
+
 ## Interfaz Web (panel)
 
 El backend trae dos capas web sobre el mismo dominio `http://localhost:3031`:
