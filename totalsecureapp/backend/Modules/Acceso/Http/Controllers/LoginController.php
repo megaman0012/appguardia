@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Support\Facades\Hash;
 
+use App\Services\PermisosApiService;
 use Modules\Acceso\Models\users;
 use Modules\Acceso\Models\user_has_gestions;
 use Modules\Acceso\Models\role_has_permissions;
@@ -103,11 +104,16 @@ class LoginController extends Controller{
 
         $code = $request->input('code');
         $code = $this->aesCypher($code, 2);
+        // Solo permisos de secciones WEB. Un Vigilante tiene 21 permisos moviles
+        // (rondas.ver, acceso.registrar...) y ninguno web; sin este filtro el
+        // primero de esa lista se usaba como destino y el navegador terminaba en
+        // /rondas.ver, que no existe: un 404 en vez de una explicacion.
         $rsUrl = role_has_permissions::Join('permissions', 'permissions.id', 'permission_id')
                         ->Join('permission_section', 'permission_section.ps_codigo', 'permissions.ps_codigo')
                         ->Join('roles', 'role_id', 'roles.id')
                         ->where('role_id', $code)
                         ->where('pr_state', 1)
+                        ->whereIn('permissions.ps_codigo', PermisosApiService::SECCIONES_WEB)
                         ->orderBy('ps_posicion')
                         ->orderBy('pr_posicion')
                         ->select(
@@ -119,7 +125,27 @@ class LoginController extends Controller{
                         )
                         ->get();
         if (!isset($rsUrl[0])) {
-            return response()->json(array('errors' => 'No tiene los permisos necesarios'));
+            $rol = DB::table('roles')->where('id', $code)->value('name');
+
+            // Se indica DONDE trabaja ese perfil, segun las secciones de permisos
+            // que si tiene: 19 es el portal cliente, 10-18 la app movil.
+            $secciones = DB::table('role_has_permissions')
+                ->join('permissions', 'permissions.id', '=', 'role_has_permissions.permission_id')
+                ->where('role_id', $code)
+                ->distinct()
+                ->pluck('permissions.ps_codigo');
+
+            if ($secciones->contains(19)) {
+                $donde = 'Su acceso es el portal de cliente.';
+            } elseif ($secciones->isNotEmpty()) {
+                $donde = 'Su trabajo se realiza desde la aplicación móvil.';
+            } else {
+                $donde = 'Este perfil no tiene permisos asignados; contacte al administrador.';
+            }
+
+            return response()->json(array(
+                'errors' => sprintf('El perfil %s no tiene acceso al panel web. %s', $rol ?: 'seleccionado', $donde),
+            ));
         }
 
         Session::put('url', $rsUrl);
