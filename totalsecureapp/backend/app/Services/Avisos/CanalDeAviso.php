@@ -18,8 +18,11 @@ interface CanalDeAviso
     public function nombre(): string;
 
     /**
-     * Manda el aviso. Devuelve si salió, nunca lanza: un aviso que no se pudo
-     * entregar no puede hacer fallar la operación que lo originó.
+     * Manda el aviso.
+     *
+     * Devuelve QUÉ pasó, no solo si salió: la diferencia entre "no tiene número
+     * cargado" y "el gateway no respondió" es la diferencia entre cargar un dato
+     * y levantar un servicio.
      */
-    public function enviar(int $usuarioId, string $titulo, string $cuerpo, array $datos = []): bool;
+    public function enviar(int $usuarioId, string $titulo, string $cuerpo, array $datos = []): ResultadoDeAviso;
 }
