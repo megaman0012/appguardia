@@ -118,6 +118,16 @@ Cinco roles. **No escribir listas de perfiles a mano**: usar `App\Support\Perfil
 - `PlantillaTurnoService::validar()` corre antes de generar. **Errores bloquean** (guardia en dos turnos a la vez, guardia sin vínculo al local, puesto de otro local) y **avisos no** (franja sin cubrir, descanso corto): eso último son decisiones del negocio, no datos inválidos.
 - `turno` no tiene ninguna restricción de solape en base, por eso la validación de solapes vive en el servicio.
 
+### Carga por CSV
+
+- `PlantillaImportService` importa **franjas y asignaciones, no turnos**: los turnos los sigue generando `PlantillaTurnoService` en un segundo paso. Así la carga masiva pasa por las mismas validaciones que la carga manual, en vez de tener un camino propio que se salte los solapes.
+- **El local no va en el archivo**: lo define la plantilla. Pedirlo por fila solo abriría la puerta a que no coincida.
+- Es tolerante con lo que sale del Excel de una oficina: BOM, Windows-1252, CRLF, separador `;` o `,`, día como `LUN`/`lunes`/`3`, hora como `6:00` o `06:00:00`, y el nombre del puesto sin acentos ni mayúsculas. Un archivo perfectamente válido no puede fallar con «puesto no encontrado» porque Excel guardó los acentos en otra codificación.
+- **O entra todo o no entra nada.** Con un solo error no se escribe ninguna fila y el cuadrante anterior queda en pie: media carga es peor que ninguna. Las filas repetidas son aviso, no error, y se cargan una sola vez.
+- El botón **Descargar modelo** entrega el CSV con los puestos del local ya escritos (y con BOM, para que Excel no rompa los acentos). Que el líder no tipee los nombres evita la mitad de los errores de carga.
+- El archivo subido se borra apenas se vuelca en la plantilla: conservarlo solo acumularía copias del cuadrante en disco.
+- **El Supervisor no puede abrir el editor del cuadrante** (`canEdit` → 403), así que no alcanza con ocultarle los botones de carga: hoy directamente no ve el detalle. Su vista de solo lectura del cuadrante es la grilla pendiente.
+
 ## Interfaz Web (panel)
 
 El backend trae dos capas web sobre el mismo dominio `http://localhost:3031`:

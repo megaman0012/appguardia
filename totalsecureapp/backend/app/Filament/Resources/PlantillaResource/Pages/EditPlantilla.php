@@ -3,13 +3,17 @@
 namespace App\Filament\Resources\PlantillaResource\Pages;
 
 use App\Filament\Resources\PlantillaResource;
+use App\Services\PlantillaImportService;
 use App\Services\PlantillaTurnoService;
 use App\Support\PerfilPanel;
 use Carbon\Carbon;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
 use Filament\Pages\Actions;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EditPlantilla extends EditRecord
 {
@@ -18,6 +22,39 @@ class EditPlantilla extends EditRecord
     protected function getActions(): array
     {
         return [
+            // Descargar el modelo con los puestos del local ya escritos: que el
+            // lider no tipee los nombres evita la mitad de los errores de carga.
+            Actions\Action::make('descargarModelo')
+                ->label('Descargar modelo')
+                ->icon('heroicon-o-download')
+                ->color('secondary')
+                ->action(fn () => $this->descargarModelo())
+                ->visible(fn () => PerfilPanel::puedeAdministrarLocales()),
+
+            Actions\Action::make('importar')
+                ->label('Importar cuadrante')
+                ->icon('heroicon-o-upload')
+                ->color('secondary')
+                ->modalHeading('Cargar el cuadrante desde un archivo')
+                ->modalSubheading('Reemplaza las franjas actuales por las del archivo. Los turnos ya generados no se tocan: se regeneran después.')
+                ->form([
+                    FileUpload::make('archivo')
+                        ->label('Archivo CSV')
+                        ->required()
+                        ->disk('local')
+                        ->directory('importaciones')
+                        // Un CSV llega con mime distinto segun quien lo generó
+                        // (Excel, LibreOffice, Sheets); el contenido igual se
+                        // valida fila por fila, asi que se es amplio aqui.
+                        ->acceptedFileTypes([
+                            'text/csv', 'text/plain', 'application/csv',
+                            'application/vnd.ms-excel', 'application/octet-stream',
+                        ])
+                        ->helperText('Columnas: cedula, puesto, dia, hora_inicio, hora_fin'),
+                ])
+                ->action(fn (array $data) => $this->importar($data))
+                ->visible(fn () => PerfilPanel::puedeAdministrarLocales()),
+
             // Primero se revisa sin tocar nada: ver los problemas antes de crear
             // cientos de turnos es la mitad del valor de la plantilla.
             Actions\Action::make('revisar')
@@ -122,6 +159,53 @@ class EditPlantilla extends EditRecord
         }
 
         Notification::make()->title('Listo')->body($texto)->success()->send();
+    }
+
+    private function descargarModelo(): StreamedResponse
+    {
+        $csv = app(PlantillaImportService::class)->plantillaDeEjemplo($this->record);
+        $nombre = 'cuadrante-' . $this->record->pl_id . '.csv';
+
+        return response()->streamDownload(function () use ($csv) {
+            // BOM para que Excel abra los acentos bien al descargarlo.
+            echo "\xEF\xBB\xBF" . $csv;
+        }, $nombre, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    private function importar(array $data): void
+    {
+        $ruta = Storage::disk('local')->path($data['archivo']);
+
+        $r = app(PlantillaImportService::class)->importar($this->record, $ruta);
+
+        // El archivo subido no se conserva: ya quedo volcado en la plantilla.
+        Storage::disk('local')->delete($data['archivo']);
+
+        if (!empty($r['errores'])) {
+            Notification::make()
+                ->title('No se importó nada')
+                ->body("• " . implode("\n• ", array_slice($r['errores'], 0, 10)))
+                ->danger()
+                ->persistent()
+                ->send();
+
+            return;
+        }
+
+        if (!empty($r['avisos'])) {
+            Notification::make()
+                ->title('Importado con observaciones')
+                ->body("• " . implode("\n• ", array_slice($r['avisos'], 0, 10)))
+                ->warning()
+                ->persistent()
+                ->send();
+        }
+
+        Notification::make()
+            ->title('Cuadrante importado')
+            ->body("{$r['franjas']} franjas y {$r['asignaciones']} asignaciones. Ahora genere los turnos del período.")
+            ->success()
+            ->send();
     }
 
     protected function mutateFormDataBeforeSave(array $data): array
