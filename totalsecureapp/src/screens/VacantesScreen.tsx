@@ -13,6 +13,16 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
 
+interface TurnoProximo {
+  tu_id: number;
+  local?: string | null;
+  puesto?: string | null;
+  fecha: string;
+  hora_inicio: string;
+  hora_fin: string;
+  avisado?: boolean;
+}
+
 interface Vacante {
   tv_id: number;
   ins_code: number;
@@ -41,6 +51,8 @@ interface Vacante {
 export const VacantesScreen = ({ navigation }: { navigation: any }) => {
   const { institucion } = useAuth();
   const [vacantes, setVacantes] = useState<Vacante[]>([]);
+  const [misTurnos, setMisTurnos] = useState<TurnoProximo[]>([]);
+  const [vista, setVista] = useState<'disponibles' | 'mis-turnos'>('disponibles');
   const [aceptaExtras, setAceptaExtras] = useState(true);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,6 +69,11 @@ export const VacantesScreen = ({ navigation }: { navigation: any }) => {
       setVacantes(Array.isArray(data?.vacantes) ? data.vacantes : []);
       setAceptaExtras(data?.acepta_extras !== false);
       setMensaje(data?.mensaje || null);
+
+      // Los turnos propios se cargan siempre: avisar que no se puede cubrir un
+      // turno no depende de querer turnos extra.
+      const propios = await api.post(API_ENDPOINTS.VACANTES.MIS_PROXIMOS_TURNOS, { dias: 14 });
+      setMisTurnos(Array.isArray(propios.data?.turnos) ? propios.data.turnos : []);
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.message || 'No se pudieron cargar los turnos disponibles');
     } finally {
@@ -106,6 +123,41 @@ export const VacantesScreen = ({ navigation }: { navigation: any }) => {
     }
   };
 
+  const avisarAusencia = async (turno: TurnoProximo, motivo: string) => {
+    setEnviando(turno.tu_id);
+    try {
+      const { data } = await api.post(API_ENDPOINTS.VACANTES.AVISAR_AUSENCIA, {
+        tu_id: turno.tu_id,
+        motivo,
+        ocurrido_en: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        client_uuid: `aviso-${turno.tu_id}-${Date.now()}`,
+      });
+
+      Alert.alert(
+        data?.success ? 'Aviso enviado' : 'No se pudo',
+        data?.message || 'Intente de nuevo.'
+      );
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'No se pudo enviar el aviso');
+    } finally {
+      setEnviando(null);
+      cargar();
+    }
+  };
+
+  const preguntarMotivo = (turno: TurnoProximo) => {
+    Alert.alert(
+      'No podré cubrir este turno',
+      `${turno.puesto || 'Puesto'} · ${turno.fecha}\n${turno.hora_inicio} a ${turno.hora_fin}\n\nSu supervisor buscará quién lo cubra.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Enfermedad', onPress: () => avisarAusencia(turno, 'enfermedad') },
+        { text: 'Permiso', onPress: () => avisarAusencia(turno, 'permiso') },
+        { text: 'Otro motivo', onPress: () => avisarAusencia(turno, 'aviso') },
+      ]
+    );
+  };
+
   const confirmarPostulacion = (vacante: Vacante) => {
     if (vacante.postulado) {
       Alert.alert('Retirar postulación', '¿Ya no puede cubrir este turno?', [
@@ -134,10 +186,68 @@ export const VacantesScreen = ({ navigation }: { navigation: any }) => {
         <Text style={styles.title}>Turnos disponibles</Text>
       </View>
 
+      <View style={styles.tabs}>
+        <TouchableOpacity
+          style={[styles.tab, vista === 'disponibles' && styles.tabActiva]}
+          onPress={() => setVista('disponibles')}
+        >
+          <Text style={[styles.tabText, vista === 'disponibles' && styles.tabTextActiva]}>
+            Por cubrir
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, vista === 'mis-turnos' && styles.tabActiva]}
+          onPress={() => setVista('mis-turnos')}
+        >
+          <Text style={[styles.tabText, vista === 'mis-turnos' && styles.tabTextActiva]}>
+            Mis turnos
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#007AFF" />
         </View>
+      ) : vista === 'mis-turnos' ? (
+        <FlatList
+          data={misTurnos}
+          keyExtractor={(item) => String(item.tu_id)}
+          contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); cargar(); }} />
+          }
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>No tiene turnos programados próximamente.</Text>
+          }
+          renderItem={({ item }) => (
+            <View style={styles.item}>
+              <Text style={styles.itemPuesto}>{item.puesto || 'Sin puesto asignado'}</Text>
+              <Text style={styles.itemLocal}>{item.local || 'Local'}</Text>
+              <Text style={styles.itemHorario}>
+                {item.fecha} · {item.hora_inicio} a {item.hora_fin}
+              </Text>
+
+              {item.avisado ? (
+                <Text style={styles.itemAvisado}>
+                  Ya avisó que no podrá cubrirlo. Su supervisor está buscando reemplazo.
+                </Text>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.btn, styles.btnAvisar]}
+                  onPress={() => preguntarMotivo(item)}
+                  disabled={enviando === item.tu_id}
+                >
+                  {enviando === item.tu_id ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.btnText}>No podré cubrirlo</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        />
       ) : !aceptaExtras ? (
         <View style={styles.center}>
           <Text style={styles.emptyText}>
@@ -216,6 +326,13 @@ const styles = StyleSheet.create({
   backBtn: { marginRight: 12 },
   backText: { fontSize: 16, color: '#007AFF' },
   title: { fontSize: 20, fontWeight: 'bold', color: '#333', flex: 1 },
+  tabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#eee' },
+  tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 3, borderBottomColor: 'transparent' },
+  tabActiva: { borderBottomColor: '#007AFF' },
+  tabText: { fontSize: 15, color: '#777', fontWeight: '600' },
+  tabTextActiva: { color: '#007AFF' },
+  itemAvisado: { fontSize: 13, color: '#b26a00', marginTop: 10, fontWeight: '600' },
+  btnAvisar: { backgroundColor: '#d9534f' },
   list: { padding: 20, paddingBottom: 30 },
   item: {
     backgroundColor: '#f8f9fa',

@@ -410,6 +410,144 @@ class VacanteTest extends TestCase
         );
     }
 
+    // ── Avisar con tiempo ──
+
+    public function test_el_guardia_avisa_que_no_va_a_poder_cubrir(): void
+    {
+        // Avisar la noche anterior deja horas para conseguir reemplazo; que se
+        // descubra a las 06:20 deja minutos.
+        $turno = $this->turno(Carbon::tomorrow()->toDateString(), '06:00', '14:00');
+
+        $r = $this->servicio->avisarAusencia($turno, 'enfermedad', 'Certificado médico');
+
+        $this->assertFalse($r['duplicada']);
+        $this->assertSame('enfermedad', $r['vacante']->tv_motivo);
+        $this->assertSame('Certificado médico', $r['vacante']->tv_observaciones);
+    }
+
+    public function test_el_aviso_no_convoca_solo(): void
+    {
+        // Si bastara con avisar para que el sistema convoque a otro, cualquiera
+        // podría soltar su turno sin que nadie lo revise.
+        $turno = $this->turno(Carbon::tomorrow()->toDateString(), '06:00', '14:00');
+
+        $r = $this->servicio->avisarAusencia($turno, 'permiso');
+
+        $this->assertSame(TurnoVacante::DETECTADA, $r['vacante']->tv_estado);
+        $this->assertFalse($r['vacante']->admitePostulaciones());
+    }
+
+    public function test_avisar_dos_veces_el_mismo_turno_no_abre_dos_vacantes(): void
+    {
+        $turno = $this->turno(Carbon::tomorrow()->toDateString(), '06:00', '14:00');
+
+        $this->servicio->avisarAusencia($turno, 'enfermedad');
+        $r = $this->servicio->avisarAusencia($turno, 'enfermedad');
+
+        $this->assertTrue($r['duplicada']);
+        $this->assertSame(1, TurnoVacante::count());
+    }
+
+    public function test_un_motivo_desconocido_se_registra_como_aviso(): void
+    {
+        // El motivo llega del cliente: no puede meter un valor arbitrario en la
+        // columna y romper los filtros del panel.
+        $turno = $this->turno(Carbon::tomorrow()->toDateString(), '06:00', '14:00');
+
+        $r = $this->servicio->avisarAusencia($turno, 'cualquier-cosa');
+
+        $this->assertSame('aviso', $r['vacante']->tv_motivo);
+    }
+
+    public function test_al_cubrir_un_aviso_queda_escrito_el_motivo(): void
+    {
+        $turno = $this->turno(Carbon::today()->toDateString(), '06:00', '14:00');
+        $vacante = $this->servicio->avisarAusencia($turno, 'enfermedad')['vacante'];
+        $this->servicio->abrir($vacante, 99);
+        $this->servicio->postular($vacante, $this->disponible);
+
+        $this->servicio->confirmar($vacante, TurnoPostulacion::first()->tp_id, 99);
+
+        $this->assertStringContainsString('Enfermedad', $turno->fresh()->tu_observaciones);
+    }
+
+    // ── Baja del guardia ──
+
+    public function test_la_baja_libera_todos_los_turnos_futuros(): void
+    {
+        // Una renuncia no es la falta de un día: sin esto, cada mañana alguien
+        // descubriría el puesto vacío otra vez.
+        $this->turno(Carbon::today()->addDays(1)->toDateString(), '06:00', '14:00');
+        $this->turno(Carbon::today()->addDays(2)->toDateString(), '06:00', '14:00');
+        $this->turno(Carbon::today()->addDays(3)->toDateString(), '06:00', '14:00');
+
+        $r = $this->servicio->darDeBaja($this->ausente, Carbon::today(), 'Renuncia', 99);
+
+        $this->assertSame(3, $r['vacantes']);
+        $this->assertSame(3, TurnoVacante::where('tv_motivo', TurnoVacante::BAJA)->count());
+    }
+
+    public function test_la_baja_no_toca_los_turnos_ya_trabajados(): void
+    {
+        $pasado = $this->turno(Carbon::today()->subDays(3)->toDateString(), '06:00', '14:00');
+        $pasado->tu_estado = 'completado';
+        $pasado->tu_marcada_entrada = Carbon::today()->subDays(3)->setTime(6, 0);
+        $pasado->save();
+
+        $this->servicio->darDeBaja($this->ausente, Carbon::today(), 'Renuncia', 99);
+
+        $this->assertSame('completado', $pasado->fresh()->tu_estado);
+        $this->assertSame(0, TurnoVacante::count());
+    }
+
+    public function test_la_baja_cierra_su_vigencia_en_el_cuadrante(): void
+    {
+        // Se cierra la vigencia en vez de borrar la asignación: el histórico de
+        // quién cubría qué no se toca.
+        $plantilla = Plantilla::create(['pl_ins_code' => $this->local, 'pl_nombre' => 'Cuadrante']);
+        $franja = PlantillaFranja::create([
+            'pf_pl_id' => $plantilla->pl_id, 'pf_puesto_id' => $this->puesto->pu_id,
+            'pf_dia_semana' => 1, 'pf_hora_inicio' => '06:00', 'pf_hora_fin' => '14:00',
+        ]);
+        PlantillaAsignacion::create(['pa_pf_id' => $franja->pf_id, 'pa_usu_id' => $this->ausente]);
+
+        $this->servicio->darDeBaja($this->ausente, Carbon::today(), 'Renuncia', 99);
+
+        $asignacion = PlantillaAsignacion::first();
+        $this->assertNotNull($asignacion->pa_hasta);
+        $this->assertSame(
+            Carbon::yesterday()->toDateString(),
+            Carbon::parse($asignacion->pa_hasta)->toDateString()
+        );
+    }
+
+    public function test_la_baja_no_le_cuenta_ausencias_al_que_se_fue(): void
+    {
+        // Marcar cada turno restante como ausencia le cargaría una falta por día
+        // que ya no trabajaba, y ensuciaría el cumplimiento del local.
+        $turno = $this->turno(Carbon::today()->addDay()->toDateString(), '06:00', '14:00');
+        $this->servicio->darDeBaja($this->ausente, Carbon::today(), 'Renuncia', 99);
+
+        $vacante = TurnoVacante::first();
+        $this->servicio->postular($vacante, $this->disponible);
+        $this->servicio->confirmar($vacante, TurnoPostulacion::first()->tp_id, 99);
+
+        $turno = $turno->fresh();
+        $this->assertNotSame('ausente', $turno->tu_estado);
+        $this->assertFalse((bool) $turno->tu_state, 'El turno del que se fue queda desactivado');
+    }
+
+    public function test_las_vacantes_de_una_baja_ya_nacen_ofrecidas(): void
+    {
+        // La baja ya la confirmó quien la registró: no hace falta que otra
+        // persona vuelva a confirmar turno por turno.
+        $this->turno(Carbon::today()->addDay()->toDateString(), '06:00', '14:00');
+
+        $this->servicio->darDeBaja($this->ausente, Carbon::today(), 'Renuncia', 99);
+
+        $this->assertSame(TurnoVacante::ABIERTA, TurnoVacante::first()->tv_estado);
+    }
+
     // ── Cierre ──
 
     public function test_vencer_cierra_las_que_ya_no_se_pueden_cubrir(): void

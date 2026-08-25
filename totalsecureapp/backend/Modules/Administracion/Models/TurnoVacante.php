@@ -29,10 +29,25 @@ class TurnoVacante extends Model
     public const VENCIDA = 'vencida';
 
     public const MOTIVOS = [
-        'falta'    => 'No marcó entrada',
-        'aviso'    => 'Avisó que no viene',
-        'refuerzo' => 'Refuerzo solicitado',
+        'falta'      => 'No marcó entrada',
+        'aviso'      => 'Avisó que no viene',
+        'enfermedad' => 'Enfermedad',
+        'permiso'    => 'Permiso',
+        'baja'       => 'Baja del guardia',
+        'refuerzo'   => 'Refuerzo solicitado',
     ];
+
+    /** Motivos que el guardia puede reportar él mismo desde la app. */
+    public const MOTIVOS_DEL_GUARDIA = ['aviso', 'enfermedad', 'permiso'];
+
+    /**
+     * El guardia dejó la empresa: sus turnos futuros no son ausencias suyas.
+     *
+     * Marcarlos como ausencia le cargaría una falta por cada día que le quedaba
+     * programado, y ensuciaría el cumplimiento del local con turnos que nadie
+     * esperaba que cubriera.
+     */
+    public const BAJA = 'baja';
 
     public const ESTADOS = [
         self::DETECTADA => 'Por confirmar',

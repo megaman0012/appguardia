@@ -105,6 +105,10 @@ Route::middleware('api.auth')->group(function () {
         ->middleware('permission.api:vacantes.postular');
     Route::post('/vacantes-retirar', [VacanteController::class, 'retirar'])
         ->middleware('permission.api:vacantes.postular');
+    Route::post('/turnos-proximos', [VacanteController::class, 'proximos'])
+        ->middleware('permission.api:vacantes.avisar_ausencia');
+    Route::post('/turnos-avisar-ausencia', [VacanteController::class, 'avisarAusencia'])
+        ->middleware('permission.api:vacantes.avisar_ausencia');
     Route::post('/perfil-extras', [VacanteController::class, 'aceptarExtras'])
         ->middleware('permission.api:perfil.editar');
 
