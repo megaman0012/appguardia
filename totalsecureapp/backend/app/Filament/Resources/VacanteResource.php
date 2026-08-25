@@ -190,15 +190,17 @@ class VacanteResource extends Resource
                             ->send();
                     }),
 
-                // Elegir quién cubre es del Líder Operativo: cubrir un puesto
-                // ante el cliente es su responsabilidad. El Supervisor confirma
-                // la falta y ve a los postulados, pero no asigna.
+                // Elegir quién cubre es del Líder Operativo y de la Consola:
+                // es responsabilidad del líder, pero una falta de madrugada no
+                // espera a que despierte, y la Consola atiende 24/7. El
+                // Supervisor confirma la falta y ve a los postulados, pero no
+                // asigna.
                 Tables\Actions\Action::make('confirmarCobertura')
                     ->label('Elegir quién cubre')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(fn (TurnoVacante $record) => $record->tv_estado === TurnoVacante::ABIERTA
-                        && PerfilPanel::puedeAdministrarLocales())
+                        && PerfilPanel::puedeAsignarCobertura())
                     ->form(fn (TurnoVacante $record) => [
                         Select::make('tp_id')
                             ->label('Guardia que cubre')

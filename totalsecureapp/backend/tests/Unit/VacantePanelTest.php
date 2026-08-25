@@ -197,6 +197,35 @@ class VacantePanelTest extends TestCase
         );
     }
 
+    public function test_la_consola_tambien_asigna_la_cobertura(): void
+    {
+        // Una falta a las tres de la mañana no espera a que el líder despierte.
+        // La Consola atiende 24/7 y ve toda la operación, sin filtro de local.
+        $vacante = $this->vacante($this->localAjeno);
+        $servicio = app(VacanteService::class);
+        $servicio->abrir($vacante, $this->supervisor);
+        DB::table('user_has_institucion')->insert([
+            'ui_usu_id' => $this->guardia, 'ui_ins_code' => $this->localAjeno, 'ui_state' => 1,
+        ]);
+        $servicio->postular($vacante, $this->guardia);
+        Session::put('usuPF', 'Consola');
+
+        $this->pantalla()
+            ->call('mountTableAction', 'confirmarCobertura', $vacante->tv_id)
+            ->set('mountedTableActionData.tp_id', TurnoPostulacion::first()->tp_id)
+            ->call('callMountedTableAction');
+
+        $this->assertSame(TurnoVacante::CUBIERTA, $vacante->fresh()->tv_estado);
+    }
+
+    public function test_la_consola_ve_las_faltas_de_cualquier_local(): void
+    {
+        $ajena = $this->vacante($this->localAjeno);
+        Session::put('usuPF', 'Consola');
+
+        $this->pantalla()->assertCanSeeTableRecords([$ajena]);
+    }
+
     public function test_el_supervisor_no_asigna_la_cobertura(): void
     {
         // Cubrir un puesto ante el cliente es responsabilidad del Líder
