@@ -19,6 +19,7 @@ class Turno extends Model
         'tu_usu_id',
         'tu_marcador_code',
         'tu_puesto_id',
+        'tu_plantilla_id',
         'tu_fecha',
         'tu_hora_inicio_prevista',
         'tu_hora_fin_prevista',
