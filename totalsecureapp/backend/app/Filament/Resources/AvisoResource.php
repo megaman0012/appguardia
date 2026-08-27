@@ -48,7 +48,13 @@ class AvisoResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('created_at')->size('sm')->label('Fecha')->dateTime('d/m/Y H:i')->sortable(),
-                TextColumn::make('usuario.usu_nmbcom')->size('sm')->label('Destinatario')->searchable(),
+                BadgeColumn::make('ae_direccion')
+                    ->label('')
+                    // Un "no puedo cubrirlo" del guardia no es lo mismo que un
+                    // aviso que mandó la empresa, aunque vivan en la misma tabla.
+                    ->formatStateUsing(fn ($state) => $state === AvisoEnvio::ENTRANTE ? 'Respuesta' : 'Enviado')
+                    ->colors(['primary' => AvisoEnvio::ENTRANTE, 'secondary' => AvisoEnvio::SALIENTE]),
+                TextColumn::make('usuario.usu_nmbcom')->size('sm')->label('Guardia')->searchable(),
                 BadgeColumn::make('ae_canal')
                     ->label('Canal')
                     ->colors(['success' => 'whatsapp', 'primary' => 'push', 'secondary' => 'bitacora']),
@@ -79,9 +85,19 @@ class AvisoResource extends Resource
                 Tables\Filters\SelectFilter::make('ae_resultado')
                     ->label('Resultado')
                     ->options(AvisoEnvio::RESULTADOS),
+                Tables\Filters\SelectFilter::make('ae_direccion')
+                    ->label('Tipo')
+                    ->options(AvisoEnvio::DIRECCIONES),
+                Tables\Filters\Filter::make('respuestas')
+                    ->label('Solo respuestas de guardias')
+                    ->query(fn (Builder $query) => $query->respuestas()),
                 Tables\Filters\Filter::make('no_llegaron')
                     ->label('Solo los que no llegaron')
-                    ->query(fn (Builder $query) => $query->where('ae_resultado', '!=', AvisoEnvio::ENVIADO)),
+                    // Solo aplica a lo saliente: una respuesta entrante siempre
+                    // "llegó", es el guardia el que escribió.
+                    ->query(fn (Builder $query) => $query
+                        ->where('ae_direccion', AvisoEnvio::SALIENTE)
+                        ->where('ae_resultado', '!=', AvisoEnvio::ENVIADO)),
             ])
             ->actions([])
             ->bulkActions([]);

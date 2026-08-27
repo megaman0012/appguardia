@@ -135,6 +135,12 @@ Si no puede, responda: NO 4821
 Cuando un guardia acepta, la **Consola y el Líder Operativo** reciben el aviso en
 el momento.
 
+**Las dos respuestas quedan registradas**, el «sí» y el «no». En *Avisos
+enviados* se distinguen de los mensajes salientes con la etiqueta **Respuesta**, y
+hay un filtro «Solo respuestas de guardias». El «no» importa tanto como el «sí»:
+la central deja de esperar esa respuesta y sabe a quién no volver a llamar por ese
+turno.
+
 ## 5. Verificar
 
 En el panel, **Operación → Avisos enviados**. Arriba hay una tarjeta con el estado

@@ -47,7 +47,7 @@ class UserHasInstitucionResource extends Resource
      * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
      * 126 consultas en vez de 6.
      */
-    protected const RELACIONES_TABLA = ['institucion.organizacionSede.organizacion', 'institucion.organizacionSede.sede', 'usuario'];
+    protected const RELACIONES_TABLA = ['institucion.cliente', 'usuario'];
     protected static ?string $navigationIcon = 'heroicon-o-identification';
 
     public static function form(Form $form): Form
@@ -108,11 +108,7 @@ class UserHasInstitucionResource extends Resource
                     ->label('Código')
                     ->sortable()
                     ->searchable(),
-                TextColumn::make('institucion.organizacionSede.sede.ps_descripcion')->size('sm')
-                    ->label('Sede')
-                    ->toggleable()
-                    ->searchable(),
-                TextColumn::make('institucion.organizacionSede.organizacion.org_descripcion')->size('sm')
+                TextColumn::make('institucion.cliente.org_descripcion')->size('sm')
                     ->label('Organizacion')
                     ->toggleable()
                     ->searchable(),

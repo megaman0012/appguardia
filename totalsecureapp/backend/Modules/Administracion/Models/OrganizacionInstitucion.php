@@ -16,7 +16,6 @@ class OrganizacionInstitucion extends Model
     public $incrementing = true;
 
     protected $fillable = [
-        'ins_so_code',
         'ins_descripcion',
         'ins_razon_social',
         'ins_direccion',
@@ -35,21 +34,6 @@ class OrganizacionInstitucion extends Model
     protected $dates = ['created_at', 'updated_at'];
     protected $attributes = [ 'ins_estado' => true ];
     protected $casts = [ 'ins_radio_tolerancia_metros' => 'integer' ];
-
-    public function organizacionSede()
-    {
-        return $this->belongsTo(OrganizacionSede::class, 'ins_so_code', 'so_code');
-    }
-
-    public function sede()
-    {
-        return $this->belongsTo(Sede::class, OrganizacionSede::class);
-    }
-
-    public function organizacion()
-    {
-        return $this->belongsTo(Organizacion::class, OrganizacionSede::class);
-    }
 
     public function marcadores()
     {

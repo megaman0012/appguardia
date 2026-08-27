@@ -40,7 +40,7 @@ class RondaDetalleResource extends Resource
      * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
      * 126 consultas en vez de 6.
      */
-    protected const RELACIONES_TABLA = ['rondaCabecera.institucion.organizacionSede.organizacion', 'rondaCabecera.institucion.organizacionSede.sede', 'users'];
+    protected const RELACIONES_TABLA = ['rondaCabecera.institucion.cliente', 'users'];
     protected static ?string $navigationIcon = 'heroicon-o-collection';
     protected static bool $shouldRegisterNavigation = false;
 
@@ -50,11 +50,7 @@ class RondaDetalleResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('rondaCabecera.institucion.organizacionSede.sede.ps_descripcion')->size('sm')
-                    ->label('Sede')
-                    ->searchable()
-                    ->toggleable(),
-                TextColumn::make('rondaCabecera.institucion.organizacionSede.organizacion.org_descripcion')->size('sm')
+                TextColumn::make('rondaCabecera.institucion.cliente.org_descripcion')->size('sm')
                     ->label('Organizacion')
                     ->searchable()
                     ->toggleable(),

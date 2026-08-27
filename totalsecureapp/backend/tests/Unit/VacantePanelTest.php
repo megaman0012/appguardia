@@ -36,6 +36,11 @@ class VacantePanelTest extends TestCase
     {
         parent::setUp();
 
+        // La hora a la que se corre el suite no puede cambiar el resultado: un
+        // turno de 06:00 a 14:00 "de hoy" ya terminó si las pruebas corren a las
+        // 17:00, y media docena de casos empezaban a fallar solos por la tarde.
+        Carbon::setTestNow(Carbon::parse('2026-09-01 07:00:00'));
+
         // El Líder Operativo tiene alcance por país, así que los locales
         // necesitan ciudad para que los vea.
         $ecuador = (int) DB::table('pais')->where('pa_iso2', 'EC')->value('pa_id');
@@ -62,6 +67,12 @@ class VacantePanelTest extends TestCase
 
         Session::put('usuID', $this->supervisor);
         Session::put('usuPF', 'Supervisor');
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
     }
 
     private function crearLocal(string $nombre, $ciudadId): int

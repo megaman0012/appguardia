@@ -57,10 +57,12 @@
 
 ## Performance y QA (Fase 9)
 
-- **Eager loading obligatorio en los resources de Filament.** Las columnas del tipo `institucion.organizacionSede.sede.ps_descripcion` disparan una consulta por relación y por fila. Cada resource declara su constante `RELACIONES_TABLA` y la aplica en `getEloquentQuery()`. Medido: 5N+1 consultas sin eso, o sea 126 por página con las 25 filas por defecto, contra 6 constantes. `EagerLoadingTest` recorre el directorio de resources y falla si uno usa columnas de relación sin declararlas, así que un resource nuevo no puede omitirlo.
+- **Eager loading obligatorio en los resources de Filament.** Las columnas del tipo `institucion.cliente.org_descripcion` disparan una consulta por relación y por fila. Cada resource declara su constante `RELACIONES_TABLA` y la aplica en `getEloquentQuery()`. Medido: 5N+1 consultas sin eso, o sea 126 por página con las 25 filas por defecto, contra 6 constantes. `EagerLoadingTest` recorre el directorio de resources y falla si uno usa columnas de relación sin declararlas, así que un resource nuevo no puede omitirlo.
 - **Caché del dashboard: la invalidación es por evento, no por TTL.** `App\Services\DashboardStatsService` incluye un contador de versión por institución en la clave, y los observers de `Alertas` y `Turno` (registrados en `EventServiceProvider`) lo suben en cada escritura. **No usar `Cache::tags()`**: el driver configurado es `file` y lanzaría `BadMethodCallException`. La invalidación va en observers y no en los services para cubrir también las escrituras del panel y de los seeders.
 - Índices compuestos en la migración `2026_08_21_500001`, con el orden igualdad→rango. Al agregar un filtro nuevo, revisar si necesita índice; el más caliente es `(ui_usu_id, ui_state)` de `user_has_institucion`, que se consulta en cada request del portal y en cada validación de institución de la app.
 - Tras desplegar índices, correr `ANALYZE`: sin estadísticas frescas el planner los ignora.
+- **Los tests de turnos congelan el reloj** (`Carbon::setTestNow`). Sin eso, media docena de casos que arman un turno «de hoy, 06:00 a 14:00» empezaban a fallar solos cuando el suite corría después de las 14:00. Al escribir un test que dependa de la hora, congelar el reloj en el `setUp` y liberarlo en el `tearDown`.
+- **Renderizar una tabla vacía no prueba nada.** `PantallasConDatosTest` dibuja las pantallas con filas reales, porque los errores de formato aparecen con el primer registro: `TurnoResource` respondía 500 en cuanto existía un turno sin marcar, que es el estado normal de todo turno futuro.
 - `CHECKLIST-DESPLIEGUE-V2.md` (raíz del monorepo) tiene el backup obligatorio, el orden de las migraciones y el rollback por fase. **La migración `2026_08_21_100002` borra `ac_nombre_contrato` sin destino**, así que su `down()` no lo recupera: solo el backup.
 
 ## Limpieza del sistema de salud heredado (2026-08-24)
@@ -74,6 +76,30 @@ El backend venía de `coredt360`/HagpAsist, un sistema hospitalario, y arrastrab
 - Secciones de permisos 1 (Administración) y 2 (Formularios), reemplazadas por la 3 (Panel) con el permiso `admin`.
 
 **Al agregar permisos web, no reutilizar `ps_codigo` 1 ni 2.** `PermisosApiService::SECCIONES_WEB` sigue listando 1, 2 y 3 para que una base vieja que aún las tenga no filtre permisos web hacia la API.
+
+## Eliminación del nivel «sede» (2026-08-27)
+
+`sede`, `organizacion_sede` y `organizacion_institucion.ins_so_code` eran otra
+herencia de coredt360: un nivel intermedio (organización → sede → institución) que
+hacía lo mismo que hoy hacen el **cliente** (`ins_cliente_id`) y la **geografía**
+(país → provincia → ciudad → local). Nunca se usó — las tres tablas estaban
+vacías y ningún local tenía sede — y su único efecto era una columna en blanco en
+media docena de pantallas más tres menús que no llevaban a nada.
+
+- Se eliminó con la migración `2026_08_27_100001_eliminar_sede`, que **antes de
+  borrar rescata el cliente** que colgaba de la sede hacia `ins_cliente_id`. En
+  desarrollo no había nada que rescatar; en producción no se puede asumir lo
+  mismo.
+- `down()` recrea la estructura pero **no los datos**: el vínculo local→sede solo
+  vuelve desde un backup. Mismo criterio que `2026_08_21_100002`.
+- **`organizacion` NO se tocó: esa es la tabla de clientes** (ahí va DHL), y es a
+  donde apuntan ahora las columnas que antes llegaban por la cadena de sede.
+- La unicidad del nombre de un local colgaba de la sede; ahora se acota por
+  **ciudad**: «Bodega Norte» puede existir en Quito y en Guayaquil.
+
+**No volver a introducir un nivel entre cliente y local.** Si hiciera falta
+modelar contratos con vigencias distintas para un mismo cliente, eso es una tabla
+nueva con ese nombre, no la resurrección de `sede`.
 
 ## Panel: dos fallos de compatibilidad ya resueltos (2026-08-24)
 
@@ -172,6 +198,8 @@ De ahí se desprende casi todo lo demás:
 
 - `NotificadorVacante` decide **a quién** se le avisa; `config/avisos.php` decide **por dónde**. Los canales implementan `App\Services\Avisos\CanalDeAviso`: hoy `CanalPush` (Expo) y `CanalWhatsApp` (Evolution). `CanalBitacora` existe para depurar sin base de datos, pero no está en la lista por defecto.
 - **Cada intento se guarda en `aviso_envio`**, haya salido o no, y se ve en el panel (Operación → Avisos enviados). Es lo que permite responder «¿le avisamos a alguien?» cuando un puesto amanece vacío; sin eso la única respuesta posible sería «debería haber salido».
+- **`ae_direccion` separa lo que mandó el sistema de lo que contestó el guardia.** Las respuestas por WhatsApp viven en la misma tabla, y sin esa marca un «no puedo cubrirlo» del guardia se leía en el panel como si fuera un mensaje que la empresa había enviado. El filtro «Solo los que no llegaron» aplica únicamente a lo saliente: una respuesta entrante siempre «llegó», la escribió el guardia.
+- **Se registran las dos respuestas, el sí y el no** (`respuesta_afirmativa` / `respuesta_negativa`). El «no» importa tanto como el «sí»: la central deja de esperar esa respuesta y sabe a quién ya no volver a llamar. El «sí» es además el comprobante de que el guardia aceptó, y a qué hora.
 - Los canales devuelven un `ResultadoDeAviso`, no un booleano, porque **«no se intentó» y «falló» son problemas distintos**: uno se arregla cargando un dato (falta el número, falta el consentimiento, el guardia nunca abrió la app) y el otro levantando un servicio (el gateway no responde). La columna Motivo del panel muestra exactamente eso.
 - **WhatsApp va por Evolution API**, un gateway open source que corre **aparte** del proyecto (contenedor propio) y con el que se habla por HTTP. `CanalWhatsApp` + `EvolutionApi` es todo el código nuestro; si mañana se cambia de gateway, se reemplaza `EvolutionApi` y nada más. Guía de instalación y operación: `WHATSAPP-EVOLUTION.md` en la raíz del monorepo.
   - **Es un cliente NO oficial de WhatsApp**: el número puede ser bloqueado sin aviso. Por eso ningún camino del sistema depende de él, y por eso la guía insiste en usar un número dedicado y no el operativo de la empresa.
@@ -224,12 +252,12 @@ El backend trae dos capas web sobre el mismo dominio `http://localhost:3031`:
   - Usuario demo: cédula `1234567890` (misma credencial unificada del 18/08/2026, ver la sección Backend; **no** es `123456`). Tiene perfiles `Vigilante` y `Supervisor`.
   - El menú se arma desde `role_has_permissions → permissions → permission_section` (seeder `seedWebAccess`).
   - Tras elegir el perfil Supervisor el login redirige **directo a `/admin`** (el permiso `admin`, sección `ps_codigo` 3, es la ruta de destino: el JS hace `location.href = urlbase + '/' + data.link`). El perfil Vigilante no tiene permisos web a propósito — usa la app móvil — así que si lo selecciona en la web recibe «No tiene los permisos necesarios».
-- **Panel Filament (`/admin`)** — el panel de administración real del negocio de la app (Rondas, Accesos, Novedades, Alertas, Inventario, Bitácora, Usuarios, Perfiles, Instituciones, Sedes, etc.). Está protegido por `canAccessFilament()` (requiere perfil `Supervisor`/`Administrador`), por lo que se entra **después** de hacer el login web y seleccionar el perfil Supervisor. El login propio de Filament apunta a `usu_email` (`App\Http\Livewire\Auth\Login`) y además la ruta `/admin/login` redirige a `/acceso/login` (diseño intencional).
+- **Panel Filament (`/admin`)** — el panel de administración real del negocio de la app (Rondas, Accesos, Novedades, Alertas, Inventario, Bitácora, Usuarios, Perfiles, Locales, Cuadrante, Cobertura de turnos, etc.). Está protegido por `canAccessFilament()` (requiere perfil `Supervisor`/`Administrador`), por lo que se entra **después** de hacer el login web y seleccionar el perfil Supervisor. El login propio de Filament apunta a `usu_email` (`App\Http\Livewire\Auth\Login`) y además la ruta `/admin/login` redirige a `/acceso/login` (diseño intencional).
 
 Fixes aplicados a la web (commit `d42858a`):
 - `Html::style/script` fueron eliminados en spatie/laravel-html v3 → reemplazados por `<link>`/`<script>` en las vistas Blade.
 - Se creó `storage/framework/sessions` (faltaba y rompía sesiones en Postgres/Docker).
-- Migraciones nuevas: `visible` en roles, catálogos web, `log`/`log_trafico`, `organizacion`/`sede`/`organizacion_sede`, `ru_code` en `user_has_roles`.
+- Migraciones nuevas: `visible` en roles, catálogos web, `log`/`log_trafico`, `organizacion`, `ru_code` en `user_has_roles`.
 - `orderBy` de `pr_posicion` corregido para Postgres (`REPLACE` no aplica a `double`).
 
 ## Flujo de cambio de contraseña (`Modules/MobileApp`):

@@ -10,7 +10,6 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Filters\Filter;
 use Modules\Administracion\Models\Alertas;
 use Modules\Administracion\Models\OrganizacionInstitucion;
-use Modules\Administracion\Models\OrganizacionSede;
 
 use Filament\Resources\Form;
 use Filament\Resources\Resource;
@@ -48,7 +47,7 @@ class AlertasResource extends Resource
      * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
      * 126 consultas en vez de 6.
      */
-    protected const RELACIONES_TABLA = ['institucion.organizacionSede.organizacion', 'institucion.organizacionSede.sede', 'usuario'];
+    protected const RELACIONES_TABLA = ['institucion.cliente', 'usuario'];
     protected static ?string $navigationIcon = 'heroicon-o-exclamation';
     public static function form(Form $form): Form{ return $form->schema([]); }
     public static function table(Table $table): Table
@@ -59,11 +58,7 @@ class AlertasResource extends Resource
                     ->label('Codigo')
                     ->toggleable()
                     ->searchable(),
-                TextColumn::make('institucion.organizacionSede.sede.ps_descripcion')->size('sm')
-                    ->label('Sede')
-                    ->toggleable()
-                    ->searchable(),
-                TextColumn::make('institucion.organizacionSede.organizacion.org_descripcion')->size('sm')
+                TextColumn::make('institucion.cliente.org_descripcion')->size('sm')
                     ->label('Organizacion')
                     ->toggleable()
                     ->searchable(),

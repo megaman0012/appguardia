@@ -37,7 +37,7 @@ class InvMovimientoResource extends Resource
      * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
      * 126 consultas en vez de 6.
      */
-    protected const RELACIONES_TABLA = ['institucion.organizacionSede.organizacion', 'institucion.organizacionSede.sede', 'lista', 'recep_user'];
+    protected const RELACIONES_TABLA = ['institucion.cliente', 'lista', 'recep_user'];
 
     protected static ?string $navigationGroup = 'Reporteria';
     protected static ?int $navigationSort = 13;
@@ -66,11 +66,7 @@ class InvMovimientoResource extends Resource
                         'danger' => 'Finalizado',
                     ]),
                 //Institucion
-                TextColumn::make('institucion.organizacionSede.sede.ps_descripcion')->size('sm')
-                    ->label('Sede')
-                    ->searchable()
-                    ->visible(fn ($livewire) => $livewire->tableFilters['rec_dev']['institucion'] ?? true),
-                TextColumn::make('institucion.organizacionSede.organizacion.org_descripcion')->size('sm')
+                TextColumn::make('institucion.cliente.org_descripcion')->size('sm')
                     ->label('Organizacion')
                     ->searchable()
                     ->visible(fn ($livewire) => $livewire->tableFilters['rec_dev']['institucion'] ?? true),

@@ -139,7 +139,14 @@ class TurnoResource extends Resource
                 TextColumn::make('tu_hora_inicio_prevista')->size('sm')->label('Entrada'),
                 TextColumn::make('tu_hora_fin_prevista')->size('sm')->label('Salida'),
                 TextColumn::make('tu_marcada_entrada')->size('sm')
-                    ->label('Marcó entrada')->dateTime('d/m H:i')->toggleable()->default('—'),
+                    // Sin marcaje el estado es null, y `default('—')` haría que
+                    // Filament intente parsear el guión como fecha: la pantalla
+                    // entera responde 500 en cuanto hay un turno sin marcar.
+                    ->label('Marcó entrada')
+                    ->formatStateUsing(fn ($state) => $state
+                        ? \Carbon\Carbon::parse($state)->format('d/m H:i')
+                        : '—')
+                    ->toggleable(),
                 BadgeColumn::make('estado_badge')
                     ->label('Estado')
                     ->colors([

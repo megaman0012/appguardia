@@ -47,7 +47,7 @@ class AccesoResource extends Resource
      * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
      * 126 consultas en vez de 6.
      */
-    protected const RELACIONES_TABLA = ['accesoPersona', 'institucion.organizacionSede.organizacion', 'institucion.organizacionSede.sede'];
+    protected const RELACIONES_TABLA = ['accesoPersona', 'institucion.cliente'];
     protected static ?string $navigationIcon = 'heroicon-o-shield-check';
     public static function form(Form $form): Form{ return $form->schema([]); }
     public static function table(Table $table): Table
@@ -58,11 +58,7 @@ class AccesoResource extends Resource
                     ->label('Código')
                     ->sortable()
                     ->searchable(),
-                TextColumn::make('institucion.organizacionSede.sede.ps_descripcion')->size('sm')
-                    ->label('Sede')
-                    ->toggleable()
-                    ->searchable(),
-                TextColumn::make('institucion.organizacionSede.organizacion.org_descripcion')->size('sm')
+                TextColumn::make('institucion.cliente.org_descripcion')->size('sm')
                     ->label('Organizacion')
                     ->toggleable()
                     ->searchable(),

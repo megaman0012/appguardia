@@ -11,7 +11,7 @@ use Tests\TestCase;
 /**
  * N+1 en las tablas del panel (Fase 9).
  *
- * Las columnas de Filament del tipo 'institucion.organizacionSede.sede.ps_descripcion'
+ * Las columnas de Filament del tipo 'institucion.cliente.org_descripcion'
  * disparan una consulta por relacion y por fila si el resource no hace eager
  * loading. Medido antes del arreglo: 5N+1 consultas, o sea 126 para las 25 filas
  * por pagina de Filament, contra 6 constantes.
@@ -35,25 +35,18 @@ class EagerLoadingTest extends TestCase
             'created_at' => now(), 'updated_at' => now(),
         ]);
 
-        // Cadena completa organizacion -> sede -> organizacion_sede -> institucion,
-        // que es la que recorren las columnas de 3 niveles.
-        $org = DB::table('organizacion')->insertGetId([
-            'org_descripcion' => 'Org Test', 'org_estado' => true,
+        // Local con cliente y con ciudad: son las dos cadenas de relaciones que
+        // recorren hoy las columnas del panel.
+        $cliente = DB::table('organizacion')->insertGetId([
+            'org_descripcion' => 'Cliente Test', 'org_estado' => true,
             'created_at' => now(), 'updated_at' => now(),
         ], 'org_code');
 
-        $sede = DB::table('sede')->insertGetId([
-            'ps_descripcion' => 'Sede Test', 'ps_estado' => true,
-            'created_at' => now(), 'updated_at' => now(),
-        ], 'ps_code');
-
-        $os = DB::table('organizacion_sede')->insertGetId([
-            'so_org_code' => $org, 'so_ps_code' => $sede, 'so_estado' => true,
-            'created_at' => now(), 'updated_at' => now(),
-        ], 'so_code');
+        $ciudad = DB::table('ciudad')->value('cd_id');
 
         $this->insCode = DB::table('organizacion_institucion')->insertGetId([
-            'ins_so_code' => $os, 'ins_descripcion' => 'Inst Test', 'ins_estado' => true,
+            'ins_cliente_id' => $cliente, 'ins_cd_id' => $ciudad,
+            'ins_descripcion' => 'Inst Test', 'ins_estado' => true,
             'created_at' => now(), 'updated_at' => now(),
         ], 'ins_code');
     }
@@ -144,7 +137,7 @@ class EagerLoadingTest extends TestCase
         $rutas = $this->relacionesDe(\App\Filament\Resources\AlertasResource::class);
 
         $this->assertNotEmpty($rutas);
-        $this->assertContains('institucion.organizacionSede.sede', $rutas);
+        $this->assertContains('institucion.cliente', $rutas);
     }
 
     public function test_el_eager_loading_queda_registrado_en_la_query(): void

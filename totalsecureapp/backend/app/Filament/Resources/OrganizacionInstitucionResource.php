@@ -7,9 +7,7 @@ use App\Support\PerfilPanel;
 use App\Filament\Resources\OrganizacionInstitucionResource\Pages;
 use App\Filament\Resources\OrganizacionInstitucionResource\RelationManagers\InstitucionMarcadoresRelationManager;
 use Modules\Administracion\Models\OrganizacionInstitucion;
-use Modules\Administracion\Models\Sede;
 use Modules\Administracion\Models\Organizacion;
-use Modules\Administracion\Models\OrganizacionSede;
 use Session;
 use Filament\Resources\Form;
 use Filament\Resources\Resource;
@@ -45,7 +43,7 @@ class OrganizacionInstitucionResource extends Resource
      * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
      * 126 consultas en vez de 6.
      */
-    protected const RELACIONES_TABLA = ['organizacionsede.organizacion', 'organizacionsede.sede', 'ciudad.provincia.pais', 'cliente'];
+    protected const RELACIONES_TABLA = ['ciudad.provincia.pais', 'cliente'];
     protected static ?int $navigationSort = 4;
     protected static ?string $navigationLabel = 'Organizacion > Institucion';
     protected static ?string $navigationIcon = 'heroicon-o-flag';
@@ -53,28 +51,15 @@ class OrganizacionInstitucionResource extends Resource
     public static function form(Form $form): Form {
         return $form->schema([
 
-            Select::make('ins_so_code')
-                ->label('Sede / Organizacion')
-                ->options(
-                    OrganizacionSede::where('so_estado', 1)
-                        ->with(['organizacion', 'sede'])->get()
-                        ->mapWithKeys(function ($item, $key) {
-                            //dd($item->organizacion->org_descripcion);
-                            $sede = $item->sede->ps_descripcion ?? 'Sin Sede';
-                            $organizacion = $item->organizacion->org_descripcion ?? 'Sin Organizacion';
-                            return [$item->so_code => $sede . ' / ' . $organizacion];
-                        })
-
-                )
-                ->searchable()
-                ->required()
-                ->disabledOn('edit'),
             TextInput::make('ins_descripcion')
                 ->label('Descripcion')
                 ->required()
                 ->maxLength(255)
+                // Antes la unicidad colgaba de la sede. Sin sede, lo que
+                // distingue a dos locales homonimos es la ciudad: "Bodega
+                // Norte" puede existir en Quito y en Guayaquil.
                 ->unique(table: static::$model, callback: function ($rule, $get) {
-                    return $rule->where('ins_so_code', $get('ins_so_code'));
+                    return $rule->where('ins_cd_id', $get('ins_cd_id'));
                 }, ignoreRecord: true),
 
             TextInput::make('ins_razon_social')
@@ -145,14 +130,6 @@ class OrganizacionInstitucionResource extends Resource
                     ->label('Código')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('organizacionsede.sede.ps_descripcion')->size('sm')
-                    ->label('Sede')
-                    ->searchable(false)
-                    ->toggleable(),
-                TextColumn::make('organizacionsede.organizacion.org_descripcion')->size('sm')
-                    ->label('Organizacion')
-                    ->searchable(false)
-                    ->toggleable(),
                 TextColumn::make('ins_descripcion')->size('sm')
                     ->label('Institución')
                     ->searchable(),
