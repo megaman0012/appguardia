@@ -72,6 +72,11 @@ class NotificadorVacanteTest extends TestCase
     {
         parent::setUp();
 
+        // La hora a la que se corre el suite no puede cambiar el resultado: un
+        // turno de 06:00 a 14:00 "de hoy" ya terminó si las pruebas corren a las
+        // 17:00, y media docena de casos empezaban a fallar solos por la tarde.
+        Carbon::setTestNow(Carbon::parse('2026-09-01 07:00:00'));
+
         CanalDePrueba::$enviados = [];
         CanalDePrueba::$falla = false;
         config(['avisos.canales' => [CanalDePrueba::class]]);
@@ -97,6 +102,12 @@ class NotificadorVacanteTest extends TestCase
         $this->crearUsuario($this->guardiaDelLocal, 'Vigilante', $this->local, true);
         $this->crearUsuario($this->guardiaDeLaCiudad, 'Vigilante', $this->otroLocal, true);
         $this->crearUsuario($this->ausente, 'Vigilante', $this->local, true);
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
     }
 
     private function crearLocal(string $nombre, $ciudadId): int

@@ -40,7 +40,7 @@ class InstitucionMarcadoresResource extends Resource
      * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
      * 126 consultas en vez de 6.
      */
-    protected const RELACIONES_TABLA = ['institucion.organizacionSede.organizacion', 'institucion.organizacionSede.sede'];
+    protected const RELACIONES_TABLA = ['institucion.cliente'];
     protected static ?string $navigationIcon = 'heroicon-o-collection';
     protected static bool $shouldRegisterNavigation = false;
     public static function form(Form $form): Form
@@ -87,11 +87,7 @@ class InstitucionMarcadoresResource extends Resource
                 TextColumn::make('im_code')->size('sm')
                     ->sortable()
                     ->label('Codigo'),
-                TextColumn::make('institucion.organizacionSede.sede.ps_descripcion')->size('sm')
-                    ->label('Sede')
-                    ->toggleable()
-                    ->searchable(),
-                TextColumn::make('institucion.organizacionSede.organizacion.org_descripcion')->size('sm')
+                TextColumn::make('institucion.cliente.org_descripcion')->size('sm')
                     ->label('Organizacion')
                     ->toggleable()
                     ->searchable(),

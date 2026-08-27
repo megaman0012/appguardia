@@ -157,11 +157,7 @@ class InstitucionMarcadoresRelationManager extends RelationManager
                     ->label('Codigo')
                     ->sortable()
                     ->searchable(),
-                TextColumn::make('institucion.organizacionSede.sede.ps_descripcion')->size('sm')
-                    ->label('Sede')
-                    ->toggleable()
-                    ->searchable(false),
-                TextColumn::make('institucion.organizacionSede.organizacion.org_descripcion')->size('sm')
+                TextColumn::make('institucion.cliente.org_descripcion')->size('sm')
                     ->label('Organizacion')
                     ->toggleable()
                     ->searchable(false),

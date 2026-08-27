@@ -143,6 +143,8 @@ docker compose run --rm backend php artisan migrate:status
 |---|---|---|
 | Fase 9 (índices) | `migrate:rollback --step=1` | Solo borra índices. Sin riesgo de datos. |
 | Fase 8 (portal) | `migrate:rollback --step=1` | Borra los permisos `portal.*` y el rol `Cliente`. Los usuarios con ese rol quedan sin acceso al portal. |
+| Cobertura de turnos | `migrate:rollback --step=1` por migración | Las tablas `turno_vacante` y `turno_postulacion` se borran con sus datos: las coberturas confirmadas ya son turnos normales y sobreviven, pero se pierde el rastro de quién se postuló. |
+| Eliminación de `sede` | `migrate:rollback --step=1` | **Recrea las tablas vacías, no los datos.** El vínculo local→sede solo vuelve desde el backup. El cliente sí se rescata antes de borrar (pasa a `ins_cliente_id`), así que eso no se pierde. |
 | Fase 7 (offline) | `migrate:rollback --step=1` | Borra `client_uuid` y `sincronizado_en`. **La APK perdería la idempotencia**: revertir esto exige también revertir la APK, o los reintentos empezarán a duplicar registros. |
 | Fase 6 (RBAC) | `migrate:rollback --step=1` | Borra los permisos móviles. Las rutas con `permission.api` responderán 403 a todos hasta que se revierta también el código. |
 | Fase 5 (accesos) | `migrate:rollback --step=2` | Dos migraciones. Ver §4.1 antes. |
@@ -252,11 +254,24 @@ docker compose exec -T db psql -U totalsecure -d coredt360 -c "
   > cargadas a mano por el supervisor sí siguen funcionando, pero pierden el
   > escalado a la ciudad y el cierre de las vencidas.
 
+### Después de desplegar la cobertura de turnos
+
+- [ ] `php artisan migrate` corrió sin error y existen `turno_vacante`, `turno_postulacion` y `aviso_envio`
+- [ ] El rol **Consola** existe y tiene el permiso del panel (`admin`)
+- [ ] Los guardias que van a recibir convocatorias tienen **número de WhatsApp** y la casilla **«Autoriza avisos por WhatsApp»** marcada; sin eso el aviso queda como «no se intentó»
+- [ ] Si se usa WhatsApp: las cuatro variables `WHATSAPP_*` están completas y **Operación → Avisos enviados** muestra el canal *Conectado*
+- [ ] Si se usa el webhook: `WHATSAPP_WEBHOOK_TOKEN` está seteado y la URL configurada en Evolution apunta al backend
+- [ ] El menú del panel **ya no muestra** «Sede» ni «Organizacion < Sede»
+- [ ] Los locales tienen **cliente** asignado (antes lo aportaba la cadena de sede, que ya no existe)
+
 ## 6. Riesgos conocidos y cómo se mitigan
 
 | Riesgo | Mitigación |
 |---|---|
 | `ac_nombre_contrato` se pierde al migrar | CSV dedicado en §2 más el backup completo |
+| El vínculo local→sede se pierde al eliminar `sede` | La migración rescata el cliente hacia `ins_cliente_id` antes de borrar; el resto solo vuelve del backup. Verificar en §2 que las tablas estaban vacías, como en desarrollo |
+| El número de WhatsApp queda bloqueado | Número dedicado, nunca el operativo. Si cae, se vacían las variables `WHATSAPP_*` y el sistema sigue funcionando sin ese canal (ver `WHATSAPP-EVOLUTION.md`) |
+| Nadie se entera de una falta porque el cron no corre | El checklist de tareas programadas lo cubre; además la pantalla Cobertura de turnos muestra las vacantes abiertas aunque el detector no haya corrido |
 | Revertir la Fase 7 sin revertir la APK → registros duplicados | Desplegar/revertir backend y APK como una unidad |
 | Revertir la Fase 6 sin revertir el código → todo 403 | Ídem: el `permission.api` de las rutas necesita los permisos en base |
 | `QUEUE_CONNECTION=sync`: el escalamiento de alertas (`NotificarAlertaPendiente`) corre en el request | Funciona, pero encarece la petición. Si se pasa a un driver con worker, **no** registrar el caché del dashboard con `Cache::tags()`: el driver es `file` y no las soporta (por eso se usa el contador de versión) |

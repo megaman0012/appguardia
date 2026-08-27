@@ -38,6 +38,11 @@ class RespuestaWhatsappTest extends TestCase
     {
         parent::setUp();
 
+        // La hora a la que se corre el suite no puede cambiar el resultado: un
+        // turno de 06:00 a 14:00 "de hoy" ya terminó si las pruebas corren a las
+        // 17:00, y media docena de casos empezaban a fallar solos por la tarde.
+        Carbon::setTestNow(Carbon::parse('2026-09-01 07:00:00'));
+
         config([
             'avisos.whatsapp.url'           => 'http://gateway.test',
             'avisos.whatsapp.instancia'     => 'totalsecure',
@@ -62,6 +67,12 @@ class RespuestaWhatsappTest extends TestCase
         $this->puesto = Puesto::create([
             'pu_ins_code' => $this->local, 'pu_nombre' => 'Garita', 'pu_estado' => true,
         ]);
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
     }
 
     private function crearUsuario(int $id, string $rol, ?string $whatsapp, bool $extras): void
@@ -235,6 +246,41 @@ class RespuestaWhatsappTest extends TestCase
         $this->assertSame(
             1,
             AvisoEnvio::where('ae_tipo', 'respuesta_negativa')->where('ae_tv_id', $vacante->tv_id)->count()
+        );
+    }
+
+    public function test_el_si_tambien_queda_registrado_como_respuesta(): void
+    {
+        // Las dos respuestas se guardan, no solo la negativa: el "sí" es el
+        // comprobante de que el guardia aceptó, y a qué hora.
+        $vacante = $this->ofrecer();
+
+        $this->entra('si');
+
+        $registro = AvisoEnvio::where('ae_tipo', 'respuesta_afirmativa')
+            ->where('ae_tv_id', $vacante->tv_id)
+            ->first();
+
+        $this->assertNotNull($registro);
+        $this->assertSame(AvisoEnvio::ENTRANTE, $registro->ae_direccion);
+        $this->assertSame($this->guardia, (int) $registro->ae_usu_id);
+    }
+
+    public function test_la_respuesta_no_se_confunde_con_un_aviso_enviado(): void
+    {
+        // Viven en la misma tabla, pero un "no puedo" del guardia no es un
+        // mensaje que mandó la empresa.
+        $this->ofrecer();
+
+        $this->entra('no');
+
+        $this->assertSame(
+            AvisoEnvio::ENTRANTE,
+            AvisoEnvio::where('ae_tipo', 'respuesta_negativa')->first()->ae_direccion
+        );
+        $this->assertSame(
+            AvisoEnvio::SALIENTE,
+            AvisoEnvio::where('ae_tipo', 'vacante_abierta')->first()->ae_direccion
         );
     }
 

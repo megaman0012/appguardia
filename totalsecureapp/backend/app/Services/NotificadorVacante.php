@@ -238,6 +238,7 @@ class NotificadorVacante
                 'ae_titulo'    => $titulo,
                 'ae_cuerpo'    => $cuerpo,
                 'ae_destino'   => $resultado->destino,
+                'ae_direccion' => AvisoEnvio::SALIENTE,
                 'ae_resultado' => $resultado->resultado,
                 'ae_detalle'   => $resultado->detalle,
                 'ae_tv_id'     => $vacante->tv_id,

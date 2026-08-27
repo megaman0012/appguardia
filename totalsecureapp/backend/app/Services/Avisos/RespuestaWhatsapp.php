@@ -76,7 +76,9 @@ class RespuestaWhatsapp
         }
 
         if ($intencion === 'negativa') {
-            $this->registrar($guardia->id, $vacante, 'respuesta_negativa', 'El guardia respondió que no puede');
+            // Que avise que no puede también es información: la central deja de
+            // esperar esa respuesta y sabe a quién ya no volver a llamar.
+            $this->registrar($guardia->id, $vacante, 'respuesta_negativa', 'Respondió que no puede cubrirlo');
 
             return $this->responder($numero, 'Entendido, gracias por avisar.', 'negativa');
         }
@@ -101,6 +103,10 @@ class RespuestaWhatsapp
         }
 
         $this->vacantes->postular($vacante, (int) $guardia->id, 'wa-' . $vacante->tv_id . '-' . $guardia->id);
+
+        // Las dos respuestas se registran, no solo la negativa: el "sí" es el
+        // comprobante de que el guardia aceptó, y a qué hora.
+        $this->registrar((int) $guardia->id, $vacante, 'respuesta_afirmativa', 'Aceptó cubrir el turno');
 
         // La Consola y el Líder tienen que enterarse ahora, no cuando alguien
         // entre al panel a mirar.
@@ -201,6 +207,7 @@ class RespuestaWhatsapp
         return ['estado' => $estado, 'detalle' => $texto];
     }
 
+    /** Deja constancia de lo que el guardia contestó, sea sí o no. */
     private function registrar(int $usuarioId, TurnoVacante $vacante, string $tipo, string $detalle): void
     {
         AvisoEnvio::create([
@@ -209,6 +216,7 @@ class RespuestaWhatsapp
             'ae_tipo'      => $tipo,
             'ae_titulo'    => 'Respuesta del guardia',
             'ae_cuerpo'    => $detalle,
+            'ae_direccion' => AvisoEnvio::ENTRANTE,
             'ae_resultado' => AvisoEnvio::ENVIADO,
             'ae_detalle'   => $detalle,
             'ae_tv_id'     => $vacante->tv_id,

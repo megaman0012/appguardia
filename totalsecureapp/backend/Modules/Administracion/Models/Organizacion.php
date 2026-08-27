@@ -38,9 +38,5 @@ class Organizacion extends Model
         'org_estado' => true,
     ];
 
-    public function organizacionSede()
-    {
-        return $this->belongsTo(OrganizacionSede::class, 'org_code', 'so_org_code');
-    }
 
 }

@@ -22,6 +22,16 @@ class AvisoEnvio extends Model
     /** No se intentó: sin número, sin consentimiento o canal apagado. */
     public const OMITIDO = 'omitido';
 
+    /** Lo que el sistema mandó. */
+    public const SALIENTE = 'saliente';
+    /** Lo que el guardia contestó. */
+    public const ENTRANTE = 'entrante';
+
+    public const DIRECCIONES = [
+        self::SALIENTE => 'Enviado por el sistema',
+        self::ENTRANTE => 'Respuesta del guardia',
+    ];
+
     public const RESULTADOS = [
         self::ENVIADO => 'Enviado',
         self::FALLIDO => 'Falló',
@@ -30,8 +40,13 @@ class AvisoEnvio extends Model
 
     protected $fillable = [
         'ae_usu_id', 'ae_canal', 'ae_tipo', 'ae_titulo', 'ae_cuerpo',
-        'ae_destino', 'ae_resultado', 'ae_detalle', 'ae_tv_id',
+        'ae_destino', 'ae_resultado', 'ae_detalle', 'ae_tv_id', 'ae_direccion',
     ];
+
+    public function scopeRespuestas($query)
+    {
+        return $query->where('ae_direccion', self::ENTRANTE);
+    }
 
     public function usuario(): BelongsTo
     {
