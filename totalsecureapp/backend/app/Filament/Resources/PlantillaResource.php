@@ -95,7 +95,16 @@ class PlantillaResource extends Resource
                 TextColumn::make('pl_vigencia_hasta')->size('sm')->label('Hasta')->date('d/m/Y')->toggleable(),
             ])
             ->defaultSort('pl_id', 'desc')
-            ->actions([Tables\Actions\EditAction::make()])
+            ->actions([
+                // Es la única forma que tiene el Supervisor de ver el detalle:
+                // la pantalla de edición la tiene cerrada.
+                Tables\Actions\Action::make('grilla')
+                    ->label('Ver grilla')
+                    ->icon('heroicon-o-view-grid')
+                    ->color('secondary')
+                    ->url(fn (Plantilla $record) => static::getUrl('grilla', ['record' => $record])),
+                Tables\Actions\EditAction::make(),
+            ])
             ->bulkActions([]);
     }
 
@@ -110,6 +119,7 @@ class PlantillaResource extends Resource
             'index'  => Pages\ListPlantillas::route('/'),
             'create' => Pages\CreatePlantilla::route('/create'),
             'edit'   => Pages\EditPlantilla::route('/{record}/edit'),
+            'grilla' => Pages\VerGrilla::route('/{record}/grilla'),
         ];
     }
 

@@ -147,6 +147,16 @@ Cinco roles. **No escribir listas de perfiles a mano**: usar `App\Support\Perfil
 - `PlantillaTurnoService::validar()` corre antes de generar. **Errores bloquean** (guardia en dos turnos a la vez, guardia sin vínculo al local, puesto de otro local) y **avisos no** (franja sin cubrir, descanso corto): eso último son decisiones del negocio, no datos inválidos.
 - `turno` no tiene ninguna restricción de solape en base, por eso la validación de solapes vive en el servicio.
 
+### La grilla
+
+- `/admin/plantillas/{id}/grilla` muestra la semana como cuadrícula: **puestos en las filas, días en las columnas**. `CuadranteGrilla` arma los datos; la página es de solo lectura.
+- Es también **la vista que le faltaba al Supervisor**: veía el listado de cuadrantes pero no podía abrir ninguno, porque el único detalle era la pantalla de edición y esa la tiene cerrada. La acción «Ver grilla» del listado es visible para todo el que opera; «Editar franjas» solo para quien administra locales.
+- **La semana es circular.** Los intervalos se calculan en minutos de la semana (0 a 10.079) y el que se pasa del final vuelve al principio. Sin eso, el choque más típico del negocio —el relevo de la noche del domingo pisando el lunes— no se detectaría nunca. Hay un test que lo fija.
+- Tres estados por celda, y el más grave manda el color: **choque** (el mismo guardia en dos lugares a la vez, rojo), **sin cubrir** (naranja) y **descanso corto** (menos de 8 h, amarillo). El choque impide generar los turnos; los otros dos no, pero se ven antes de publicar.
+- Debajo, **la carga semanal por guardia**. Es lo que evita el cuadrante donde uno hace 60 horas y otro 8 sin que nadie lo note hasta la planilla; por encima de 48 h la cifra se resalta.
+- Un turno de 22:00 a 06:00 **cuenta 8 horas, no 16**. Medirlo al revés inflaría las horas de todo el equipo de la noche.
+- Los colores van en `style` y no en clases de Tailwind: Filament 2 sirve un CSS ya compilado y una clase que ninguna de sus vistas use puede no existir en ese archivo.
+
 ### Carga por CSV
 
 - `PlantillaImportService` importa **franjas y asignaciones, no turnos**: los turnos los sigue generando `PlantillaTurnoService` en un segundo paso. Así la carga masiva pasa por las mismas validaciones que la carga manual, en vez de tener un camino propio que se salte los solapes.
@@ -155,7 +165,7 @@ Cinco roles. **No escribir listas de perfiles a mano**: usar `App\Support\Perfil
 - **O entra todo o no entra nada.** Con un solo error no se escribe ninguna fila y el cuadrante anterior queda en pie: media carga es peor que ninguna. Las filas repetidas son aviso, no error, y se cargan una sola vez.
 - El botón **Descargar modelo** entrega el CSV con los puestos del local ya escritos (y con BOM, para que Excel no rompa los acentos). Que el líder no tipee los nombres evita la mitad de los errores de carga.
 - El archivo subido se borra apenas se vuelca en la plantilla: conservarlo solo acumularía copias del cuadrante en disco.
-- **El Supervisor no puede abrir el editor del cuadrante** (`canEdit` → 403), así que no alcanza con ocultarle los botones de carga: hoy directamente no ve el detalle. Su vista de solo lectura del cuadrante es la grilla pendiente.
+- **El Supervisor no puede abrir el editor del cuadrante** (`canEdit` → 403), así que no alcanza con ocultarle los botones de carga. Su lectura del cuadrante es **la grilla** (`/admin/plantillas/{id}/grilla`), que sí puede abrir.
 
 ## Cobertura de turnos (vacantes)
 
