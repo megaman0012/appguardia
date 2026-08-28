@@ -22,6 +22,12 @@ class EditPlantilla extends EditRecord
     protected function getActions(): array
     {
         return [
+            Actions\Action::make('grilla')
+                ->label('Ver grilla')
+                ->icon('heroicon-o-view-grid')
+                ->color('secondary')
+                ->url(fn () => PlantillaResource::getUrl('grilla', ['record' => $this->record])),
+
             // Descargar el modelo con los puestos del local ya escritos: que el
             // lider no tipee los nombres evita la mitad de los errores de carga.
             Actions\Action::make('descargarModelo')

@@ -82,6 +82,10 @@ class CuadranteEjemploSeeder extends Seeder
             $this->franja($plantilla, $puestos['Sala de monitoreo'], $dia, '22:00', '06:00', $usuarios[1]);
         }
 
+        // Un turno de fin de semana todavía sin asignar: deja ver en la grilla
+        // cómo se marca un hueco de cobertura, que es para lo que existe.
+        $this->franja($plantilla, $puestos['Andén de carga'], 7, '08:00', '16:00', null);
+
         $desde = Carbon::today()->startOfMonth();
         $hasta = Carbon::today()->endOfMonth();
 
@@ -171,7 +175,8 @@ class CuadranteEjemploSeeder extends Seeder
         return $ids;
     }
 
-    private function franja(Plantilla $plantilla, int $puestoId, int $dia, string $inicio, string $fin, int $usuario): void
+    /** $usuario en null deja la franja sin cubrir a propósito. */
+    private function franja(Plantilla $plantilla, int $puestoId, int $dia, string $inicio, string $fin, ?int $usuario): void
     {
         $franja = PlantillaFranja::create([
             'pf_pl_id'       => $plantilla->pl_id,
@@ -180,6 +185,10 @@ class CuadranteEjemploSeeder extends Seeder
             'pf_hora_inicio' => $inicio,
             'pf_hora_fin'    => $fin,
         ]);
+
+        if ($usuario === null) {
+            return;
+        }
 
         PlantillaAsignacion::create([
             'pa_pf_id'  => $franja->pf_id,
