@@ -1,7 +1,16 @@
 /node_modules
 /public/hot
 /public/storage
+
+# Contenido subido por la app (fotos de accesos, biometria, rondas): ~1 GB.
+# Las dos imagenes de la pantalla de login si estan forzadas al repositorio.
 /public/images
+
+# El panel legacy (/acceso/login) carga jQuery y AdminLTE desde aca. La carpeta
+# completa pesa 127 MB, asi que se ignora, PERO los 41 archivos que las vistas
+# referencian estan forzados al repositorio con `git add -f` (7 MB). Sin ellos un
+# clon nuevo se queda sin jQuery y el formulario de login —que envia por AJAX— no
+# funciona: nadie puede entrar al sistema.
 /public/AdminLTE320
 /storage/*.key
 /vendor
