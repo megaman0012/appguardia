@@ -110,7 +110,7 @@ appguardia/
 
 ---
 
-## Pantallas de la App (18 screens)
+## Pantallas de la App (20 screens)
 
 | Screen | Función | Endpoint API |
 |--------|---------|--------------|
@@ -130,8 +130,35 @@ appguardia/
 | AlertasScreen | Alertas del día | POST /api/alert/today |
 | InventarioScreen | Listas de inventario | POST /api/inventario/listbyinst |
 | InventarioDetalleScreen | Detalle inventario | POST /api/inventario/listsave |
-| BiometriaScreen | Registro biométrico | POST /api/biometria |
-| ProfileSelectionScreen | **ENDPOINT NO EXISTE** | - |
+| BiometriaScreen | Marcaje de entrada/salida (foto + GPS) | POST /api/biometria, POST /api/turnos-del-dia |
+| ProfileSelectionScreen | Elección de perfil tras el login | POST /api/seleccionar_perfil, POST /api/procesar_perfil |
+| PreregistroFormScreen | Pre-registro de visitante esperado | POST /api/acceso/preregistro |
+| VacantesScreen | Turnos disponibles: postularse, retirarse, avisar ausencia | POST /api/vacantes-disponibles, /api/vacantes-postular, /api/vacantes-retirar, /api/turnos-proximos, /api/turnos-avisar-ausencia |
+
+### Flujo de navegación
+
+```
+LoginScreen  ──►  ProfileSelectionScreen  ──►  SeleccionInstitucionScreen  ──►  HomeScreen
+   │                (se salta si el                                              │
+   │                 usuario tiene un                                            └─► los módulos
+   │                 solo perfil)                                                    según permisos
+   └──► PasswordResetRequestScreen ──► PasswordResetScreen ──► vuelve al login
+```
+
+- **El login NO valida ubicación.** Se entra desde cualquier lugar. Lo que
+  comprueba la presencia es el **marcaje** (BiometriaScreen) y el **QR de rondas**
+  (ScannerQRScreen), contra la geocerca del local. Ver la sección «Validacion de
+  presencia y geocerca» de `totalsecureapp/AGENTS.md`.
+- **HomeScreen muestra cada módulo según el permiso de lectura** del perfil
+  elegido, no una lista fija. Los permisos llegan en la respuesta del login
+  (`abilities`) y viven en `AuthContext` con el helper `can()`.
+- **`abilities` no son nombres de rol**: son permisos granulares
+  (`rondas.ver`, `acceso.registrar`, …). Para mostrar el perfil en pantalla va
+  `perfiles`, no `abilities`.
+- **VacantesScreen no es el camino principal** para cubrir un turno. La app corre
+  en la tablet del puesto, y el guardia que puede cubrir está franco y en su casa:
+  a ese se le llega por **WhatsApp**. La pantalla sirve para el que ya está en su
+  puesto y toma un turno extra.
 
 ---
 
@@ -300,12 +327,19 @@ npx serve dist -l 8081 --no-clipboard
 7. Configurar en app.json:
    ```json
    "extra": {
-     "apiHost": "192.168.100.212",
+     "apiHost": "192.168.100.212",   // ⚠️ IP de la red de desarrollo original
      "eas": {
        "projectId": "TU_PROJECT_ID_AQUI"
      }
    }
    ```
+
+> ⚠️ **`apiHost` está fijado a una IP concreta y hay que cambiarlo al mover el
+> backend.** Si apunta a una máquina que no existe en esa red, el login falla por
+> timeout y la app no dice por qué. El orden de prioridad es
+> `expoConfig.extra.apiHost` → `hostUri` de Expo → `localhost`. Como el JS va
+> **embebido** en el APK release, cambiar la IP obliga a **recompilar**
+> (`./gradlew :app:assembleRelease`). Ver la IP real con `hostname -I`.
 
 **NOTA**: La app usa Expo Push Notifications, NO Firebase directamente.
 El `google-services.json` es necesario para compilation pero las notificaciones
@@ -320,9 +354,10 @@ van por Expo Push Token service.
 - [ ] Configurar `eas.json` con credentials
 - [ ] Compilar APK/AAB firmado
 
-### 3. ProfileSelectionScreen
-- [ ] Verificar si se usa o eliminar
-- [ ] No tiene endpoint asociado
+### 3. ~~ProfileSelectionScreen~~ — RESUELTO (Fase 6)
+Se reescribió y quedó conectada a `POST /api/seleccionar_perfil` y
+`POST /api/procesar_perfil`. **Sí se usa**, y es parte del flujo obligatorio
+cuando el usuario tiene más de un perfil.
 
 ### 4. Configuración Producción
 - [ ] Variables .env reales
@@ -342,8 +377,9 @@ van por Expo Push Token service.
 | /api/notification/institution | Solo backend |
 | /api/notification/user | Solo backend |
 | /api/notification/bulk | Solo backend |
-| ProfileSelectionScreen | **SIN ENDPOINT** |
 
 ---
 
-*Documento generado: 2026-08-17 | Última actualización: 2026-08-19*
+*Documento generado: 2026-08-17 | Última actualización: 2026-09-07 (revisado
+contra el código en el clon del servidor nuevo: 20 pantallas, flujo de
+navegación, y la aclaración de que el login no valida ubicación).*

@@ -93,6 +93,11 @@ class AccesoService
                 'ac_ap_code'       => $ap->ap_code,
                 'ac_lat'           => $datos['latitud'],
                 'ac_lng'           => $datos['longitud'],
+                // Lo mide el controlador con PresenceValidationService y NO
+                // bloquea: un acceso fuera del radio se registra igual, pero
+                // deja de ser indistinguible de uno hecho en la garita.
+                'ac_ubicacion_verificada' => $datos['ubicacion_verificada'] ?? null,
+                'ac_distancia_m'          => $datos['distancia_m'] ?? null,
                 'ac_estado_acceso' => $esEntrada ? Acceso::ESTADO_EN_CURSO : Acceso::ESTADO_COMPLETADA,
                 'ac_temperatura'   => $datos['temperatura'] ?? null,
                 'ac_bicicleta'     => !empty($datos['isBici']),

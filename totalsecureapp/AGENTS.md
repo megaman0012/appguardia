@@ -19,6 +19,16 @@
   - `docker compose exec backend php artisan migrate` — comandos de Laravel dentro del contenedor.
   - `docker compose logs -f` — logs; `docker compose down` — detiene sin borrar datos (volumen `pgdata`).
   - Las credenciales de BD se toman del `.env` (variables `DB_*`). `DB_HOST` se sobrescribe a `db` dentro de los contenedores.
+  - **El scheduler va por cron del host, no dentro del contenedor.**
+    `scripts/schedule-run.sh` envuelve el `docker compose exec ... schedule:run`
+    y se instala en el crontab del **dueño del repo** (no de root: root no está
+    en el grupo `docker` ni es dueño de `storage/`). Instalado el 2026-09-07 en
+    `server-dt`, con log en `storage/logs/schedule-cron.log`. **Sin esto no hay
+    detección de faltas**: `turnos:revisar-cobertura` corre cada 5 minutos y es
+    lo único que descubre un puesto vacío a tiempo para cubrirlo;
+    `turnos:cerrar-dia` corre a las 23:55, cuando ya no sirve.
+    El script usa rutas absolutas a propósito: cron trae un `PATH` mínimo y
+    `docker` a secas no se resuelve.
   - **El proyecto de Compose se llama `backend`**, porque Docker lo deriva del nombre del directorio y el `docker-compose.yml` vive en `backend/`. De ahí el volumen `backend_pgdata` y la red `backend_default`. En un servidor con varios proyectos eso es ambiguo, pero **cambiarlo con `name:` no es cosmético**: Compose lo tomaría como un proyecto nuevo, dejaría `backend_pgdata` huérfano y arrancaría con una base vacía. Si algún día se cambia, va con volcado y restauración, no en caliente.
   - **`docker/postgres/init/`** se monta en `/docker-entrypoint-initdb.d`. Postgres solo lo ejecuta al **inicializar un volumen vacío**, así que agregar un script ahí no afecta a una instalación existente: hay que aplicarlo a mano además. Hoy solo crea `coredt360_testing` (ver Pruebas). En producción eso deja una base de pruebas vacía sin usar; es ruido conocido y aceptado, no un error.
   - **`memory_limit` de PHP: 512M**, fijado en `conf.d/zz-memory.ini` desde el `Dockerfile`. Con los 128M por defecto `php artisan test` se cae con `Allowed memory size exhausted` **a mitad de la suite**, y las docenas de tests que quedan marcados como fallidos parecen bugs de lógica. No bajarlo.
@@ -43,6 +53,88 @@
 - `POST api/login` devuelve `abilities` (permisos granulares) y `perfiles` (nombres de rol). **`abilities` ya no son nombres de rol**, así que no usarlo para mostrar el perfil en la UI.
 - Frontend: la app guarda perfil y permisos en `AuthContext` (`perfil`, `permisos`, helper `can()`), y `HomeScreen` muestra cada módulo según su permiso de lectura. El flujo es Login → `ProfileSelection` (se salta solo si hay un único perfil) → Selección de institución → Home.
 - Trait `App\Traits\BelongsToInstitution` con scope `forInstitution()` en `ronda_cabecera`, `Alertas`, `Novedad`, `Acceso` e `InvMovimiento` (cada modelo declara su `$institutionColumn`).
+
+## Validacion de presencia y geocerca
+
+**El login NO valida ubicacion.** Se autentica desde cualquier lugar; verificado
+el 2026-09-07 haciendo `POST api/login` sin enviar coordenada alguna. La
+presencia se comprueba en el **marcaje**, no en la entrada al sistema, y tiene
+sentido: la app vive en la tablet del puesto (ver «Donde vive la app»), asi que
+lo que hay que probar es que el guardia estaba ahi cuando marco. Si alguien pide
+«que no puedan entrar si no estan en el punto», eso **no es lo que hace hoy** y
+es un cambio de diseño, no un bug.
+
+`App\Services\PresenceValidationService` es el unico lugar donde se resuelve
+esto. Radio por local en `organizacion_institucion.ins_radio_tolerancia_metros`
+(100 m por defecto), distancia por Haversine.
+
+| Modulo | Que hace | Bloquea |
+|---|---|---|
+| **Biometria** (marcaje) | `validarUbicacion()`: GPS contra el primer marcador activo | **Si**, fuera del radio se rechaza |
+| **Rondas** (QR) | `validarPresencia()`: QR + GPS + geocerca contra el marcador del QR | **Si** |
+| **Accesos** | `medirUbicacion()`: mide y lo deja escrito | **No**, a proposito |
+| **Novedades** | nada | — |
+
+- **Rondas no puede fail-open**: el marcador sale del QR descifrado, y sin
+  marcador el QR es invalido. Falla cerrado por construccion.
+- **Biometria si podia**, y ese era el hueco (abajo).
+- **Accesos mide pero no rechaza.** Un visitante legitimo no se puede quedar
+  afuera porque el GPS del dispositivo ande mal, y la app manda `0/0` cuando no
+  obtuvo ubicacion. Rechazar ahi es una decision de negocio que todavia no se
+  tomo; el dato ya queda para poder tomarla con numeros.
+- **`0/0` no es una coordenada, es «no se sabe».** `medirUbicacion()` lo descarta
+  explicitamente: medirlo contra el golfo de Guinea daria una distancia enorme y
+  perfectamente falsa. Igual con null y con texto no numerico.
+
+### El fail-open de la geocerca (encontrado y corregido el 2026-09-07)
+
+**Un local SIN marcador activo aceptaba marcajes desde cualquier lugar, en
+silencio.** `validarUbicacion()` medía solo si encontraba un marcador; si no,
+devolvia `valido = true` sin mirar nada. Comprobado en vivo: desactivando los
+marcadores, un marcaje desde **Quito, a 273 km del local**, entro con
+`distancia_m: 0` y quedo en la base **indistinguible** de uno hecho en la garita.
+Ningun test lo cubria, y por eso nadie lo habia notado.
+
+Lo que se decidio: **aceptar pero marcar**, no bloquear. Un guardia no puede
+perder su asistencia porque a alguien le falto configurar el local, y en
+produccion un local mal cargado dejaria a su gente sin poder marcar a las 6 de la
+mañana. Pero deja de ser invisible.
+
+- El servicio devuelve **`verificado`** aparte de `valido`. Son cosas distintas:
+  `valido` es «se acepta», `verificado` es «lo comprobe de verdad». Colapsarlas
+  fue exactamente el origen del hueco.
+- Migracion `2026_09_07_100001_add_verificacion_ubicacion`:
+  `bio_ubicacion_verificada` + `bio_distancia_m` en `user_has_biometria`, y
+  `ac_ubicacion_verificada` + `ac_distancia_m` en `acceso`. **La columna se lee
+  junto con la distancia**, porque hay cuatro estados y un booleano solo no
+  alcanza:
+
+  | verificada | distancia | Significa |
+  |---|---|---|
+  | `true` | numero | Se midio y estaba **dentro** del radio |
+  | `false` | numero | Se midio y estaba **fuera** (solo pasa en accesos: biometria lo rechaza antes) |
+  | `false` | `null` | **No se pudo medir**: el local no tiene marcador activo, o el dispositivo no dio ubicacion |
+  | `null` | `null` | Fila anterior a la migracion: no se sabe |
+
+- **Fuera del radio sale con `verificado = true`.** Se rechaza justamente porque
+  se pudo medir. Marcarlo como no verificado confundiria «esta lejos» con «no se
+  sabe donde esta», que es la distincion que hace util la columna.
+- En el panel: columna **Ubicacion** (badge) y filtro **«Solo ubicacion sin
+  verificar»** en Biometria y en Accesos. El filtro es el punto: sin el habria que
+  exportar a Excel para encontrar esas filas, y por eso nadie las miraria.
+- `VerificacionUbicacionTest` fija los cuatro estados. **Al tocar la geocerca,
+  correrlo**: es lo unico que impide volver al fail-open silencioso.
+- **La marca la calcula el servidor, no la manda el cliente.** En accesos se
+  asigna a `$datos` **despues** de `$request->all()`, asi que un cliente que
+  mande `ubicacion_verificada=true` la ve sobreescrita; en biometria va por
+  asignacion directa al modelo, fuera de `$fillable`. Si algun dia se reordena
+  ese `$datos[...] = ...`, la columna pasa a ser un campo que el dispositivo
+  puede rellenar y deja de servir para auditar.
+
+**Pendiente de negocio:** decidir si a partir de cierto punto se bloquea el
+marcaje de un local sin marcadores. Hoy no se bloquea. Lo que hay que mirar antes
+es cuantas filas salen con `verificada = false`; si son muchas, el problema es la
+carga de datos y no la regla.
 
 ## Offline sync (Fase 7)
 
@@ -350,13 +442,17 @@ tocó** está abajo.
 
 ## Pendientes conocidos
 
-- **Cron sin configurar en el servidor nuevo.** Falta la línea de
-  `schedule:run` (paso 5 del README). Sin ella no corre
-  `turnos:revisar-cobertura` cada 5 minutos, así que **un puesto vacío no se
-  detecta** hasta el cierre del día, cuando ya no se puede cubrir. Es el
-  pendiente más caro de los abiertos.
 - **Usuario demo con clave `123456` en el seeder**, en claro y versionado. Ver
-  la sección Backend: hay que tocar `DatabaseSeeder`, no solo la base.
+  la sección Backend: hay que tocar `DatabaseSeeder`, no solo la base. Ya existe
+  un administrador propio (`0912345678`), así que el demo se puede desactivar.
+- **Bloquear o no el marcaje de un local sin marcadores.** Hoy se acepta y se
+  marca como no verificado (ver «Validacion de presencia y geocerca»). La
+  decisión conviene tomarla mirando cuántas filas salen con
+  `verificada = false`, no antes.
+- **`php artisan schedule:list` revienta** con
+  `DateTime::setTimezone(): Argument #1 must be of type DateTimeZone, null
+  given`. Es un bug de Laravel 8.75 (la opción `--timezone` llega null), no del
+  proyecto. Para ver lo programado, leer `app/Console/Kernel.php`.
 
 - **Firebase/Google Play:** falta `google-services.json` para notificaciones push en dispositivos reales en producción (la app ya registra el token; sin Firebase no llega la notificación a teléfonos). Se debe evitar versionar el archivo con credenciales reales en el repo.
 - **Cambio de contraseña por email:** la app puede completar el flujo porque la API devuelve el token; si se quiere estricto por correo, usar deep linking (`Linking` + scheme).

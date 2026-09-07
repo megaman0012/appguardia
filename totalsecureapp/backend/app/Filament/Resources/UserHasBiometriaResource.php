@@ -86,6 +86,26 @@ class UserHasBiometriaResource extends Resource
                     ->label('Usuario')
                     ->toggleable()
                     ->searchable(),
+                // Hace visible el hueco que antes era invisible: un marcaje que
+                // nadie pudo comprobar se veia igual que uno hecho en la garita.
+                BadgeColumn::make('bio_ubicacion_estado')
+                    ->label('Ubicacion')
+                    ->getStateUsing(function ($record) {
+                        if ($record->bio_ubicacion_verificada === null) {
+                            return 'Sin dato';
+                        }
+                        return $record->bio_ubicacion_verificada ? 'Verificada' : 'Sin verificar';
+                    })
+                    ->colors([
+                        'success'   => 'Verificada',
+                        'danger'    => 'Sin verificar',
+                        'secondary' => 'Sin dato',
+                    ])
+                    ->toggleable(),
+                TextColumn::make('bio_distancia_m')->size('sm')
+                    ->label('Distancia (m)')
+                    ->toggleable()
+                    ->sortable(),
                 ImageColumn::make('imagen_url')
                     ->label('Imagen')
                     ->width(35)
@@ -94,6 +114,13 @@ class UserHasBiometriaResource extends Resource
                     ->view('tables.columns.imagen-modal'),
             ])
             ->filters([
+                // Es la consulta que importa: "que marcajes no se pudieron
+                // comprobar". Sin este filtro habria que exportar a Excel para
+                // encontrarlos, y por eso nadie los miraria.
+                Filter::make('bio_sin_verificar')
+                    ->label('Solo ubicacion sin verificar')
+                    ->query(fn (Builder $query): Builder =>
+                        $query->where('bio_ubicacion_verificada', false)),
                 Filter::make('bio_created_at')
                     ->label('Rango de fecha')
                     ->form([

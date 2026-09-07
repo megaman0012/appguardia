@@ -80,12 +80,30 @@ php artisan db:seed --class=CuadranteEjemploSeeder
 
 ### 5. Tareas programadas
 
+Con Docker, usar el script incluido (resuelve el `docker compose exec`, el
+usuario y las rutas absolutas que cron necesita):
+
+```cron
+* * * * * /ruta/al/backend/scripts/schedule-run.sh >> /ruta/al/backend/storage/logs/schedule-cron.log 2>&1
+```
+
+Sin Docker:
+
 ```cron
 * * * * * cd /ruta/al/backend && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-> **Sin esto no hay detección de faltas.** Nadie se entera de que un puesto quedó
-> vacío hasta el cierre del día, cuando ya no se puede cubrir.
+> **Sin esto no hay detección de faltas.** `turnos:revisar-cobertura` corre cada
+> 5 minutos y es lo único que descubre un puesto vacío a tiempo para cubrirlo.
+> El otro comando, `turnos:cerrar-dia`, corre a las 23:55: enterarse a esa hora
+> de que el puesto de las 06:00 quedó vacío no sirve de nada.
+>
+> Va en el crontab del **usuario dueño del repo**, no de root: root no está en el
+> grupo `docker` ni es dueño de `storage/`. Y **no redirigir a `/dev/null`** la
+> primera vez: el log es la única forma de saber si el cron corre.
+>
+> `php artisan schedule:list` **no sirve para verificarlo** — revienta por un bug
+> de Laravel 8.75. Lo programado está en `app/Console/Kernel.php`.
 
 ### 6. Permisos de escritura
 

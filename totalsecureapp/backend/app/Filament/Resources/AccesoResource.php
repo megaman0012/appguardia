@@ -79,6 +79,26 @@ class AccesoResource extends Resource
                     ->label('Apellidos')
                     ->toggleable()
                     ->searchable(),
+                // Hace visible el hueco que antes era invisible: un marcaje que
+                // nadie pudo comprobar se veia igual que uno hecho en la garita.
+                BadgeColumn::make('ac_ubicacion_estado')
+                    ->label('Ubicacion')
+                    ->getStateUsing(function ($record) {
+                        if ($record->ac_ubicacion_verificada === null) {
+                            return 'Sin dato';
+                        }
+                        return $record->ac_ubicacion_verificada ? 'Verificada' : 'Sin verificar';
+                    })
+                    ->colors([
+                        'success'   => 'Verificada',
+                        'danger'    => 'Sin verificar',
+                        'secondary' => 'Sin dato',
+                    ])
+                    ->toggleable(),
+                TextColumn::make('ac_distancia_m')->size('sm')
+                    ->label('Distancia (m)')
+                    ->toggleable()
+                    ->sortable(),
                 TextColumn::make('ac_temperatura')->size('sm')
                     ->label('Temperatura')
                     ->toggleable(),
@@ -128,6 +148,13 @@ class AccesoResource extends Resource
                     ->sortable(),*/
             ])
             ->filters([
+                // Es la consulta que importa: "que marcajes no se pudieron
+                // comprobar". Sin este filtro habria que exportar a Excel para
+                // encontrarlos, y por eso nadie los miraria.
+                Filter::make('ac_sin_verificar')
+                    ->label('Solo ubicacion sin verificar')
+                    ->query(fn (Builder $query): Builder =>
+                        $query->where('ac_ubicacion_verificada', false)),
                 Filter::make('Filtro Rondas')
                     ->label('Rango de fecha')
                     ->form([

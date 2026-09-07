@@ -19,6 +19,11 @@ class PresenceValidationService
         'distancia_m'  => 0.0,
         'motivo'       => '',
         'marcador'     => null,
+        // 'verificado' separa "comprobe la geocerca y estaba dentro" de "no
+        // pude comprobar nada": las dos devuelven valido=true. Sin esta marca
+        // un marcaje de un local sin marcadores quedaba indistinguible de uno
+        // comprobado de verdad. Ver 2026_09_07_100001_add_verificacion_ubicacion.
+        'verificado'   => false,
     ];
 
     /**
@@ -45,6 +50,7 @@ class PresenceValidationService
                 'distancia_m' => 0.0,
                 'motivo'      => 'QR inválido, de otra institución o marcador inactivo',
                 'marcador'    => null,
+                'verificado'  => false,
             ];
         }
 
@@ -67,6 +73,7 @@ class PresenceValidationService
                 'distancia_m' => round($distancia, 2),
                 'motivo'      => "Fuera de geocerca ({$distancia}m, radio: {$radioTolerancia}m)",
                 'marcador'    => null,
+                'verificado'  => true,
             ];
         }
 
@@ -75,6 +82,7 @@ class PresenceValidationService
             'distancia_m' => round($distancia, 2),
             'motivo'      => '',
             'marcador'    => $marcador,
+            'verificado'  => true,
         ];
     }
 
@@ -117,6 +125,7 @@ class PresenceValidationService
                     'distancia_m' => round($distancia, 2),
                     'motivo'      => "Fuera de geocerca ({$distancia}m, radio: {$radioTolerancia}m)",
                     'marcador'    => null,
+                    'verificado'  => true,
                 ];
             }
 
@@ -125,15 +134,78 @@ class PresenceValidationService
                 'distancia_m' => round($distancia, 2),
                 'motivo'      => '',
                 'marcador'    => $marcador,
+                'verificado'  => true,
             ];
         }
 
-        // Sin marcador: validación básica de institución
+        // Sin marcador activo no hay contra que medir, asi que el marcaje se
+        // ACEPTA: un guardia no puede perder su asistencia porque a alguien le
+        // falto configurar el local. Pero sale con verificado=false, y eso se
+        // guarda en la fila y se ve en el panel. Antes esta rama devolvia
+        // exactamente lo mismo que una comprobacion real y el hueco era
+        // invisible: se aceptaba un marcaje a 273 km sin dejar rastro.
         return [
             'valido'      => true,
             'distancia_m' => 0.0,
-            'motivo'      => '',
+            'motivo'      => 'El local no tiene marcador activo: ubicación no verificada',
             'marcador'    => null,
+            'verificado'  => false,
+        ];
+    }
+
+    /**
+     * Medir la ubicación SIN bloquear nada.
+     *
+     * Para Accesos: el modulo guardaba ac_lat/ac_lng y nunca los comparaba con
+     * nada -- inyectaba este servicio y no lo llamaba -- asi que no habia forma
+     * de saber si un acceso se registro en la garita o desde una casa. Medir y
+     * dejarlo escrito cierra ese hueco sin cambiar quien puede registrar: un
+     * visitante legitimo no se puede quedar afuera porque el GPS del dispositivo
+     * ande mal. Rechazar es una decision de negocio aparte.
+     *
+     * Devuelve ['verificada' => ?bool, 'distancia_m' => ?float]:
+     *   verificada=true            estaba dentro del radio
+     *   verificada=false + numero  se midio y estaba FUERA
+     *   verificada=false + null    no se pudo medir (sin marcador, o sin GPS)
+     */
+    public function medirUbicacion(
+        $latitud,
+        $longitud,
+        int $institucionId,
+        int $radioTolerancia = 100
+    ): array {
+        $sinMedir = ['verificada' => false, 'distancia_m' => null];
+
+        // La app manda '0'/'0' cuando el dispositivo no entrego ubicacion. Eso
+        // no es el golfo de Guinea, es "no se sabe": medirlo daria una distancia
+        // enorme y perfectamente falsa.
+        if ($latitud === null || $longitud === null
+            || !is_numeric($latitud) || !is_numeric($longitud)
+            || ((float) $latitud === 0.0 && (float) $longitud === 0.0)) {
+            return $sinMedir;
+        }
+
+        $institucion = OrganizacionInstitucion::where('ins_code', $institucionId)->first();
+        if ($institucion && $institucion->ins_radio_tolerancia_metros) {
+            $radioTolerancia = $institucion->ins_radio_tolerancia_metros;
+        }
+
+        $marcador = InstitucionMarcadores::where('im_ins_code', $institucionId)
+            ->where('im_estado', true)
+            ->first();
+
+        if (!$marcador) {
+            return $sinMedir;
+        }
+
+        $distancia = $this->calcularDistancia(
+            (float) $latitud, (float) $longitud,
+            $marcador->im_lat, $marcador->im_lng
+        );
+
+        return [
+            'verificada'  => $distancia <= $radioTolerancia,
+            'distancia_m' => round($distancia, 2),
         ];
     }
 
@@ -152,6 +224,7 @@ class PresenceValidationService
                 'distancia_m' => 0.0,
                 'motivo'      => 'Usuario no vinculado a institución',
                 'marcador'    => null,
+                'verificado'  => false,
             ];
         }
 
@@ -160,6 +233,7 @@ class PresenceValidationService
             'distancia_m' => 0.0,
             'motivo'      => '',
             'marcador'    => null,
+            'verificado'  => false,
         ];
     }
 

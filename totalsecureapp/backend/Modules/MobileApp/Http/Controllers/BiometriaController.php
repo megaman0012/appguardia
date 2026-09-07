@@ -91,6 +91,12 @@ class BiometriaController extends Controller {
         $biox->bio_image_name = $fileName;
         $biox->bio_lat = $request->latitud;
         $biox->bio_lng = $request->longitud;
+        // Queda escrito si la geocerca se pudo comprobar. Si el local no tiene
+        // marcador activo el marcaje se acepta igual, pero con false: asi la
+        // asistencia se puede auditar sin ir a revisar a mano que locales
+        // estaban bien configurados el dia del marcaje.
+        $biox->bio_ubicacion_verificada = $validarInst['verificado'];
+        $biox->bio_distancia_m = $validarInst['verificado'] ? $validarInst['distancia_m'] : null;
         $biox->bio_is_entrada = $request->is_entrada;
         $biox->bio_ins_code = $request->institucion;
         $biox->bio_state = true;

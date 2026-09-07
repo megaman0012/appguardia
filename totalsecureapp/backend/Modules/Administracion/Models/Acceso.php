@@ -61,6 +61,8 @@ class Acceso extends Model {
         'ac_ap_code',
         'ac_lat',
         'ac_lng',
+        'ac_ubicacion_verificada',
+        'ac_distancia_m',
         'ac_lat_sal',
         'ac_lng_sal',
         'ac_estado_acceso',

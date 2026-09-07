@@ -51,6 +51,17 @@ class AccesoController extends Controller{
         try {
             $datos = $request->all();
 
+            // Se mide la ubicacion y se guarda el resultado, pero NO se rechaza:
+            // ver PresenceValidationService::medirUbicacion. Antes este
+            // controlador inyectaba el servicio y jamas lo llamaba.
+            $medicion = $this->presenceService->medirUbicacion(
+                $request->input('latitud'),
+                $request->input('longitud'),
+                (int) $request->input('institucion')
+            );
+            $datos['ubicacion_verificada'] = $medicion['verificada'];
+            $datos['distancia_m'] = $medicion['distancia_m'];
+
             // La foto se mueve a disco antes de la transaccion
             if ($request->hasFile('file')) {
                 list($fileMoved, $fileName) = $this->storeFiles('accesos', $request->file('file'), $us->id.'_'.$tk->tokenable_gs);
