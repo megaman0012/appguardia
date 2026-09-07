@@ -34,7 +34,9 @@
       "web"
     ],
     "extra": {
-      "apiHost": "192.168.100.212"
+      "apiHost": "181.188.232.50",
+      "apiScheme": "http",
+      "apiPort": 80
     },
     "plugins": [
       [
