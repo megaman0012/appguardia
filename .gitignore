@@ -8,3 +8,11 @@ vendor/
 
 # Credenciales sensibles - no versionar
 Credencial*todos.txt
+
+# Volcados de base de datos. Traen datos reales de personas -- cedulas, correos,
+# hashes de contrasena, GPS -- y este repo esta en GitHub. Un `git add -A`
+# distraido los publica y sacarlos del historial despues es reescribirlo.
+*.sql
+!totalsecureapp/backend/docker/postgres/init/*.sql
+*.dump
+*.sql.gz

@@ -168,6 +168,7 @@ php artisan usuario:crear --cedula=... --nombres=... --apellidos=... \
 | `totalsecureapp/AGENTS.md` | **Documentación técnica principal.** Decisiones de diseño, trampas conocidas y por qué las cosas están como están |
 | `CHECKLIST-DESPLIEGUE-V2.md` | Checklist de despliegue: backup obligatorio, orden de migraciones, rollback por fase |
 | `DESPLIEGUE-DOMINIO.md` | Dominio, DNS y certificado |
+| `ANALISIS-MIGRACION-V1.md` | **Migración de la base real de v1 (MariaDB) a v2 (PostgreSQL).** Conteos reales, los cuatro choques de esquema, y dónde están las ~42.000 fotos |
 | `DESPLIEGUE-IP-Y-PUERTO-80.md` | **Publicar por IP en el puerto 80, sin dominio.** Reparto del 80 entre proyectos, qué reenviar en el router, el APK con IP, y por qué el 3031 sigue abierto |
 | `WHATSAPP-EVOLUTION.md` | Canal de WhatsApp con el gateway Evolution (se instala aparte) |
 | `API-OFFLINE-SYNC.md` | Contrato de los endpoints que funcionan sin señal |
