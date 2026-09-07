@@ -172,9 +172,31 @@ O sea: el ETL de accesos **se parte en dos** — las columnas base a `acceso`, y
 fila en `acceso_vehiculo` por cada acceso que traiga alguno de esos siete campos.
 `ac_empresa` con 8.975 filas es el que más pesa: es casi cada acceso.
 
-`ac_nombre_contrato` (36 filas) es el que la migración `2026_08_21_100002` borra
-sin destino. Son pocas filas, pero **hay que decidir a mano** si se rescatan a
-`ac_observaciones` o se aceptan como pérdida.
+#### `ac_nombre_contrato`: qué es, en realidad
+
+`AGENTS.md` dice que la migración `2026_08_21_100002` lo borra «sin destino», y
+eso es cierto **de la migración**, pero no del modelo de v2. Mirando los 36
+valores se ve qué guardaba: **el nombre de la persona a la que se visitaba, o del
+responsable que autorizaba la entrada**, en texto libre y sin ninguna
+validación:
+
+```
+Transmonserrate (4)   Romel Murillo (4)   Jean (2)   Carlos (2)
+"Srta Anguelina Guevara  Asistente de Gerencia"
+"Claudia Maldonado;samia chejin;Alejandro Ramirez"
+"Responsable : Andrea Pasmiño"   "A dejar carga"   "Sn"
+0986765524   0978696095          <- numeros de telefono
+```
+
+O sea: un campo donde cada guardia escribió lo que quiso — nombres, cargos,
+varias personas separadas por `;`, teléfonos, y `Sn` («sin nombre»).
+
+**Y v2 sí tiene el destino natural: `acceso_visitante.avi_persona_visita`**, que
+es exactamente «la persona a la que se visita». No hay que aceptar la pérdida ni
+meterlo en observaciones: va a esa columna, tal cual, sin intentar interpretarlo.
+
+Son 36 filas de 9.769 (0,4%), así que cualquiera de las dos decisiones es
+defendible. Copiarlo cuesta una línea en el ETL.
 
 ### 3.4 Inventario: v2 tiene los dos juegos de tablas
 
@@ -183,9 +205,25 @@ v1 trae `inv_productos`, `inv_listas_productos`, `inv_lista_producto_items`,
 `inv_producto_catalogo`, `inv_lista`, `inv_lista_item`,
 `inv_movimiento_cabecera`, `inv_movimiento_detalle` (singular).
 
-Es el trabajo de `FASE1-INVENTARIO-UNIFICADO.md`. Antes de cargar 23.790
-movimientos hay que resolver **a cuál de los dos juegos van**, o se cargan en las
-tablas que el sistema nuevo ya no lee.
+Esto **no es una decisión de migración: es una inconsistencia que v2 ya tiene**, y
+conviene verla antes de cargar nada.
+
+`FASE1-INVENTARIO-UNIFICADO.md` diseñó el juego **nuevo** para reemplazar al
+viejo. La app móvil ya se movió; el panel **no**:
+
+| Quién | Modelos | Tablas | Juego |
+|---|---|---|---|
+| **App móvil** (`InventarioController`) | `Lista`, `ListaItem`, `MovimientoCabecera`, `MovimientoDetalle`, `ProductoCatalogo` | `inv_lista`, `inv_lista_item`, `inv_movimiento_cabecera`, `inv_movimiento_detalle`, `inv_producto_catalogo` | **nuevo** |
+| **Panel Filament** (4 resources) | `InvProducto`, `InvMovimiento`, `InvMovimientoDetalle`, `InvListaProducto` | `inv_productos`, `inv_movimientos`, `inv_movimiento_detalles`, `inv_listas_productos` | **viejo** |
+
+**El guardia escribe en unas tablas y el panel lee otras.** Un inventario hecho
+desde la tablet hoy no aparece en «Inventario» del panel, y al revés. No lo
+provoca la migración: pasa ya.
+
+Por eso cargar los 23.790 movimientos en cualquiera de los dos juegos deja a la
+mitad del sistema ciego. **El orden correcto es arreglar el panel primero** —
+apuntar los 4 resources al juego nuevo, que es el diseño de FASE1 y donde escribe
+la app— y después cargar, al juego nuevo.
 
 ---
 
@@ -288,18 +326,28 @@ pero no auditable.
 
 ---
 
-## 8. Qué falta para poder ejecutar
+## 8. Decisiones tomadas (2026-09-07)
+
+| # | Decisión |
+|---|---|
+| 1 | **Imágenes**: las sube el usuario. Pendiente de recibir `public/images/`. |
+| 2 | **Países: solo Ecuador.** Se quita Colombia del catálogo sembrado y no se trae Chile (estaba inactivo y sin locales en v1). |
+| 3 | **El local con ciudad `MANTENIMIENTO` → Guayaquil.** ⚠️ Pendiente de confirmar si «solo Guayaquil» significa además migrar únicamente los 95 locales de Guayaquil, o los 137 creando las 15 ciudades. |
+| 4 | Pendiente tras la explicación (ver §3.3). |
+| 5 | Pendiente tras la explicación (ver §3.4). |
+| 6 | **`log` y `log_trafico`: empezar limpio.** No se migran las 2.902 filas de auditoría vieja. |
+
+## 9. Qué falta para poder ejecutar
 
 1. **`public/images/` del servidor de v1** (~42.000 archivos). Es lo único que no
-   está en el dump y sin eso las fotos se pierden.
-2. **Decidir Colombia y Chile**: ¿el catálogo de países queda Ecuador+Colombia
-   (como sembró v2), Ecuador+Chile (como dice v1), o los tres?
-3. **El local con ciudad `MANTENIMIENTO`**: a qué ciudad pertenece.
-4. **`ac_nombre_contrato`** (36 filas): rescatar a observaciones, o aceptar la
-   pérdida.
-5. **Inventario**: a cuál de los dos juegos de tablas van los 23.790 movimientos.
-6. **`log` y `log_trafico`** (2.902 filas): ¿migrar la auditoría vieja o empezar
-   limpio?
+   está en el dump y sin eso las fotos se pierden. **En curso.**
+2. **Alcance de «solo Guayaquil»**: ¿los 137 locales (creando 15 ciudades) o solo
+   los 95 de Guayaquil como primera etapa? Cambia si se migran 137 o 95 locales,
+   y con ellos sus rondas, marcajes y accesos.
+3. **`ac_nombre_contrato`**: copiar a `avi_persona_visita` (recomendado, una
+   línea) o aceptar la pérdida de 36 filas.
+4. **Inventario**: apuntar el panel al juego nuevo antes de cargar (recomendado),
+   o cargar al juego viejo y dejar la app escribiendo en otro lado.
 
 Con eso definido, el ETL es escribible y verificable tabla por tabla.
 
