@@ -26,6 +26,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+# El memory_limit por defecto de PHP (128M) no alcanza para la suite completa:
+# `php artisan test` moria con "Allowed memory size exhausted" a mitad de camino.
+RUN printf 'memory_limit=512M\n' > /usr/local/etc/php/conf.d/zz-memory.ini
+
 RUN sed -i 's/^user = www-data/user = 1000/' /usr/local/etc/php-fpm.d/www.conf \
  && sed -i 's/^group = www-data/group = 1000/' /usr/local/etc/php-fpm.d/www.conf
 

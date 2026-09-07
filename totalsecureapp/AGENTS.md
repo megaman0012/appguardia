@@ -11,17 +11,26 @@
 ## Backend
 
 - **Git / remote:** el monorepo (`appguardia/`) tiene el remote `origin` = `git@github.com:megaman0012/appguardia.git`, y `main` sigue a `origin/main`. Commitear localmente cuando corresponda, pero **no hacer `push`/`pull`/`fetch` sin autorización explícita del usuario**, y no agregar ni cambiar remotes por iniciativa propia.
-- **Propiedad de archivos:** normalizada a `server-gea` (2026-08-21) con `sudo chown -R server-gea:server-gea` sobre todo el monorepo; git ya no necesita `safe.directory`. Si vuelve a aparecer «posesión dudosa detectada» es que algo corrió como `root` otra vez. Docker sí sigue requiriendo `sudo` (el usuario no está en el grupo `docker`), y `sudo` pide contraseña interactiva, así que **desde una sesión de agente no se puede levantar Docker**: usar el PHP local (8.3) contra Postgres en el puerto host `5434` (`DB_PORT=5434 php artisan ...`), o pedir al usuario que corra el comando en una terminal real.
+- **Propiedad de archivos:** todo el monorepo debe pertenecer al usuario que opera el servidor, no a `root`; si aparece «posesión dudosa detectada» es que algo corrió como `root`. El dueño **depende del servidor**, no del proyecto: era `server-gea` en el equipo de desarrollo original y es `server-dt` en el servidor de 2026-09-07. No dar por hecho ninguno de los dos: verificar con `ls -ld`.
+  - **El PHP-FPM del contenedor corre con UID 1000** (lo fija el `Dockerfile`), así que los archivos que escribe Laravel salen con ese UID. Mientras el dueño del repo sea el UID 1000 del host coincide; si no, hay que ajustar el `Dockerfile`.
+  - **Si el usuario está en el grupo `docker`, `docker compose` no necesita `sudo`** y una sesión de agente puede levantar el stack entera. Comprobarlo con `id`. Solo cuando no lo está aplica el camino alterno: PHP local contra Postgres en el puerto host `5434` (`DB_PORT=5434 php artisan ...`), o pedir el comando en una terminal real.
 - **Ejecución con Docker (recomendado).** Todo el stack (nginx + PHP-FPM 8.3 + PostgreSQL 16) corre con Docker Compose desde `backend/`:
   - `docker compose up -d` — levanta todo. Backend en http://localhost:3031, Postgres en `127.0.0.1:5434` (host) / `db:5432` (red docker).
   - `docker compose exec backend php artisan migrate` — comandos de Laravel dentro del contenedor.
   - `docker compose logs -f` — logs; `docker compose down` — detiene sin borrar datos (volumen `pgdata`).
   - Las credenciales de BD se toman del `.env` (variables `DB_*`). `DB_HOST` se sobrescribe a `db` dentro de los contenedores.
+  - **El proyecto de Compose se llama `backend`**, porque Docker lo deriva del nombre del directorio y el `docker-compose.yml` vive en `backend/`. De ahí el volumen `backend_pgdata` y la red `backend_default`. En un servidor con varios proyectos eso es ambiguo, pero **cambiarlo con `name:` no es cosmético**: Compose lo tomaría como un proyecto nuevo, dejaría `backend_pgdata` huérfano y arrancaría con una base vacía. Si algún día se cambia, va con volcado y restauración, no en caliente.
+  - **`docker/postgres/init/`** se monta en `/docker-entrypoint-initdb.d`. Postgres solo lo ejecuta al **inicializar un volumen vacío**, así que agregar un script ahí no afecta a una instalación existente: hay que aplicarlo a mano además. Hoy solo crea `coredt360_testing` (ver Pruebas). En producción eso deja una base de pruebas vacía sin usar; es ruido conocido y aceptado, no un error.
+  - **`memory_limit` de PHP: 512M**, fijado en `conf.d/zz-memory.ini` desde el `Dockerfile`. Con los 128M por defecto `php artisan test` se cae con `Allowed memory size exhausted` **a mitad de la suite**, y las docenas de tests que quedan marcados como fallidos parecen bugs de lógica. No bajarlo.
 - `.env` está en `.gitignore` (contiene credenciales SMTP reales, no versionar). `composer.phar` también ignorado. `.env.example` está actualizado para Postgres sin secretos.
 - Autenticación API: Sanctum (bearer token). Las rutas de la app están en `backend/Modules/MobileApp/Routes/api.php` (`POST api/login`, `api/instituciones`, `api/rondas`, …). El prefijo real es `api/` (el `i/` del APK original era un alias del proxy).
 - Middleware CORS/seguridad personalizados (`App\Http\Middleware\HandleCors`, `SecurityHeaders`, `App\Services\CorsService`) se corrigieron para funcionar en PHP 8.3.
 - **BD migrada y sembrada.** `php artisan migrate` crea todo el esquema (incluye tablas de negocio de la app). `php artisan db:seed` crea:
-  - Usuario demo: cédula `1234567890` (roles Vigilante **y** Supervisor, con gestión activa). **La contraseña no es `123456`**: se unificó el 18/08/2026 y está en `HISTORIAL_DE_CHAT.md` y en `Credencial única todos.txt` (este último sí está en `.gitignore`). Verificada el 2026-08-23 contra `POST /api/login`. ⚠️ **Esa clave está en un archivo versionado (`HISTORIAL_DE_CHAT.md`) y por tanto ya en el remoto de GitHub**: debería rotarse y sacarse del repo. Para probar la API sin usarla, generar un token con `DB_PORT=5434 php artisan tinker --execute='...createToken("probe")->plainTextToken'`.
+  - Usuario demo: cédula `1234567890` (roles Vigilante **y** Supervisor, con gestión activa). **En un clon nuevo la contraseña ES `123456`**, porque es lo que `DatabaseSeeder` escribe en claro (`'usu_password' => '123456'`). Verificado el 2026-09-07 contra `POST /api/login` en una base recién sembrada.
+    - ⚠️ Corrige lo que decía antes esta línea («la contraseña no es `123456`»). La clave unificada del 18/08/2026 que figura en `HISTORIAL_DE_CHAT.md` era la de **aquella base ya en marcha**, puesta después de sembrar; no es lo que produce el seeder. Confundir las dos cuesta un rato de «clave incorrecta» creyendo que el clon quedó mal.
+    - Por lo mismo, **rotar la clave en la base no arregla nada por sí solo**: el próximo `db:seed` la devuelve a `123456`. Para producción hay que tocar el seeder o no correrlo, y crear el administrador con `usuario:crear`.
+    - ⚠️ La clave del piloto sigue en texto plano en `HISTORIAL_DE_CHAT.md`, **versionado y ya en el remoto de GitHub**: tratarla como comprometida donde se haya reutilizado. (`Credencial única todos.txt` sí está en `.gitignore`.)
+    - Para probar la API sin usar ninguna credencial, generar un token: `docker compose exec -u 1000 backend php artisan tinker --execute='...createToken("probe")->plainTextToken'`.
   - Institución demo con 2 marcadores QR y un checklist de inventario con 2 productos.
   - Parámetro `access` (login) y roles `Supervisor`/`Vigilante`.
 - **Correcciones hechas a migraciones/modelos heredados:** tabla `user_has_gestions` (antes `users_gestions`, columnas `ug_finish`/auditoría añadidas), columnas `tokenable_gs`/`refresh_token`/`expires_at` en `personal_access_tokens`, migración de permisos ya no fuerza `mysql`, `config/auth.php` tiene provider `mobile_users` (el `sanctum` guard valida contra `Modules\MobileApp\Models\users`), y el modelo `users` ya no fuerza la contraseña a `123456` (solo la hashea al cambiarla).
@@ -103,7 +112,7 @@ nueva con ese nombre, no la resurrección de `sede`.
 
 ## Panel: dos fallos de compatibilidad ya resueltos (2026-08-24)
 
-- **`FILAMENT_LIVEWIRE` debe quedar VACÍO en el `.env`.** Livewire arma la URL de su JS como `<valor>/vendor/livewire/livewire.js`. Traía `http://localhost:3031/coredt360/public` (resto de la instalación original en subdirectorio), así que el JS daba **404** y el panel se renderizaba pero **no respondía a nada**: el selector de columnas, los filtros, la búsqueda y los modales quedaban muertos. Vacío produce la ruta relativa, que funciona en cualquier host. No poner el dominio con `/admin`.
+- **`FILAMENT_LIVEWIRE` debe quedar VACÍO en el `.env`.** Alimenta `asset_url` de `config/livewire.php`, y Livewire arma la URL de su JS como `<valor>/livewire/livewire.js`. Vacío da **`/livewire/livewire.js`**, que es la ruta que Livewire registra de verdad (`route:list | grep livewire`) y responde 200. Esa es la URL que hay que verificar; `/vendor/livewire/livewire.js` **no existe** en esta instalación y da 404 aunque el panel esté sano. Traía `http://localhost:3031/coredt360/public` (resto de la instalación original en subdirectorio), así que el JS daba **404** y el panel se renderizaba pero **no respondía a nada**: el selector de columnas, los filtros, la búsqueda y los modales quedaban muertos. Vacío produce la ruta relativa, que funciona en cualquier host. No poner el dominio con `/admin`.
 - **Shims de Laravel 9 en `AppServiceProvider::registrarShimsDeLaravel9()`.** Filament 2.17 usa dos APIs que Eloquent/Support recién traen desde Laravel 9 y en 8.75 no existen. Ambos macros se autodesactivan si el método aparece, así que al subir a Laravel 9+ se pueden borrar.
   - `Stringable::toHtmlString()` — Filament la llama al renderizar `helperText` y `hint`: `Str::of($helperText)->markdown()->sanitizeHtml()->toHtmlString()`. **Sin el shim, cualquier formulario con `helperText` responde 500.** No hace falta shim para `sanitizeHtml()`: la registra el propio Filament.
   - `Model::resolveRouteBindingQuery()` — Filament 2.17 llama a `$model->resolveRouteBindingQuery(...)`, método que Eloquent recién trae desde Laravel 9; en 8.75 no existe y **todas** las páginas de edición del panel respondían 500. Se registra como macro del Builder (`Model::__call` reenvía ahí), lo que cubre los ~20 modelos sin tocarlos. El shim se autodesactiva si el método existe, así que al subir a Laravel 9+ se puede borrar.
@@ -258,7 +267,14 @@ en vez de escribir una clave nueva en el repositorio.
 
 El backend trae dos capas web sobre el mismo dominio `http://localhost:3031`:
 
-- **Panel legacy (`/acceso/login`)** — login por cédula (web `login_check` → selección de perfil → menú). Usa las vistas AdminLTE de `Modules/{Acceso,Administracion,Formularios}`.
+**Puntos de entrada.** `routes/web.php` solo tiene redirecciones: `/` y
+`/admin/login` van a `/acceso/login`. **La raíz existe desde 2026-09-07**; antes
+no había ninguna ruta para `/` y respondía el 404 de Laravel, que en un
+despliegue nuevo se lee como «el servidor quedó mal» cuando lo único que pasaba
+es que el sistema no tiene portada pública. Al agregar rutas web, no dejar la
+raíz sin destino.
+
+- **Panel legacy (`/acceso/login`)** — login por cédula (web `login_check` → selección de perfil → menú). Los campos del formulario son **`usu_cedula` y `password`** (no `usu_password`, que es el de la API), y `POST /acceso/procesar_perfil` espera **`code`**: el id del rol **cifrado con AES**, tal como sale en el `data-code` de la pantalla de perfiles. No confundirlo con el `POST api/procesar_perfil` de la app, que sí recibe un `id` en claro. Mandarle un `id` responde «este perfil no tiene permisos asignados», que hace pensar en un problema de permisos cuando el rol los tiene. Usa las vistas AdminLTE de `Modules/{Acceso,Administracion,Formularios}`.
   - Usuario demo: cédula `1234567890` (misma credencial unificada del 18/08/2026, ver la sección Backend; **no** es `123456`). Tiene perfiles `Vigilante` y `Supervisor`.
   - El menú se arma desde `role_has_permissions → permissions → permission_section` (seeder `seedWebAccess`).
   - Tras elegir el perfil Supervisor el login redirige **directo a `/admin`** (el permiso `admin`, sección `ps_codigo` 3, es la ruta de destino: el JS hace `location.href = urlbase + '/' + data.link`). El perfil Vigilante no tiene permisos web a propósito — usa la app móvil — así que si lo selecciona en la web recibe «No tiene los permisos necesarios».
@@ -279,7 +295,7 @@ Fixes aplicados a la web (commit `d42858a`):
 
 Expo SDK 57. Leer docs versionadas en https://docs.expo.dev/versions/v57.0.0/ antes de escribir código.
 
-- **Conectada al backend real.** `src/services/api.ts` apunta a `API_URL` de `src/utils/constants.ts`: el host se toma en orden de prioridad de `Constants.expoConfig.extra.apiHost` (app.json, `192.168.100.212`), luego del `hostUri` de Expo, y como último recurso `localhost`. Puerto 3031 → funciona en web, emulador y dispositivo físico en la misma red.
+- **Conectada al backend real.** `src/services/api.ts` apunta a `API_URL` de `src/utils/constants.ts`: el host se toma en orden de prioridad de `Constants.expoConfig.extra.apiHost` (app.json), luego del `hostUri` de Expo, y como último recurso `localhost`. ⚠️ **Ese `apiHost` está fijado a una IP concreta y es de la red donde se desarrolló** (`192.168.100.212`): en otro servidor la app apunta a una máquina que no existe y el login falla por timeout, sin decir por qué. Al mover el backend hay que editarlo y **recompilar el APK release** (el JS va embebido). Comprobar con `hostname -I` cuál es la IP real. Puerto 3031 → funciona en web, emulador y dispositivo físico en la misma red.
 - **APK release standalone:** `./gradlew :app:assembleRelease` genera `android/app/build/outputs/apk/release/app-release.apk` (~99 MB, firmado con el debug keystore, JS embebido → **no necesita Metro**). La IP del servidor se configura en `expo.extra.apiHost` de `app.json` (si cambia la IP, editarla y recompilar). `expo-build-properties` habilita `usesCleartextTraffic` (HTTP local). El APK debug (`app-debug.apk`) en cambio SÍ requiere Metro corriendo.
 - **Flujo actual completo:**
   - Login (`POST api/login` con `usu_cedula`/`usu_password`) → guarda `access_token` + `usuario` en AsyncStorage (interceptor agrega `Authorization: Bearer`).
@@ -297,7 +313,7 @@ Se verificó el estado completo del proyecto:
 
 | Componente | Estado | Detalle |
 |------------|--------|---------|
-| Backend Docker | ✅ Funcionando | Contenedores `ts_app`, `ts_db`, `ts_nginx` activos en puerto 3031 |
+| Backend Docker | ✅ Funcionando | Contenedores `ts_backend`, `ts_db`, `ts_nginx` activos en puerto 3031 |
 | API REST | ✅ Funcionando | `POST /api/login` responde correctamente con JSON |
 | Frontend Expo | ✅ Compila | TypeScript sin errores, bundle genera ~1MB |
 | Web export | ✅ Funcionando | Export estático en `dist/`, servido en `0.0.0.0:8081` |
@@ -310,7 +326,37 @@ Se verificó el estado completo del proyecto:
 
 **Nota:** El error "React Native DevTools" al iniciar Expo es esperado en servidores Linux sin interfaz gráfica (Electron no tiene `--no-sandbox`). No afecta al funcionamiento de la app.
 
+## Verificación del clon en servidor nuevo (2026-09-07)
+
+Clonado limpio en `/home/server-dt/Documentos/totalsecureapp` (servidor
+`192.168.3.124`) y levantado de cero con Docker. Todo verificado contra el
+sistema corriendo, no contra el código:
+
+| Componente | Estado | Detalle |
+|---|---|---|
+| Build + `composer install` | ✅ | 101 paquetes; `vendor/` no se versiona, el paso es obligatorio |
+| Migraciones | ✅ | 47 migraciones |
+| `db:seed` + `storage:link` | ✅ | Seed base (sin `CuadranteEjemploSeeder`) |
+| `php artisan test` | ✅ | **285/285**, ~34 s |
+| `POST /api/login` | ✅ | Token Sanctum + 40 permisos, cédula `1234567890` / `123456` |
+| Login web → perfil → `/admin` | ✅ | Con el `code` cifrado del perfil Supervisor |
+| Pantallas del panel Filament | ✅ | Las 13 responden 200, ninguna 500 |
+| `/livewire/livewire.js` | ✅ | 200, con `FILAMENT_LIVEWIRE` vacío |
+
+Tres cosas se corrigieron a raíz de esta verificación —la raíz que daba 404, el
+`memory_limit` que tumbaba la suite y la base `coredt360_testing` que no
+existía— y están documentadas en sus secciones. **Lo que sigue pendiente y no se
+tocó** está abajo.
+
 ## Pendientes conocidos
+
+- **Cron sin configurar en el servidor nuevo.** Falta la línea de
+  `schedule:run` (paso 5 del README). Sin ella no corre
+  `turnos:revisar-cobertura` cada 5 minutos, así que **un puesto vacío no se
+  detecta** hasta el cierre del día, cuando ya no se puede cubrir. Es el
+  pendiente más caro de los abiertos.
+- **Usuario demo con clave `123456` en el seeder**, en claro y versionado. Ver
+  la sección Backend: hay que tocar `DatabaseSeeder`, no solo la base.
 
 - **Firebase/Google Play:** falta `google-services.json` para notificaciones push en dispositivos reales en producción (la app ya registra el token; sin Firebase no llega la notificación a teléfonos). Se debe evitar versionar el archivo con credenciales reales en el repo.
 - **Cambio de contraseña por email:** la app puede completar el flujo porque la API devuelve el token; si se quiere estricto por correo, usar deep linking (`Linking` + scheme).

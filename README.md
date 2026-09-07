@@ -30,6 +30,13 @@ git clone git@github.com:megaman0012/appguardia.git
 cd appguardia/totalsecureapp/backend
 ```
 
+> Si el servidor tiene **varias identidades de GitHub**, `git@github.com:` usa la
+> clave por defecto (`~/.ssh/id_ed25519`), que puede pertenecer a otra cuenta u
+> organizacion: el clon falla o queda con la identidad equivocada. En ese caso
+> clonar por el alias de ssh_config de esta cuenta, p. ej.
+> `git@github-megaman0012:megaman0012/appguardia.git`, y ponerle identidad
+> **local al repo** (`git config user.name/user.email`) para no heredar la global.
+
 ### 2. Dependencias
 
 ```bash
@@ -102,14 +109,26 @@ base en `127.0.0.1:5434`.
 ## Primer acceso
 
 El panel se entra por **`/acceso/login`** (cédula y contraseña), se elige el
-perfil, y de ahí redirige a `/admin`. El login propio de Filament está
-deliberadamente desviado a esa misma pantalla.
+perfil, y de ahí redirige a `/admin`. **La raíz (`/`) y `/admin/login` redirigen
+a esa misma pantalla**: el sistema no tiene portada pública. Antes la raíz
+respondía un 404 de Laravel, que parecía un despliegue roto cuando solo faltaba
+la ruta.
 
-Para crear el primer usuario administrador:
+El usuario que crea `db:seed` es **de demostración** y su contraseña es
+**`123456`** (la escribe `DatabaseSeeder`). Sirve para comprobar que el clon
+quedó bien y **no debe sobrevivir a la salida a producción**: ver la sección
+final.
+
+Para crear un usuario administrador propio:
 
 ```bash
-php artisan usuario:crear
+php artisan usuario:crear --cedula=... --nombres=... --apellidos=... \
+    --email=... --rol=Administrador
 ```
+
+> Sin `--password` la pide por teclado sin mostrarla, así que **necesita una
+> terminal real**: desde un script o una sesión de agente hay que pasarla en el
+> comando.
 
 ## Los seis perfiles
 
@@ -138,19 +157,43 @@ php artisan usuario:crear
 ## Pruebas
 
 ```bash
-php artisan test
+docker compose exec -u 1000 backend php artisan test
 ```
 
-285 pruebas. Si alguna falla después de clonar, la causa más probable es la
-conexión a la base de datos del `.env`.
+285 pruebas, ~34 s. Si fallan **todas** después de clonar, no es el código:
+
+- **Base de pruebas.** `phpunit.xml` corre contra `coredt360_testing`, una base
+  **aparte** de la de trabajo. La crea `docker/postgres/init/01-base-de-pruebas.sql`
+  al inicializar el volumen, así que un clon nuevo ya la trae. En un volumen que
+  **ya existía** hay que crearla a mano, una sola vez:
+
+  ```bash
+  docker compose exec db psql -U totalsecure -d coredt360 \
+      -c 'CREATE DATABASE coredt360_testing;'
+  ```
+
+- **`memory_limit`.** Con los 128M por defecto de PHP la suite muere a mitad de
+  camino con `Allowed memory size exhausted`, y las fallas que deja parecen
+  errores de lógica. El `Dockerfile` lo sube a 512M
+  (`conf.d/zz-memory.ini`); fuera de Docker hay que pasarlo a mano:
+  `php -d memory_limit=512M artisan test`.
+
+- **Conexión.** Si el mensaje es de conexión, revisar `DB_*` en el `.env`.
 
 ---
 
 ## Antes de abrir a producción
 
-- [ ] **Rotar la contraseña de demostración.** `HISTORIAL_DE_CHAT.md` contuvo una
-      credencial en texto plano y sigue en el historial de git: hay que cambiarla
-      en la base y tratarla como comprometida.
+- [ ] **Sacar de circulación el usuario de demostración.** Son **dos** cosas y
+      hacer una sola no alcanza:
+      1. `DatabaseSeeder` escribe la contraseña **`123456`** en claro. Cambiarla
+         en la base no basta: el próximo `db:seed` la vuelve a poner. Hay que
+         tocar el seeder, o no correrlo en el servidor real.
+      2. La credencial que se usó en el piloto quedó en texto plano en
+         `HISTORIAL_DE_CHAT.md`, que **está versionado y ya viajó a GitHub**:
+         tratarla como comprometida donde sea que se haya reutilizado.
+      Lo sano en producción es crear el administrador con `usuario:crear` y
+      desactivar al usuario demo.
 - [ ] `APP_DEBUG=false` y `APP_ENV=production`
 - [ ] Cargar los **clientes** y asociarlos a cada local
 - [ ] Cargar el **WhatsApp** de los guardias y su autorización, si se usa ese canal
