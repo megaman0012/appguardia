@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Tables\FiltroDeEstado;
+
 use App\Support\PerfilPanel;
 use App\helpers;
 use Illuminate\Support\Facades\Hash;
@@ -130,7 +132,10 @@ class UsersResource extends Resource
                         ? ($record->usu_acepta_whatsapp ? $state : $state . ' (sin autorizar)')
                         : '—'),
             ])
-            ->filters([])
+            ->filters([
+                // Abre mostrando solo los activos. Ver App\Filament\Tables\FiltroDeEstado.
+                FiltroDeEstado::make('usu_state', 1, 'Estado'),
+            ])
             ->actions([
                 Tables\Actions\EditAction::make(),
 

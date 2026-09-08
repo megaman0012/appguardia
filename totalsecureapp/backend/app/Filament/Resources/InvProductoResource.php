@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Tables\FiltroDeEstado;
+
 use App\Support\PerfilPanel;
 
 use Session;
@@ -147,6 +149,10 @@ class InvProductoResource extends Resource
                     ->label('Activo')
                     ->toggleable()
                     ->searchable(false),
+            ])
+            ->filters([
+                // Abre mostrando solo los activos. Ver App\Filament\Tables\FiltroDeEstado.
+                FiltroDeEstado::make('ipc_activo', true, 'Estado'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

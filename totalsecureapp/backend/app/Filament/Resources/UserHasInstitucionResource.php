@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Tables\FiltroDeEstado;
+
 use App\Filament\Forms\SelectorDeUsuario;
 
 use App\Support\PerfilPanel;
@@ -135,6 +137,8 @@ class UserHasInstitucionResource extends Resource
                     ->searchable(false),
             ])
             ->filters([
+                // Abre mostrando solo los activos. Ver App\Filament\Tables\FiltroDeEstado.
+                FiltroDeEstado::make('ui_state', 1, 'Estado'),
                 //
             ])
             ->actions([

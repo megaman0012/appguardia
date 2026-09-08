@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Tables\FiltroDeEstado;
+
 use App\Support\PerfilPanel;
 
 use Filament\Forms\Components\Select;
@@ -131,7 +133,11 @@ class InvListaProductoResource extends Resource
                 ->label('Activa')
                 ->toggleable()
                 ->searchable(false),
-        ])->bulkActions([]);
+        ])->filters([
+    // Abre mostrando solo los activos. Ver App\Filament\Tables\FiltroDeEstado.
+    FiltroDeEstado::make('li_activo', true, 'Estado'),
+])
+->bulkActions([]);
     }
 
     public static function getRelations(): array

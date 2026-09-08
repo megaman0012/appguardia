@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Tables\FiltroDeEstado;
+
 use App\Support\PerfilPanel;
 
 use App\Filament\Resources\OrganizacionInstitucionResource\Pages;
@@ -162,7 +164,10 @@ class OrganizacionInstitucionResource extends Resource
                     ->searchable(false),
 
             ])
-            ->filters([])
+            ->filters([
+                // Abre mostrando solo los activos. Ver App\Filament\Tables\FiltroDeEstado.
+                FiltroDeEstado::make('ins_estado', true, 'Estado'),
+            ])
             ->actions([
                 Tables\Actions\EditAction::make()
                     ->visible(fn () => PerfilPanel::puedeAdministrarLocales()),

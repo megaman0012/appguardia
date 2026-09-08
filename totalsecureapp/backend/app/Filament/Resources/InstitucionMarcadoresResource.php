@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Tables\FiltroDeEstado;
+
 use App\Filament\Resources\InstitucionMarcadoresResource\Pages;
 use App\Filament\Resources\InstitucionMarcadoresResource\RelationManagers;
 use Modules\Administracion\Models\InstitucionMarcadores;
@@ -105,7 +107,10 @@ class InstitucionMarcadoresResource extends Resource
                     ->label('Longitud'),
                 BooleanColumn::make('im_estado')->label('Activo'),
             ])
-            ->filters([])
+            ->filters([
+                // Abre mostrando solo los activos. Ver App\Filament\Tables\FiltroDeEstado.
+                FiltroDeEstado::make('im_estado', true, 'Estado'),
+            ])
             ->actions([
                 Action::make('gmap')
                     ->label('Mapa')

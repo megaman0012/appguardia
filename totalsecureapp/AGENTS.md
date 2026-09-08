@@ -476,6 +476,50 @@ formulario.
     exporta la variable y phpdotenv no sobreescribe lo que ya esta en el
     entorno). Por eso se apaga con `DEBUGBAR_ENABLED`, que compose no define.
 
+## Los listados abren mostrando solo lo activo (2026-09-08)
+
+`App\Filament\Tables\FiltroDeEstado`, en ocho pantallas: Usuarios, Locales,
+Clientes, Marcadores QR, Locales por usuario, Gestiones, Productos y Listas de
+inventario.
+
+**Por que.** Aca nada se borra: un guardia que se va, un local que cierra o un
+cliente que termina contrato se **desactivan**, porque su historial de rondas,
+marcajes y accesos tiene que seguir consultable. El efecto es que los listados
+mezclan lo que opera con lo que ya no. En Clientes es lo mas notorio: **6 de 21
+son bajas**.
+
+**Filament 2 NO tiene pestañas en los listados** — `getTabs()` y la clase `Tab`
+son de Filament 3, no existen en 2.17. Asi que no hay «Activos | Inactivos |
+Todos» arriba de la tabla; el equivalente es este filtro con `->default('activos')`,
+que se maneja desde el panel de filtros. **Al subir a Filament 3 esto se puede
+convertir en pestañas de verdad.**
+
+| Recurso | Columna | «Activo» es |
+|---|---|---|
+| Usuarios | `usu_state` | `1` (entero, no booleano) |
+| Locales por usuario | `ui_state` | `1` (entero) |
+| Gestiones | `ug_finish` | **`false`** — la columna dice si TERMINO, esta invertida |
+| Locales, Clientes, Marcadores, Productos, Listas | `*_estado` / `*_activo` | `true` |
+
+- **La opcion «Inactivos» incluye los NULL** (`orWhereNull`). Sin eso una fila
+  con la columna vacia no seria activa ni inactiva: invisible en las dos
+  opciones.
+- ⚠️ **Un filtro por defecto es la trampa de «no aparece, entonces no existe».**
+  Alguien busca a un guardia dado de baja, no lo encuentra y lo crea de nuevo.
+  Dos cosas lo contienen: Filament muestra un indicador de filtro activo debajo
+  de la barra de busqueda, y el alta de usuarios valida `usu_cedula` unica
+  **contra toda la tabla**, inactivos incluidos, asi que el duplicado se rechaza.
+  (Ojo: esa unicidad es solo de la aplicacion — **no hay indice unico en la
+  base**, solo la clave primaria.)
+
+Verificado por la URL del filtro sobre los datos reales: con `activos` aparece
+DHL y no «Banco del Pacífico»; con `inactivos` al reves; con `todos` los dos.
+
+**Cinco de los ocho recursos ya tenian un `->filters([])` VACIO.** Insertar un
+segundo bloque dejaba dos llamadas a `->filters()` en la misma tabla, y la
+segunda pisa a la primera en silencio: parece funcionar y descarta los filtros
+que hubiera. Hay que fusionar, no agregar.
+
 ## Elegir un usuario: por nombre Y por cedula (2026-09-08)
 
 `App\Filament\Forms\SelectorDeUsuario` — un solo lugar, cinco usos:

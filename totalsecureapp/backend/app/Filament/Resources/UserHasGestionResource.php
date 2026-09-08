@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Tables\FiltroDeEstado;
+
 use App\Filament\Forms\SelectorDeUsuario;
 
 use App\Support\PerfilPanel;
@@ -107,7 +109,10 @@ class UserHasGestionResource extends Resource{
                     ->toggleable()
                     ->searchable(),
             ])
-            ->filters([ ])
+            ->filters([
+                // Abre mostrando solo los activos. Ver App\Filament\Tables\FiltroDeEstado.
+                FiltroDeEstado::make('ug_finish', false, 'Gestión'),
+            ])
             ->actions([
                 /*Tables\Actions\EditAction::make()
                 ->disabled(fn ($record) => $record->ug_egreso !== null),*/
