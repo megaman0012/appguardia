@@ -21,9 +21,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         pcntl \
         pdo_pgsql \
         pgsql \
+        pdo_mysql \
         zip \
     && rm -rf /var/lib/apt/lists/*
 
+# pdo_mysql es para LEER la base de v1 durante la migracion (conexion 'v1' de
+# config/database.php). La app no lo usa: v2 corre sobre PostgreSQL.
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # El memory_limit por defecto de PHP (128M) no alcanza para la suite completa:

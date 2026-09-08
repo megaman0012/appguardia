@@ -62,6 +62,32 @@ return [
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
         ],
+        /*
+        | Base de v1 (MariaDB), SOLO LECTURA, para la migracion de datos.
+        |
+        | v1 es MariaDB 10.4 y v2 PostgreSQL, asi que el ETL lee de aqui y
+        | escribe en 'postgres'. Se declara aparte en vez de reusar 'mysql'
+        | porque 'mysql' comparte las variables DB_* con la conexion por
+        | defecto: apuntarla a v1 habria dejado a la app entera hablando con la
+        | base vieja si alguien cambiaba DB_CONNECTION.
+        |
+        | Vacio por defecto: sin V1_DB_HOST en el .env el ETL se niega a correr
+        | en vez de intentar conectarse a algo.
+        */
+        'v1' => [
+            'driver' => 'mysql',
+            'host' => env('V1_DB_HOST', ''),
+            'port' => env('V1_DB_PORT', '3306'),
+            'database' => env('V1_DB_DATABASE', 'coredt360'),
+            'username' => env('V1_DB_USERNAME', ''),
+            'password' => env('V1_DB_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => false,
+            'engine' => null,
+        ],
+
         'postgres' => [
             'driver' => 'pgsql',
             'url' => env('DATABASE_URL'),
