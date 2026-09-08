@@ -28,7 +28,7 @@ class RolesResource extends Resource
     protected static ?string $pluralModelLabel = 'perfiles';
     protected static ?string $navigationLabel = 'Perfiles y permisos';
     protected static ?string $model = roles::class;
-    protected static bool $shouldRegisterNavigation = false;
+    protected static bool $shouldRegisterNavigation = true;
 
     protected static ?string $navigationIcon = 'heroicon-o-collection';
 

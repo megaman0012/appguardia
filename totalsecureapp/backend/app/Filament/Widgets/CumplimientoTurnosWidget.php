@@ -3,7 +3,9 @@
 namespace App\Filament\Widgets;
 
 use App\Services\DashboardStatsService;
+use App\Filament\Widgets\Concerns\AcotaPorAlcance;
 use Filament\Widgets\StatsOverviewWidget;
+use Illuminate\Support\Facades\DB;
 use Filament\Widgets\StatsOverviewWidget\Card;
 use Illuminate\Support\Facades\Session;
 use Modules\Administracion\Models\UserHasInstitucion;
@@ -16,7 +18,28 @@ use Modules\Administracion\Models\UserHasInstitucion;
  */
 class CumplimientoTurnosWidget extends StatsOverviewWidget
 {
-    protected static ?int $sort = 2;
+    use AcotaPorAlcance;
+
+    protected static ?int $sort = 5;
+
+    /**
+     * Vista propia solo para poder poner un titulo.
+     *
+     * Filament 2 no soporta encabezado en StatsOverviewWidget, y con dos filas
+     * de cuatro tarjetas quedaban ocho numeros seguidos sin distinguir cual mide
+     * operacion y cual mide configuracion.
+     */
+    protected static string $view = 'filament.widgets.stats-con-titulo';
+
+    public function getEncabezado(): ?string
+    {
+        return 'Turnos de hoy';
+    }
+
+    public function getAyuda(): ?string
+    {
+        return 'Requiere cuadrantes cargados: sin turnos programados queda en cero.';
+    }
 
     protected function getCards(): array
     {
@@ -55,17 +78,24 @@ class CumplimientoTurnosWidget extends StatsOverviewWidget
         ];
     }
 
-    /** @return int[] */
+    /**
+     * @return int[]
+     *
+     * Antes leia solo `user_has_institucion`, y con eso un Administrador o la
+     * Consola -- alcance global, sin locales vinculados -- veian el widget en
+     * CERO. Ahora sale de `localesEnAlcance()`; con alcance global se resuelven
+     * todos los locales, que es lo que corresponde ver.
+     */
     private function institucionesDelUsuario(): array
     {
-        $usuId = Session::get('usuID');
-        if (!$usuId) {
-            return [];
+        $locales = $this->localesEnAlcance();
+
+        if ($locales !== null) {
+            return $locales;
         }
 
-        return UserHasInstitucion::where('ui_usu_id', $usuId)
-            ->where('ui_state', 1)
-            ->pluck('ui_ins_code')
+        return DB::table('organizacion_institucion')
+            ->pluck('ins_code')
             ->map(fn ($c) => (int) $c)
             ->all();
     }

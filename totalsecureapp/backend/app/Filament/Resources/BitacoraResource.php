@@ -39,7 +39,7 @@ class BitacoraResource extends Resource
      */
     protected const RELACIONES_TABLA = ['institucion.cliente', 'users'];
     protected static ?string $navigationIcon = 'heroicon-o-collection';
-    protected static bool $shouldRegisterNavigation = false;
+    protected static bool $shouldRegisterNavigation = true;
     public static function form(Form $form): Form { return $form->schema([ ]); }
 
     public static function table(Table $table): Table

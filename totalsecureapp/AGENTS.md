@@ -273,6 +273,79 @@ nueva con ese nombre, no la resurrección de `sede`.
   - `Stringable::toHtmlString()` — Filament la llama al renderizar `helperText` y `hint`: `Str::of($helperText)->markdown()->sanitizeHtml()->toHtmlString()`. **Sin el shim, cualquier formulario con `helperText` responde 500.** No hace falta shim para `sanitizeHtml()`: la registra el propio Filament.
   - `Model::resolveRouteBindingQuery()` — Filament 2.17 llama a `$model->resolveRouteBindingQuery(...)`, método que Eloquent recién trae desde Laravel 9; en 8.75 no existe y **todas** las páginas de edición del panel respondían 500. Se registra como macro del Builder (`Model::__call` reenvía ahí), lo que cubre los ~20 modelos sin tocarlos. El shim se autodesactiva si el método existe, así que al subir a Laravel 9+ se puede borrar.
 
+## Escritorio: cuatro filas con titulo (2026-09-08)
+
+**El escritorio era una pared de ceros.** Los tres widgets median alertas activas
+(0: todas las migradas estan finalizadas), cumplimiento de turnos (0: v1 no tenia
+turnos) y estado de WhatsApp (sin configurar, ocupando el ancho completo arriba).
+Mientras tanto habia 452 marcajes, 460 rondas y 218 accesos en 7 dias que nadie
+veia.
+
+Ahora son cuatro filas, en este orden:
+
+1. **Actividad de los últimos 7 días** — marcajes, rondas, accesos, novedades,
+   cada uno **comparado con los 7 dias anteriores**.
+2. **Estado del sistema** — locales sin punto QR, locales activos sin actividad,
+   usuarios sin perfil, marcajes sin verificar.
+3. **Alertas** (el widget que ya existia).
+4. **Turnos de hoy** (idem).
+
+### Por que 7 dias y no «hoy»
+
+Un escritorio que mide el dia corriente **amanece en cero todas las mañanas**, y
+el turno de la noche lo abre sin nada que mirar. Peor: mientras la operacion no
+arranque se ve vacio y parece roto. La ventana de 7 dias siempre tiene contenido y
+sigue sirviendo despues.
+
+Y cada tarjeta compara con la semana anterior, porque el numero solo no dice nada:
+452 marcajes esta bien o mal segun si la semana pasada fueron 400 o 900. **Una
+caida se pinta en ambar, no en rojo**: puede ser un puesto abandonado, pero
+tambien un feriado o un contrato que termino.
+
+### `AcotaPorAlcance`: el bug que dejaba el escritorio en blanco
+
+Los widgets acotaban por `user_has_institucion`, y con eso **un Administrador o
+la Consola veian CEROS**: su alcance es global, asi que no estan vinculados a
+ningun local y la lista salia vacia. El escritorio quedaba en blanco justo para
+los perfiles que tienen que verlo todo.
+
+El trait `App\Filament\Widgets\Concerns\AcotaPorAlcance` resuelve los tres
+alcances de `PerfilPanel` en un solo lugar. **`null` y `[]` no son lo mismo**:
+`null` es «sin filtro» y `[]` es «no ve nada»; un lider sin paises cae en `[]` a
+proposito.
+
+### Detalles de la fila «Estado del sistema»
+
+- **Cada tarjeta enlaza al listado donde se arregla.** Un numero que no dice
+  adonde ir se mira una vez y despues se ignora.
+- «Locales sin punto QR» muestra **cuantos de ellos ya reciben marcajes**, que es
+  el dato que importa: uno que todavia no opera es una tarea pendiente, uno que ya
+  marca esta acumulando asistencia que nadie va a poder auditar.
+- «Usuarios sin perfil» **no se acota por local**, porque un usuario sin perfil
+  tampoco tiene por que tener local: filtrarlo lo esconderia de quien puede
+  arreglarlo. Solo lo ve quien tiene alcance global.
+- «Marcajes sin verificar» cuenta `false`, **no `null`**. `null` es «fila anterior
+  a la migracion»: contar los 12.664 marcajes de v1 llenaria la tarjeta de un
+  problema que ya no se puede arreglar.
+
+### `stats-con-titulo.blade.php`
+
+**Filament 2 no soporta encabezado en `StatsOverviewWidget`**: su vista pinta las
+tarjetas y nada mas, y `$heading` se ignora en silencio. Con dos filas de cuatro
+tarjetas quedaban ocho numeros seguidos sin distinguir cual mide operacion y cual
+mide configuracion. La vista propia agrega titulo y una linea de ayuda, leidos de
+`getEncabezado()` y `getAyuda()`.
+
+### WhatsApp solo aparece si esta configurado
+
+`EstadoWhatsapp::canView()` exige `WHATSAPP_URL`. Sin el canal, la tarjeta decia
+«no configurado» ocupando la franja mas visible del escritorio. Cuando se
+configure vuelve sola, y ahi si tiene algo que decir.
+
+### Bitácora y Perfiles y permisos: visibles
+
+Tenian `shouldRegisterNavigation = false` y solo se llegaba escribiendo la URL.
+
 ## Panel: como se presenta la informacion (2026-09-08)
 
 Revision de presentacion sobre el panel ya cargado con los datos reales.

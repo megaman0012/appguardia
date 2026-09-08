@@ -18,6 +18,24 @@ class EstadoWhatsapp extends Widget
     protected static string $view = 'filament.widgets.estado-whatsapp';
     protected int | string | array $columnSpan = 'full';
 
+    protected static ?int $sort = 3;
+
+    /**
+     * Solo se muestra si el canal esta configurado.
+     *
+     * Sin `WHATSAPP_URL` el canal no intenta nada, asi que la tarjeta decia
+     * «no configurado» ocupando el ancho completo de la franja mas visible del
+     * escritorio -- el lugar donde tiene que estar lo que hay que mirar hoy.
+     *
+     * Cuando se configure vuelve sola, y ahi si tiene algo que decir: la sesion
+     * de WhatsApp se cae cada tanto y si nadie lo ve los avisos dejan de salir
+     * en silencio.
+     */
+    public static function canView(): bool
+    {
+        return filled(config('avisos.whatsapp.url') ?? env('WHATSAPP_URL'));
+    }
+
     /** @return array<string, mixed> */
     public function getDatos(): array
     {
