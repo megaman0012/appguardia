@@ -274,10 +274,63 @@ nombre del archivo es `<user_id>_<ug_code>_<timestamp>.jpg`; ejemplo real:
 
 Rango a copiar: **2025-04-07 a 2026-09-07**, unos 17 meses de carpetas diarias.
 
-**Lo que hace falta de tu lado:** acceso al disco del servidor de v1 para copiar
-`public/images/`. Con `du -sh public/images/` sabemos el peso antes de moverlo, y
-conviene `rsync -a` (preserva estructura y fechas) y contar archivos en los dos
-extremos.
+### Cargadas y verificadas (2026-09-07)
+
+Recibidas como `images.zip` (1,3 GB, 46.503 entradas) y descomprimidas en
+`totalsecureapp/backend/public/images/`. **1,4 GB, ~45.300 archivos.**
+
+**La verificación que importa no es contar archivos, es comprobar que las rutas
+que la base calcula existan.** Se generó la ruta esperada de cada registro
+(`<modulo>/<AAAA/MM/DD de la fecha del registro>/<nombre>`) y se buscó en disco:
+
+| Módulo | Rutas esperadas | Encontradas | Faltan |
+|---|---:|---:|---:|
+| `biometria` | 12.664 | **12.664** | **0** |
+| `rondas` | 29.243 | **29.243** | **0** |
+| `novedad` | 6 | **6** | **0** |
+
+Y se comprobó de punta a punta que se sirven: una foto real responde **200
+`image/jpeg`** por HTTP.
+
+Al descomprimir se excluyeron los tres archivos de la raíz del zip
+(`acceso-login.jpg`, `favicon.ico`, `logo.png`): son **assets de la interfaz que
+sí están versionados**, y sobreescribirlos habría ensuciado el repo. Verificado
+que quedaron intactos.
+
+> **`public/images/` está en `.gitignore` del backend** (`/public/images`, línea
+> 7), así que los 45.300 archivos no entran al repo. Se comprobó con
+> `git check-ignore` sobre una ruta concreta **antes** de descomprimir: sobre un
+> directorio que todavía no existe la comprobación no es concluyente.
+
+### Dos cosas que aparecieron en el zip
+
+**1. 3.329 fotos de accesos que no se pueden reconectar.** La carpeta
+`accesos/` trae 3.333 archivos con el mismo formato de nombre
+(`<usu_id>_<ug_code>_<timestamp>.jpg`), pero **`acceso` en v1 no tiene ninguna
+columna de foto**: el módulo las guardaba en disco y nunca registraba cuál
+pertenecía a cada acceso.
+
+Se intentó reconstruir el vínculo por usuario + gestión + tiempo. No sale:
+
+| Ventana | Fotos emparejables |
+|---|---:|
+| exacta | 4 (0,1%) |
+| ±60 s | 37 (1,1%) |
+| ±1 h | 570 (17,1%) |
+| ±24 h | 3.286 (98,7%) |
+
+El timestamp del archivo es el de **subida**, no el del acceso. La ventana de 24 h
+empareja casi todo pero no sirve de nada: un guardia registra muchos accesos en un
+día, así que asignaría fotos casi al azar. **Conclusión: se conservan como
+archivos y no se vinculan.** v2 sí tiene `ac_foto`, así que los accesos nuevos no
+repetirán el problema.
+
+**2. Un `2025.rar` de 83 MB dentro del directorio web.** Alguien archivó las fotos
+de 2025 y dejó el .rar en `public/images/accesos/`. Nginx sirve todo `public/`,
+así que **era descargable por HTTP** (comprobado: respondía 206 a un range
+request) — y con el puerto 80 abierto a internet eso queda público. Movido a
+`datos-v1/`, fuera del directorio servido; comprobado que ahora responde 404 y que
+las fotos siguen dando 200.
 
 ---
 

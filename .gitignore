@@ -26,3 +26,6 @@ Credencial*todos.txt
 *.tar
 *.tar.gz
 *.tgz
+*.rar
+# Datos de v1 fuera del directorio web (ver ANALISIS-MIGRACION-V1.md).
+/datos-v1/
