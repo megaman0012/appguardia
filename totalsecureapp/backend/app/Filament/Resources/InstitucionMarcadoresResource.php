@@ -65,15 +65,29 @@ class InstitucionMarcadoresResource extends Resource
                     ->label('Descripción')
                     ->required(),
 
+                // ⚠️ **El rango no es decorativo.** 64 marcadores llegaron de v1
+                // con latitud y longitud positivas; Ecuador esta al oeste y al
+                // sur, asi que ambas son negativas (la latitud, salvo en el
+                // norte del pais). Con el signo invertido la geocerca calculaba
+                // 17.764 km y **en 61 de 110 locales el marcaje biometrico era
+                // imposible**: el guardia solo veia «Fuera de geocerca».
+                // Corregido en 2026_09_08_220001; esto evita que vuelva a
+                // entrar escribiendolo a mano.
                 TextInput::make('im_lat')
                     ->label('Latitud')
                     ->numeric()
-                    ->required(),
+                    ->minValue(-5)
+                    ->maxValue(1.5)
+                    ->required()
+                    ->helperText('Ecuador: entre -5 y 1.5. Guayaquil ronda -2.19 (con el signo menos)'),
 
                 TextInput::make('im_lng')
                     ->label('Longitud')
                     ->numeric()
-                    ->required(),
+                    ->minValue(-81.2)
+                    ->maxValue(-75.2)
+                    ->required()
+                    ->helperText('Ecuador: entre -81.2 y -75.2. Siempre negativa'),
 
                 Toggle::make('im_estado')
                     ->label('Activo')

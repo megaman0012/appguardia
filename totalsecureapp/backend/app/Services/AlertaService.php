@@ -24,6 +24,13 @@ class AlertaService
                 'al_prioridad' => $datos['prioridad'] ?? 'media',
                 'al_observacion' => $datos['observacion'],
                 'al_created_user' => $datos['usuario_id'],
+                'al_client_uuid' => $datos['client_uuid'] ?? null,
+                'al_sincronizado_en' => $datos['sincronizado_en'] ?? null,
+                // ⚠️ `al_fecha` hay que escribirla: no tiene default en la base
+                // y `scopeDelDia()` -- lo que alimenta la pantalla «Alertas de
+                // hoy» -- filtra justamente por ella. Si queda nula, la alerta
+                // se crea y **no aparece en ninguna parte**.
+                'al_fecha' => $datos['ocurrido_en'] ?? now(),
             ]);
 
             AlertaHistorial::registrar(
@@ -41,17 +48,43 @@ class AlertaService
         });
     }
 
+    /**
+     * Asigna la alerta a un supervisor del mismo local.
+     *
+     * ⚠️ **Esto no funcionaba, y tumbaba la creacion de alertas entera.** La
+     * consulta original usaba `whereHas('instituciones', ...)`, y **ninguno de
+     * los dos modelos `users` tiene esa relacion**: ni el de `Modules\Acceso`
+     * ni el de `Modules\MobileApp`. Eloquent lanzaba
+     * `BadMethodCallException: Call to undefined method users::instituciones()`,
+     * y como `crearAlerta` llama a este metodo dentro de su transaccion, el
+     * `catch` del controlador devolvia **500 «Error al crear alerta»**.
+     *
+     * O sea: el endpoint de crear alerta no podia funcionar nunca. Se notaba
+     * poco porque la app tampoco lo llamaba y al rol Vigilante le faltaba el
+     * permiso; las tres cosas juntas dejaban el boton de panico inexistente.
+     *
+     * El vinculo real vive en `user_has_institucion` (`ui_usu_id`,
+     * `ui_ins_code`, `ui_state`), que es lo que usa el resto del sistema.
+     */
     public function asignarASupervisor(Alertas $alerta): ?AlertaDetalle
     {
         $supervisor = users::whereHas('roles', function ($q) {
             $q->where('name', 'Supervisor')
               ->where('estado', 1);
         })
-        ->whereHas('instituciones', function ($q) use ($alerta) {
-            $q->where('ins_code', $alerta->al_ins_code);
+        ->whereExists(function ($q) use ($alerta) {
+            $q->select(DB::raw(1))
+              ->from('user_has_institucion')
+              ->whereColumn('user_has_institucion.ui_usu_id', 'users.id')
+              ->where('user_has_institucion.ui_ins_code', $alerta->al_ins_code)
+              ->where('user_has_institucion.ui_state', 1);
         })
+        ->where('usu_state', 1)
         ->first();
 
+        // Sin supervisor asignado la alerta se queda «pendiente» y sigue
+        // visible: no se pierde. 10 usuarios no tienen rol y varios locales no
+        // tienen supervisor vinculado, asi que este caso es real.
         if (!$supervisor) {
             return null;
         }

@@ -177,6 +177,11 @@ export const API_ENDPOINTS = {
     TOKEN_SAVE: '/token/save',
     TOKEN_REMOVE: '/token/remove',
     ALERT_TODAY: '/alert/today',
+    // El endpoint existia en el backend desde el principio y la app no lo
+    // llamaba nunca: la pantalla de Alertas era solo lectura, sin forma de
+    // generar una. En una app para guardias de seguridad, avisar de una
+    // emergencia es la funcion mas importante que hay.
+    ALERT_CREAR: '/alert/crear',
   },
 };
 

@@ -68,10 +68,25 @@ class OrganizacionInstitucionResource extends Resource
                     return $rule->where('ins_cd_id', $get('ins_cd_id'));
                 }, ignoreRecord: true),
 
+            // ⚠️ **Esta columna se llama «razon social» pero no lo es.** La
+            // razon social del cliente vive en el cliente (`org_razon_social`),
+            // y aca repetia ese nombre en 73 de 137 locales -- o decia «Total
+            // Security Company», que es la empresa de guardias: relleno de un
+            // campo obligatorio que nadie sabia como llenar.
+            //
+            // Lo interesante es lo que hicieron los otros 53: escribieron el
+            // **sitio**. En el cliente JBGYE dice «Hospital Alfredo Paulson» u
+            // «Hospital Roberto Gilbert», y eso separa limpio dos hospitales
+            // que comparten la direccion «Av. Democracia». Es la señal mas
+            // fiable para deducir que locales son en realidad puestos del mismo
+            // lugar (ver `php artisan puestos:analizar`).
+            //
+            // Asi que se queda, pero con el nombre de lo que de verdad guarda y
+            // sin ser obligatorio: obligar es lo que lo lleno de relleno.
             TextInput::make('ins_razon_social')
-                ->label('Razon Social')
-                ->required()
-                ->maxLength(255),
+                ->label('Sitio')
+                ->maxLength(255)
+                ->helperText('El lugar físico que agrupa varios locales: «Hospital Alfredo Paulson». Dejar vacío si el local es un sitio por sí solo'),
 
             TextInput::make('ins_direccion')
                 ->label('Dirección')
@@ -100,10 +115,13 @@ class OrganizacionInstitucionResource extends Resource
                 ))
                 ->helperText('Si falta la ciudad, se crea en Ubicación Geográfica'),
 
-            TextInput::make('ins_ciudad')
-                ->label('Ciudad (texto libre, en desuso)')
-                ->maxLength(250)
-                ->helperText('Reemplazado por el selector de Ciudad. Se conserva por los datos ya cargados'),
+            // `ins_ciudad` (texto libre) ya NO esta en el formulario: se veian
+            // dos campos «Ciudad» seguidos y habia que leer la letra chica para
+            // saber cual era el que contaba. La columna se conserva -- la
+            // rellena el ETL y la devuelve la PortalApi -- pero el unico dato
+            // que se edita y que define el alcance del Lider Operativo y los
+            // cortes de reporteria es el selector de arriba, que sale del
+            // catalogo de ciudades. Los 137 locales tienen los dos llenos.
 
             TextInput::make('ins_telefono')
                 ->label('Teléfono')
@@ -145,10 +163,6 @@ class OrganizacionInstitucionResource extends Resource
                     ->label('País')->sortable()->toggleable(),
                 TextColumn::make('ciudad.cd_nombre')->size('sm')
                     ->label('Ciudad')->sortable()->toggleable(),
-                TextColumn::make('ins_ciudad')->size('sm')
-                    ->label('Ciudad/Estado')
-                    ->searchable(false)
-                    ->toggleable(),
                 TextColumn::make('ins_direccion')->size('sm')
                     ->label('Dirección')
                     ->searchable(false)

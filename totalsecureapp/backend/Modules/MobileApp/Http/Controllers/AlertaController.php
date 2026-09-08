@@ -4,6 +4,7 @@ namespace Modules\MobileApp\Http\Controllers;
 
 use App\generalTrait;
 use App\Services\AlertaService;
+use App\Services\OfflineSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -16,7 +17,8 @@ class AlertaController extends Controller
     use generalTrait;
 
     public function __construct(
-        private AlertaService $alertaService
+        private AlertaService $alertaService,
+        private OfflineSyncService $offlineSync
     ) {}
 
     protected array $todayRules = [
@@ -35,6 +37,10 @@ class AlertaController extends Controller
             'lng' => 'required|numeric',
             'observacion' => 'required|string|max:1000',
             'prioridad' => 'nullable|in:baja,media,alta,critica',
+            // Opcional, como en los otros endpoints de campo: el APK ya
+            // instalado no los manda y tiene que seguir funcionando.
+            'client_uuid' => 'nullable|uuid',
+            'ocurrido_en' => 'nullable|date',
         ],
         'messages' => [
             'ins.required' => 'Campo institucion es obligatorio',
@@ -86,21 +92,49 @@ class AlertaController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()]);
         }
 
+        $clientUuid = $request->input('client_uuid');
+
+        // El boton de panico se toca bajo estres: si no hubo respuesta porque la
+        // red del sitio es mala, el guardia aprieta otra vez. Con el mismo uuid
+        // eso devuelve la alerta que ya entro, en vez de crear una segunda para
+        // el mismo hecho -- con su segundo aviso al supervisor y su segunda
+        // entrada en el historial.
+        $yaCreada = $this->offlineSync->buscar(Alertas::class, 'al_client_uuid', $clientUuid);
+
+        if ($yaCreada !== null) {
+            return response()->json([
+                'success'   => true,
+                'message'   => 'Alerta creada correctamente',
+                'alert'     => $yaCreada,
+                'duplicado' => true,
+            ], 200);
+        }
+
         try {
-            $alerta = $this->alertaService->crearAlerta([
-                'institucion_id' => $request->ins,
-                'usuario_id' => $us->id,
-                'lat' => $request->lat,
-                'lng' => $request->lng,
-                'observacion' => $request->observacion,
-                'prioridad' => $request->prioridad ?? 'media',
-            ]);
+            list($alerta, $duplicado) = $this->offlineSync->registrar(
+                Alertas::class,
+                'al_client_uuid',
+                $clientUuid,
+                fn () => $this->alertaService->crearAlerta([
+                    'institucion_id' => $request->ins,
+                    'usuario_id' => $us->id,
+                    'lat' => $request->lat,
+                    'lng' => $request->lng,
+                    'observacion' => $request->observacion,
+                    'prioridad' => $request->prioridad ?? 'media',
+                    'client_uuid' => $clientUuid,
+                    'sincronizado_en' => $this->offlineSync->sincronizadoEn(),
+                    // Hora real del hecho. Sin `ocurrido_en` queda `now()`.
+                    'ocurrido_en' => $this->offlineSync->ocurridoEn($request->input('ocurrido_en')),
+                ])
+            );
 
             return response()->json([
                 'success' => true,
                 'message' => 'Alerta creada correctamente',
                 'alert' => $alerta,
-            ], 201);
+                'duplicado' => $duplicado,
+            ], $duplicado ? 200 : 201);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

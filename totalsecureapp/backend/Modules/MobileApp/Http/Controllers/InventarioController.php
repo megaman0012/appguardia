@@ -213,6 +213,29 @@ class InventarioController extends Controller
 
             $productos = json_decode($request->productos);
 
+            // ⚠️ **Validar que cada producto traiga id.** La app leia los
+            // productos con los nombres de campo de v1 (`pr_id` en vez de
+            // `ipc_id`), asi que `id_producto` iba `undefined`; JSON.stringify
+            // descarta las claves undefined y aca llegaba un objeto sin ella.
+            // El resultado era `Undefined property: stdClass::$id_producto`
+            // devuelto como si fuera un error de validacion del guardia.
+            //
+            // El bug de la app ya esta corregido, pero un mensaje claro vale mas
+            // que una advertencia de PHP filtrada al usuario.
+            if (!is_array($productos)) {
+                DB::rollBack();
+
+                return $this->message_json('errors', 'El listado de productos no es válido');
+            }
+
+            foreach ($productos as $item) {
+                if (!isset($item->id_producto) || $item->id_producto === null || $item->id_producto === '') {
+                    DB::rollBack();
+
+                    return $this->message_json('errors', 'Hay productos sin identificador: actualice la aplicación');
+                }
+            }
+
             // Un solo INSERT en vez de uno por producto. Eran cuatro viajes a la
             // base por movimiento (4 items por lista en promedio), dentro de la
             // transaccion y sobre la red movil de la tablet.

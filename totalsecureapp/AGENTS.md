@@ -1345,6 +1345,197 @@ Tres cosas se corrigieron a raíz de esta verificación —la raíz que daba 404
 existía— y están documentadas en sus secciones. **Lo que sigue pendiente y no se
 tocó** está abajo.
 
+## Puestos de trabajo: deducirlos de la data (2026-09-08)
+
+v1 no tenia puestos, solo locales. Para operar un hospital con cinco garitas,
+quien cargo los datos creo **cinco locales**: «HOSPITAL SEMEDIC - LOBBY»,
+«- PLUMA», «- EMERGENCIA», «- TORNIQUETE», «- PARQUEO». De ahi que haya 137
+locales donde en realidad hay bastantes menos sitios, y que la tabla `puesto`
+este **vacia** -- por eso el cuadrante de turnos no muestra nada: Turno,
+TurnoVacante, PlantillaFranja y CuadranteGrilla cuelgan de `pu_id`.
+
+`php artisan puestos:analizar` mide y **no modifica nada**. Con `--csv=` deja el
+detalle para revisar.
+
+### Resultado: 16 sitios agrupan 66 locales
+
+De 130 locales activos quedarian **~80 sitios**, con 66 de los locales actuales
+convertidos en puestos. Los grupos grandes:
+
+| Sitio | Cliente | Puestos | Diámetro GPS |
+|---|---|---:|---:|
+| Cementerio General | JBGYE | 12 | 995 m |
+| Hospital Luis Vernaza | JBGYE | 11 | 487 m |
+| Hospital Roberto Gilbert | JBGYE | 8 | 240 m |
+| Hospital Alfredo Paulson | JBGYE | 6 | 392 m |
+| Hospital Semedic | SEMEDIC | 5 | 72 m |
+
+### ⚠️ Ninguna señal sola funciona, y las probe todas
+
+- **La direccion NO alcanza.** En JBGYE, «Av. Democracia» junta **dos hospitales
+  distintos** (Alfredo Paulson y Roberto Gilbert) mas una garita de un tercer
+  complejo. «Av. de las Americas» junta cuatro sitios sin relacion.
+- **Un radio unico tampoco**, y falla de las dos maneras. Con union transitiva a
+  300 m encadeno **34 locales** del centro de Guayaquil en un grupo de 1.211 m.
+  Con enlace completo a 150 m dejo de encadenar pero **partio sitios reales**.
+  La causa es que **el tamaño de un sitio depende del sitio**: los cinco puestos
+  de Semedic caben en 70 m, las once puertas del Cementerio General ocupan 600 m
+  porque el cementerio mide eso. Y al revés, «JBGYE HOGAR CORAZON DE JESUS» esta
+  a **60 m** del cementerio y es otra institucion.
+- **`ins_razon_social` es la mejor señal, y por accidente.** La columna se llama
+  «razon social» pero no lo es: la del cliente vive en el cliente. En 73 de 137
+  locales solo repite el nombre del cliente, y en varios dice «Total Security
+  Company» (la empresa de guardias): **relleno de un campo obligatorio que nadie
+  sabia como llenar**. Pero los otros 53 escribieron **el sitio** -- «Hospital
+  Alfredo Paulson», «Hospital Roberto Gilbert» --, y eso separa limpio lo que la
+  direccion mezcla. Por eso ahora el formulario la llama **«Sitio»** y no la
+  exige.
+- **La ciudad es una restriccion dura.** Dos locales del mismo cliente en
+  ciudades distintas no pueden ser el mismo sitio. Sin esto, «LA FABRIL» agrupo
+  Ambato con Ibarra: 9 locales y **315 km** de diametro. Los 130 activos tienen
+  ciudad normalizada.
+
+**Como quedo:** el nombre propone (razon social primero, luego arranques de
+nombre repetidos, descartando genericos como «JBG», «U.E», «C.C.» o «PLAZA») y
+el **GPS veta** cualquier grupo con mas de 1.200 m de diametro, que es un poco
+mas que el sitio mas grande que existe en esta data.
+
+### Lo que falta decidir, y no es un detalle
+
+Convertir esos 66 locales en puestos significa **repuntar todo lo que cuelga de
+`ins_code`**: 38.246 vinculos de usuario, 46.282 rondas, 12.664 marcajes, 11.405
+accesos, los marcadores QR y el inventario. El comando imprime ese conteo por
+local justamente para que se vea el costo. **No se hizo nada de eso**: es una
+decision de negocio, no una migracion mas.
+
+## GPS: 61 locales donde marcar era imposible (2026-09-08)
+
+Reportado como «intente registrarme en biometrico y no me registro, al parecer
+fue el gps». Era eso, y mucho peor de lo que parecia.
+
+**64 de 118 marcadores QR tenian latitud y longitud POSITIVAS.** Ecuador esta al
+oeste de Greenwich y casi todo al sur del ecuador: la longitud es **siempre**
+negativa. Un marcador de Guayaquil guardado como `2.048401 / 79.888372` en vez
+de `-2.048401 / -79.888372` cae al otro lado del planeta, y
+`PresenceValidationService::validarUbicacion()` **bloquea** cuando la distancia
+supera el radio del local:
+
+> Distancia calculada: **17.764 km**. Radio: 100 m. En **61 de 110 locales con
+> marcador activo el marcaje biometrico era imposible**, y el guardia solo veia
+> «Fuera de geocerca (17764506.825468m)». Las rondas por QR usan
+> `validarPresencia()`, que bloquea igual.
+
+Los signos **ya venian mal de v1** (65 latitudes positivas de 118 ahi tambien) y
+el ETL los copio fielmente. No es un fallo de la migracion: es un dato que nunca
+estuvo bien, y en v1 no se notaba porque v1 no comparaba la ubicacion con nada.
+
+### ⚠️ No se corrige con `-abs()`
+
+`LA FABRIL IBARRA` tiene latitud **+0.338139 y es correcta**: Ibarra esta al
+norte del ecuador. `2026_09_08_220001` corrige por rango -- solo invierte si el
+resultado cae dentro de Ecuador (lat -5.0 a 1.5, lng -81.2 a -75.2) -- y deja
+Ibarra intacta. **63 marcadores corregidos.** Uno queda sin tocar a proposito:
+«CCO» en 46.0/78.0 es relleno y esta inactivo.
+
+### Y ademas, tres arreglos para que no vuelva a pasar
+
+- **El formulario valida el rango.** `im_lat` y `im_lng` aceptaban cualquier
+  numero; asi entraron los 64.
+- **Un marcador imposible ya no bloquea.** Si la coordenada cae fuera de
+  Ecuador, el marcaje se **acepta sin verificar** -- igual que cuando el local no
+  tiene marcador -- en vez de dejar a un guardia sin poder marcar su turno. Un
+  dato mal cargado es un problema de configuracion; la asistencia de una persona
+  no es donde pagarlo.
+- **El mensaje lo lee una persona.** «Fuera de geocerca (17764506.825468m,
+  radio: 100m)» paso a «Está a 6,1 km del punto de marcación (se permite hasta
+  100 m). Acérquese al local.»
+
+**Ojo:** el marcaje que se probo desde la oficina sigue fallando, y esta bien.
+Del punto donde estaba el dispositivo al marcador del local 149 hay **6.130 m de
+verdad**. La geocerca ahora mide de verdad.
+
+## El boton de panico no existia (2026-09-08)
+
+La pantalla de Alertas era **de solo lectura**: listaba las alertas del dia sin
+forma de generar una. Estaba roto por **tres lados a la vez**, y eso es lo que lo
+hacia invisible:
+
+1. **La app no llamaba al endpoint.** `constants.ts` solo declaraba
+   `/alert/today`; `/alert/crear` existia en el backend desde el principio.
+2. **El rol Vigilante no tenia `alertas.crear`.** Con el boton puesto habria
+   recibido 403. Es el mismo patron que `inventario.finalizar`: el permiso que
+   necesita justo la persona que esta en el sitio.
+3. **El endpoint no podia funcionar.** `AlertaService::asignarASupervisor()`
+   llamaba a `users::instituciones()`, una relacion **que no existe en ninguno de
+   los dos modelos `users`**. Eloquent lanzaba `BadMethodCallException` dentro de
+   la transaccion de `crearAlerta` y el controlador lo convertia en **500 «Error
+   al crear alerta»**. El vinculo real vive en `user_has_institucion`.
+
+Y una cuarta que habria dejado la alerta creada pero invisible: **`al_fecha` no
+se escribia** y no tiene default, mientras `scopeDelDia()` -- lo que alimenta
+«Alertas de hoy» -- filtra por esa columna.
+
+Ahora: permiso dado (`2026_09_08_230001`), relacion corregida, `al_fecha`
+escrita, `client_uuid` en la tabla (`2026_09_08_240001`) porque **un boton de
+panico se aprieta dos veces** cuando no hay respuesta, y boton EMERGENCIA en la
+app con selector de prioridad. La ubicacion **no** bloquea el envio: si el GPS no
+responde se manda 0/0, que el servidor ya interpreta como «no se sabe». 10 tests
+en `BotonDePanicoTest`.
+
+## El inventario del APK no podia guardar nada (2026-09-08)
+
+Reportado como «en inventario solo se ve un item que dice 4 productos» y «veo un
+desglose pero no se ve las letras». Las dos cosas son el mismo bug.
+
+**La app leia los campos con los nombres de la base de v1.** El endpoint
+`/inventario/listbyinst` devuelve `li_id`, `li_nombre`, `li_descripcion` para la
+lista e `ipc_id`, `ipc_nombre`, `ipc_especificacion` para el producto. Las
+pantallas leian `lp_*` y `pr_*`. Consecuencias, en cadena:
+
+- En la lista, nombre y descripcion salian vacios: **solo se leia «4
+  producto(s)»**.
+- En el detalle, las filas de productos se dibujaban **en blanco**.
+- Al guardar, `id_producto` iba `undefined`; `JSON.stringify` descarta las claves
+  undefined, asi que el backend recibia productos sin id y respondia
+  **«Undefined property: stdClass::$id_producto»**. Comprobado contra la base:
+  no escribia nada.
+- Y `listas.find((l) => String(l.lp_id) === String(lp_id))` comparaba
+  `'undefined' === 'undefined'`, o sea **true**: siempre abria la primera lista
+  del local por accidente. Con dos listas, la segunda mostraba la primera.
+
+### El texto invisible tenia su propia causa
+
+`AppTheme` heredaba de **`Theme.AppCompat.DayNight`** mientras `app.json`
+declara `userInterfaceStyle: light` y las pantallas tienen fondo blanco fijo. En
+un dispositivo puesto en modo oscuro, Android pintaba el texto de los
+`TextInput` en color claro: campos en blanco sobre blanco. Ahora el tema es
+`Light` y cada `TextInput` lleva su `color` explicito.
+
+## La app: encabezado, scroll y colores (2026-09-08)
+
+- **El menu no se podia usar completo.** `HomeScreen` tenia un `View flex: 1`
+  sin scroll: con ocho modulos, los ultimos quedaban **por debajo del borde de
+  la pantalla y no habia forma de llegar a ellos**. Ahora hay `ScrollView` y el
+  menu va en dos columnas, asi que los ocho entran sin desplazar.
+- **17 pantallas repetian `paddingTop: 50`** para esquivar la barra de estado,
+  que `styles.xml` deja transparente. Un numero magico que en una tablet sin
+  notch deja hueco y en un telefono con notch no alcanza. `Encabezado` toma el
+  alto real de `useSafeAreaInsets()` y trae el rojo de la marca.
+- **Los colores estaban sueltos por pantalla**: el azul `#007AFF` de iOS, el
+  `#dc3545` de Bootstrap, `#333` en los titulos. Nada de eso es la marca.
+  `src/utils/tema.ts` los junta, con el rojo **#BD1212** y el gris **#666666**
+  **medidos del logo**.
+- **La foto del biometrico no se veia.** La camara la guardaba en el estado y no
+  se mostraba en ningun lado: el unico cambio era que el boton pasaba a decir
+  «Cambiar foto». El guardia enviaba su marcacion a ciegas, y esa foto es la
+  prueba de que estuvo en su puesto. Ahora hay vista previa con «Tomar otra» y
+  «Descartar», y el boton de registrar esta deshabilitado sin foto.
+
+**Nada de esto esta en el APK instalado**: son cambios de codigo para la
+proxima compilacion. Lo que si aplica ya, sin recompilar, son los dos permisos,
+la correccion de coordenadas, la validacion del formulario y los arreglos del
+backend de alertas.
+
 ## repomix: empaquetar el repo como contexto (2026-09-08)
 
 `repomix.config.json` en la raiz. Corre con `npx repomix` (no hace falta

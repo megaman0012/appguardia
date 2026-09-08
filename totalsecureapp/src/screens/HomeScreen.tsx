@@ -1,6 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { Encabezado } from '../components/Encabezado';
+import { COLORES } from '../utils/tema';
 
 export const HomeScreen = ({ navigation }: { navigation: any }) => {
   const { user, perfil, logout, can } = useAuth();
@@ -19,6 +21,13 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
     }
   };
 
+  const confirmarSalida = () => {
+    Alert.alert('Cerrar sesión', '¿Salir de la aplicación?', [
+      { text: 'No', style: 'cancel' },
+      { text: 'Salir', style: 'destructive', onPress: handleLogout },
+    ]);
+  };
+
   // Cada modulo se muestra solo si el perfil activo tiene el permiso de lectura.
   // El backend vuelve a validarlo en cada endpoint (middleware permission.api).
   const menu = [
@@ -34,64 +43,59 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.appName}>Total Secure App</Text>
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity onPress={handleLogout}>
-            <Text style={styles.logoutText}>Cerrar Sesión</Text>
+      <Encabezado
+        titulo="Total Secure"
+        derecha={
+          <TouchableOpacity onPress={confirmarSalida} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <Text style={styles.salir}>Salir</Text>
           </TouchableOpacity>
-        </View>
-      </View>
+        }
+      />
 
-      <View style={styles.content}>
-        <View style={styles.userInfoContainer}>
-          <Text style={styles.userInfoLabel}>Nombre:</Text>
-          <Text style={styles.userInfoValue}>{nombres}</Text>
+      {/*
+        ⚠️ Esto era un `View` con `flex: 1` y ahi estaba el problema que se
+        reporto: con ocho modulos en el menu, los ultimos quedaban por debajo
+        del borde de la pantalla y **no habia forma de llegar a ellos**. Ahora
+        hay scroll de verdad, y ademas el menu va en dos columnas, asi que en la
+        practica los ocho entran sin desplazar.
+      */}
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.tarjetaUsuario}>
+          <Text style={styles.nombre}>{nombres}</Text>
+          {perfil && <Text style={styles.perfil}>{perfil.nombre}</Text>}
 
-          {email !== '' && (
-            <>
-              <Text style={styles.userInfoLabel}>Email:</Text>
-              <Text style={styles.userInfoValue}>{email}</Text>
-            </>
-          )}
-
-          {acc !== '' && (
-            <>
-              <Text style={styles.userInfoLabel}>Código de acceso:</Text>
-              <Text style={styles.userInfoValue}>{acc}</Text>
-            </>
-          )}
-
-          {perfil && (
-            <>
-              <Text style={styles.userInfoLabel}>Perfil:</Text>
-              <Text style={styles.userInfoValue}>{perfil.nombre}</Text>
-            </>
-          )}
-        </View>
-
-        <View style={styles.menuContainer}>
-          <Text style={styles.menuTitle}>Menú Principal</Text>
-
-          {menu.length === 0 ? (
-            <Text style={styles.menuEmptyText}>
-              El perfil activo no tiene modulos habilitados.
+          {/*
+            El correo y el codigo de acceso ocupaban dos lineas cada uno con su
+            etiqueta encima, y empujaban el menu fuera de la pantalla. Se
+            muestran en una sola linea y solo si existen: 505 usuarios no tienen
+            correo cargado.
+          */}
+          {(email !== '' || acc !== '') && (
+            <Text style={styles.secundario} numberOfLines={1}>
+              {[email, acc && `Cód. ${acc}`].filter(Boolean).join('  ·  ')}
             </Text>
-          ) : (
-            menu.map((item) => (
+          )}
+        </View>
+
+        {menu.length === 0 ? (
+          <Text style={styles.menuEmptyText}>
+            El perfil activo no tiene módulos habilitados.
+          </Text>
+        ) : (
+          <View style={styles.grilla}>
+            {menu.map((item) => (
               <TouchableOpacity
                 key={item.permiso}
                 onPress={item.accion}
-                style={styles.menuItem}
+                style={styles.celda}
+                activeOpacity={0.7}
               >
-                <Text style={styles.menuItemText}>{item.titulo}</Text>
+                <Text style={styles.celdaTexto}>{item.titulo}</Text>
               </TouchableOpacity>
-            ))
-          )}
-        </View>
-      </View>
+            ))}
+          </View>
+        )}
+      </ScrollView>
     </View>
   );
 };
@@ -99,75 +103,68 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORES.fondo,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  headerRight: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-  appName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  logoutText: {
-    color: '#dc3545',
-    fontSize: 16,
+  salir: {
+    color: COLORES.textoSobreMarca,
+    fontSize: 15,
     fontWeight: '600',
   },
   content: {
-    flex: 1,
-    padding: 20,
+    padding: 16,
+    paddingBottom: 32,
   },
-  userInfoContainer: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 10,
-    padding: 20,
-    marginBottom: 30,
-  },
-  userInfoLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-    fontWeight: '500',
-  },
-  userInfoValue: {
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 8,
-  },
-  menuContainer: {
+  tarjetaUsuario: {
+    backgroundColor: COLORES.fondoSuave,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORES.borde,
+    padding: 16,
     marginBottom: 20,
   },
-  menuTitle: {
+  nombre: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
+    fontWeight: '700',
+    color: COLORES.texto,
   },
-  menuItem: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 10,
+  perfil: {
+    fontSize: 14,
+    color: COLORES.marca,
+    fontWeight: '600',
+    marginTop: 2,
   },
-  menuItemText: {
+  secundario: {
+    fontSize: 13,
+    color: COLORES.textoSuave,
+    marginTop: 6,
+  },
+  grilla: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    // `space-between` con ancho 48% deja el hueco justo entre columnas sin
+    // tener que calcular margenes.
+    justifyContent: 'space-between',
+  },
+  celda: {
+    width: '48%',
+    minHeight: 84,
+    backgroundColor: COLORES.fondo,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORES.borde,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORES.marca,
+    padding: 14,
+    marginBottom: 12,
+    justifyContent: 'center',
+  },
+  celdaTexto: {
     fontSize: 16,
-    color: '#333',
+    fontWeight: '600',
+    color: COLORES.texto,
   },
   menuEmptyText: {
     fontSize: 15,
-    color: '#666',
+    color: COLORES.textoSuave,
   },
 });

@@ -72,15 +72,20 @@ class RbacTest extends TestCase
     // ── Seed de permisos ──
 
     /**
-     * El Vigilante paso de 21 a 22 permisos: se le agrego
-     * `inventario.finalizar` en 2026_09_08_210001. Sin el, el guardia recibia
-     * la lista de inventario pero la devolucion le daba 403, la recepcion
-     * quedaba abierta y el turno siguiente era rechazado con «ya existe una
-     * recepcion»: podia registrar inventario una sola vez y quedaba bloqueado.
+     * El Vigilante paso de 21 a 23 permisos, en dos arreglos del mismo tipo:
+     *
+     *  - `inventario.finalizar` (2026_09_08_210001). Sin el, el guardia recibia
+     *    la lista de inventario pero la devolucion le daba 403, la recepcion
+     *    quedaba abierta y el turno siguiente era rechazado con «ya existe una
+     *    recepcion»: podia registrar inventario una sola vez y quedaba
+     *    bloqueado.
+     *  - `alertas.crear` (2026_09_08_230001). Es el boton de panico: podia ver
+     *    y cerrar alertas, no generarlas. En una app para guardias, avisar de
+     *    una emergencia es la funcion mas importante que hay.
      *
      * @test
      */
-    public function seed_asigna_22_permisos_a_vigilante_y_31_a_supervisor()
+    public function seed_asigna_23_permisos_a_vigilante_y_31_a_supervisor()
     {
         $vigilanteId = DB::table('roles')->where('name', 'Vigilante')->value('id');
         $supervisorId = DB::table('roles')->where('name', 'Supervisor')->value('id');
@@ -96,7 +101,7 @@ class RbacTest extends TestCase
             ->whereBetween('ps_codigo', [10, 18])
             ->count();
 
-        $this->assertEquals(22, $vig);
+        $this->assertEquals(23, $vig);
         $this->assertEquals(31, $sup);
     }
 
@@ -105,7 +110,11 @@ class RbacTest extends TestCase
     {
         $vigilante = $this->userConRol('Vigilante');
         $this->assertTrue($vigilante->can('acceso.registrar'));
-        $this->assertFalse($vigilante->can('alertas.crear'));
+        // El boton de panico: el vigilante es el unico que esta en el sitio
+        // cuando pasa algo. Ver 2026_09_08_230001.
+        $this->assertTrue($vigilante->can('alertas.crear'));
+        // Lo que si sigue fuera de su alcance: mirar estadisticas.
+        $this->assertFalse($vigilante->can('alertas.ver_estadisticas'));
 
         $supervisor = $this->userConRol('Supervisor');
         $this->assertTrue($supervisor->can('alertas.crear'));
@@ -122,9 +131,14 @@ class RbacTest extends TestCase
     }
 
     /** @test */
-    public function vigilante_no_puede_crear_alerta_responde_403()
+    public function consola_no_puede_crear_alerta_responde_403()
     {
-        $user = $this->userConRol('Vigilante');
+        // Antes este test comprobaba que el **Vigilante** recibia 403 al crear
+        // una alerta, y con eso dejaba escrito el bug como si fuera la regla:
+        // un guardia no podia levantar una alarma desde el sitio. Ahora si
+        // puede (2026_09_08_230001), y el rol que de verdad no debe crearlas es
+        // Consola, que monitorea desde una oficina.
+        $user = $this->userConRol('Consola');
         $token = $this->tokenPara($user);
 
         $response = $this->withHeader('Authorization', "Bearer {$token}")
@@ -132,6 +146,18 @@ class RbacTest extends TestCase
 
         $response->assertStatus(403);
         $response->assertJsonPath('required_permission', 'alertas.crear');
+    }
+
+    /** @test */
+    public function vigilante_si_puede_crear_alerta_no_recibe_403()
+    {
+        $user = $this->userConRol('Vigilante');
+        $token = $this->tokenPara($user);
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson('/api/alert/crear', $this->crearAlertaPayload());
+
+        $this->assertNotSame(403, $response->status());
     }
 
     /** @test */
@@ -206,7 +232,8 @@ class RbacTest extends TestCase
         // filtrar de mas o de menos si tiene que romperlo.
         $this->assertCount($this->permisosMovilesDelRol($roleId), $permisos);
         $this->assertContains('acceso.registrar', $permisos);
-        $this->assertNotContains('alertas.crear', $permisos);
+        $this->assertContains('alertas.crear', $permisos);
+        $this->assertNotContains('alertas.ver_estadisticas', $permisos);
     }
 
     /**

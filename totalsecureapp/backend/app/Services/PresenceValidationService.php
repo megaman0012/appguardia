@@ -27,6 +27,57 @@ class PresenceValidationService
     ];
 
     /**
+     * Ecuador continental e insular, con margen. Fuera de esto, una coordenada
+     * de marcador no es una ubicacion: es un dato mal cargado.
+     */
+    private const LAT_MIN = -5.0;
+    private const LAT_MAX = 1.5;
+    private const LNG_MIN = -81.2;
+    private const LNG_MAX = -75.2;
+
+    /**
+     * ¿La coordenada de un marcador es creible?
+     *
+     * ⚠️ **Esta comprobacion existe por un apagon real.** 64 marcadores venian
+     * de v1 con latitud y longitud positivas -- Ecuador esta al oeste y al sur,
+     * asi que ambas deben ser negativas (salvo la latitud en el norte del
+     * pais). Con el signo invertido, `calcularDistancia` devolvia **17.764 km** y
+     * la geocerca rechazaba todo: en **61 de 110 locales el marcaje biometrico
+     * era imposible** y el guardia solo veia «Fuera de geocerca (17764506m)».
+     *
+     * Los signos ya estan corregidos (`2026_09_08_220001`), pero el formulario
+     * del panel permite escribir cualquier numero. Si vuelve a entrar una
+     * coordenada imposible, el marcaje se ACEPTA sin verificar -- como cuando el
+     * local no tiene marcador -- en vez de dejar a un guardia sin poder marcar
+     * su turno. Un dato mal cargado es un problema de configuracion, y la
+     * asistencia de una persona no es el lugar donde pagarlo.
+     */
+    private function coordenadaCreible($lat, $lng): bool
+    {
+        if (!is_numeric($lat) || !is_numeric($lng)) {
+            return false;
+        }
+
+        $lat = (float) $lat;
+        $lng = (float) $lng;
+
+        if ($lat === 0.0 && $lng === 0.0) {
+            return false;
+        }
+
+        return $lat >= self::LAT_MIN && $lat <= self::LAT_MAX
+            && $lng >= self::LNG_MIN && $lng <= self::LNG_MAX;
+    }
+
+    /** Metros redondeados, para un mensaje que lea una persona. */
+    private function aMetros(float $distancia): string
+    {
+        return $distancia >= 1000
+            ? number_format($distancia / 1000, 1, ',', '.') . ' km'
+            : ((int) round($distancia)) . ' m';
+    }
+
+    /**
      * Validar presencia completa: QR + GPS + Geocerca
      */
     public function validarPresencia(
@@ -60,18 +111,33 @@ class PresenceValidationService
             $radioTolerancia = $institucion->ins_radio_tolerancia_metros;
         }
 
-        // 4. Calcular distancia
+        // 4. Si la coordenada del marcador no es creible, el QR ya probo que el
+        //    guardia estaba ahi: se acepta sin medir. Ver coordenadaCreible().
+        if (!$this->coordenadaCreible($marcador->im_lat, $marcador->im_lng)) {
+            return [
+                'valido'      => true,
+                'distancia_m' => 0.0,
+                'motivo'      => 'El marcador tiene una coordenada inválida: ubicación no verificada',
+                'marcador'    => $marcador,
+                'verificado'  => false,
+            ];
+        }
+
+        // 5. Calcular distancia
         $distancia = $this->calcularDistancia(
             $latitud, $longitud,
             $marcador->im_lat, $marcador->im_lng
         );
 
-        // 5. Validar geocerca
+        // 6. Validar geocerca
         if ($distancia > $radioTolerancia) {
             return [
                 'valido'      => false,
                 'distancia_m' => round($distancia, 2),
-                'motivo'      => "Fuera de geocerca ({$distancia}m, radio: {$radioTolerancia}m)",
+                'motivo'      => sprintf(
+                    'Está a %s del punto de marcación (se permite hasta %d m). Acérquese al punto.',
+                    $this->aMetros($distancia), $radioTolerancia
+                ),
                 'marcador'    => null,
                 'verificado'  => true,
             ];
@@ -112,6 +178,18 @@ class PresenceValidationService
             ->where('im_estado', true)
             ->first();
 
+        if ($marcador && !$this->coordenadaCreible($marcador->im_lat, $marcador->im_lng)) {
+            // Marcador con coordenada imposible: se trata como si no hubiera
+            // marcador. Ver coordenadaCreible().
+            return [
+                'valido'      => true,
+                'distancia_m' => 0.0,
+                'motivo'      => 'El marcador del local tiene una coordenada inválida: ubicación no verificada',
+                'marcador'    => null,
+                'verificado'  => false,
+            ];
+        }
+
         if ($marcador) {
             // Calcular distancia contra el marcador
             $distancia = $this->calcularDistancia(
@@ -123,7 +201,10 @@ class PresenceValidationService
                 return [
                     'valido'      => false,
                     'distancia_m' => round($distancia, 2),
-                    'motivo'      => "Fuera de geocerca ({$distancia}m, radio: {$radioTolerancia}m)",
+                    'motivo'      => sprintf(
+                        'Está a %s del punto de marcación (se permite hasta %d m). Acérquese al local.',
+                        $this->aMetros($distancia), $radioTolerancia
+                    ),
                     'marcador'    => null,
                     'verificado'  => true,
                 ];
@@ -194,7 +275,7 @@ class PresenceValidationService
             ->where('im_estado', true)
             ->first();
 
-        if (!$marcador) {
+        if (!$marcador || !$this->coordenadaCreible($marcador->im_lat, $marcador->im_lng)) {
             return $sinMedir;
         }
 

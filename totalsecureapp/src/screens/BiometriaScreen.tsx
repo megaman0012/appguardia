@@ -2,9 +2,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  ScrollView,
   StyleSheet,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +14,9 @@ import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
 import { getCurrentLocation } from '../utils/location';
 import { CameraCapture } from '../components/CameraCapture';
+import { Encabezado } from '../components/Encabezado';
+import { ahoraDelDispositivo, useIdempotencia } from '../utils/idempotencia';
+import { COLORES } from '../utils/tema';
 
 interface TurnoDelDia {
   tu_id: number;
@@ -32,6 +37,7 @@ export const BiometriaScreen = ({ navigation }: { navigation: any }) => {
   const [enviando, setEnviando] = useState(false);
   const [turno, setTurno] = useState<TurnoDelDia | null>(null);
   const [cargandoTurno, setCargandoTurno] = useState(true);
+  const { uuidPara, confirmar } = useIdempotencia();
 
   // El guardia necesita saber en qué puesto le toca y a qué hora antes de
   // marcar. Si la institución no usa turnos, la pantalla funciona igual.
@@ -71,11 +77,20 @@ export const BiometriaScreen = ({ navigation }: { navigation: any }) => {
     }
     setEnviando(true);
     try {
+      // Acá el GPS SÍ es obligatorio, al contrario que en una alerta: el
+      // servidor compara la ubicación con el punto de marcación del local para
+      // decidir si el guardia está en su puesto, y sin coordenada no hay nada
+      // que comparar. Lo que se mejora es el aviso: antes decía «No se pudo
+      // obtener la ubicación» y no sugería qué hacer.
       let coords = { lat: '0', lng: '0' };
       try {
         coords = await getCurrentLocation();
       } catch (e: any) {
-        Alert.alert('Error', e.message || 'No se pudo obtener la ubicación');
+        Alert.alert(
+          'Sin ubicación',
+          'Active el GPS y salga al aire libre unos segundos antes de marcar.\n\n' +
+            (e?.message || '')
+        );
         setEnviando(false);
         return;
       }
@@ -90,12 +105,18 @@ export const BiometriaScreen = ({ navigation }: { navigation: any }) => {
         name: 'foto.jpg',
         type: 'image/jpeg',
       } as any);
+      // El endpoint acepta los dos desde la Fase 7 y la app no los mandaba: un
+      // reintento subía la foto otra vez y creaba un segundo marcaje. El uuid
+      // se suelta sólo cuando el servidor confirma.
+      formData.append('client_uuid', uuidPara(isEntrada ? 'entrada' : 'salida'));
+      formData.append('ocurrido_en', ahoraDelDispositivo());
 
       const response = await api.post(API_ENDPOINTS.BIOMETRIA, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       const data = response.data;
       if (data && data.message) {
+        confirmar(isEntrada ? 'entrada' : 'salida');
         // El backend vincula el marcaje con el turno y devuelve el resultado,
         // así el guardia ve su tardanza en el momento y no en un reporte.
         let detalle = data.message;
@@ -126,12 +147,11 @@ export const BiometriaScreen = ({ navigation }: { navigation: any }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backText}>‹ Volver</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Marcación biométrica</Text>
-      </View>
+      <Encabezado titulo="Marcación biométrica" onVolver={() => navigation.goBack()} />
+
+      {/* Con la tarjeta del turno, el selector, la cámara y el botón, en una
+          pantalla chica el botón de registrar quedaba fuera de vista. */}
+      <ScrollView contentContainerStyle={styles.scroll}>
 
       {cargandoTurno ? (
         <View style={styles.turnoCard}>
@@ -182,6 +202,33 @@ export const BiometriaScreen = ({ navigation }: { navigation: any }) => {
         </TouchableOpacity>
       </View>
 
+      {/*
+        La foto que se va a subir, visible.
+
+        Antes la cámara guardaba la imagen en el estado y **no se mostraba en
+        ningún lado**: el único cambio era que el botón pasaba a decir «Cambiar
+        foto». El guardia enviaba su marcación a ciegas, sin saber si había
+        salido movida, oscura o con el dedo encima del lente -- y esa foto es la
+        prueba de que estuvo en su puesto.
+      */}
+      {photo && !showCamera ? (
+        <View style={styles.previewWrap}>
+          <Text style={styles.previewTitulo}>Foto de la marcación</Text>
+          <Image source={{ uri: photo.uri }} style={styles.preview} resizeMode="cover" />
+          <View style={styles.previewBotones}>
+            <TouchableOpacity style={styles.previewBoton} onPress={() => setShowCamera(true)}>
+              <Text style={styles.previewBotonTexto}>Tomar otra</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.previewBoton, styles.previewDescartar]}
+              onPress={() => setPhoto(null)}
+            >
+              <Text style={styles.previewDescartarTexto}>Descartar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : null}
+
       {!showCamera ? (
         <TouchableOpacity
           style={styles.cameraButton}
@@ -205,23 +252,81 @@ export const BiometriaScreen = ({ navigation }: { navigation: any }) => {
       )}
 
       <TouchableOpacity
-        style={styles.saveButton}
+        style={[styles.saveButton, (enviando || !photo) && styles.saveButtonOff]}
         onPress={enviar}
-        disabled={enviando}
+        disabled={enviando || !photo}
       >
         {enviando ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={COLORES.textoSobreMarca} />
         ) : (
           <Text style={styles.saveButtonText}>
-            Registrar {isEntrada ? 'entrada' : 'salida'}
+            {photo
+              ? `Registrar ${isEntrada ? 'entrada' : 'salida'}`
+              : 'Tome la foto para continuar'}
           </Text>
         )}
       </TouchableOpacity>
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  scroll: {
+    paddingBottom: 32,
+  },
+  previewWrap: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+  },
+  previewTitulo: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORES.textoSuave,
+    marginBottom: 8,
+  },
+  preview: {
+    width: '100%',
+    // Alto fijo y `cover`: la cámara devuelve la foto en la orientación del
+    // dispositivo y sin esto el recuadro cambia de tamaño según cómo se sostuvo
+    // la tablet.
+    height: 260,
+    borderRadius: 12,
+    backgroundColor: COLORES.fondoSuave,
+    borderWidth: 1,
+    borderColor: COLORES.borde,
+  },
+  previewBotones: {
+    flexDirection: 'row',
+    marginTop: 10,
+  },
+  previewBoton: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORES.borde,
+    backgroundColor: COLORES.fondoSuave,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  previewBotonTexto: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORES.texto,
+  },
+  previewDescartar: {
+    marginRight: 0,
+    borderColor: COLORES.critico,
+  },
+  previewDescartarTexto: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORES.critico,
+  },
+  saveButtonOff: {
+    opacity: 0.5,
+  },
   turnoCard: {
     backgroundColor: '#f1f5f9',
     borderRadius: 10,

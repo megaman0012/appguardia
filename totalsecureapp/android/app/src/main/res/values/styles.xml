@@ -1,5 +1,18 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-  <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+  <!--
+    ⚠️ Era `Theme.AppCompat.DayNight.NoActionBar` y ahi estaba el «no se ven las
+    letras» que se reporto en inventario.
+
+    Con DayNight, un dispositivo puesto en modo oscuro hace que Android pinte el
+    texto de los `TextInput` en color claro. Pero `app.json` declara
+    `userInterfaceStyle: light` y las pantallas tienen fondo blanco fijo, asi
+    que el resultado era texto casi blanco sobre blanco: los campos de cantidad
+    y nota quedaban en blanco aunque tuvieran valor.
+
+    La app no tiene tema oscuro: forzar el claro es lo coherente con lo que
+    declara `app.json`.
+  -->
+  <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
     <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
     <item name="colorPrimary">@color/colorPrimary</item>
     <item name="android:statusBarColor">@android:color/transparent</item>

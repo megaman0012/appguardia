@@ -66,17 +66,65 @@ class VerificacionUbicacionTest extends TestCase
         ]);
     }
 
-    private function crearMarcador(bool $activo = true): void
+    private function crearMarcador(bool $activo = true, $lat = -2.1890, $lng = -79.8890): void
     {
         DB::table('institucion_marcadores')->insert([
             'im_ins_code'    => $this->insCode,
             'im_descripcion' => 'Garita',
-            'im_lat'         => -2.1890,
-            'im_lng'         => -79.8890,
+            'im_lat'         => $lat,
+            'im_lng'         => $lng,
             'im_estado'      => $activo,
             'im_created_at'  => now(),
             'im_updated_at'  => now(),
         ]);
+    }
+
+    /**
+     * El caso que dejo 61 locales sin poder marcar.
+     *
+     * @test
+     */
+    public function un_marcador_con_el_signo_invertido_no_bloquea_el_marcaje()
+    {
+        // Guayaquil guardado como positivo: es lo que traian 64 marcadores de
+        // v1. La distancia calculada daba 17.764 km y la geocerca rechazaba
+        // todo, asi que en 61 de 110 locales el biometrico era imposible.
+        $this->crearMarcador(true, 2.1890, 79.8890);
+
+        $r = $this->service->validarUbicacion(-2.1890, -79.8890, $this->insCode);
+
+        // Se acepta, porque el guardia no tiene por que perder su turno por un
+        // dato mal cargado...
+        $this->assertTrue($r['valido']);
+        // ...pero queda constancia de que no se pudo comprobar nada.
+        $this->assertFalse($r['verificado']);
+        $this->assertStringContainsString('coordenada inválida', $r['motivo']);
+    }
+
+    /** @test */
+    public function un_marcador_en_cero_cero_tampoco_bloquea()
+    {
+        // '0','0' no es el golfo de Guinea, es «no se cargo».
+        $this->crearMarcador(true, 0, 0);
+
+        $r = $this->service->validarUbicacion(-2.1890, -79.8890, $this->insCode);
+
+        $this->assertTrue($r['valido']);
+        $this->assertFalse($r['verificado']);
+    }
+
+    /** @test */
+    public function una_latitud_positiva_del_norte_del_pais_si_se_valida()
+    {
+        // Ibarra esta a +0.34 de latitud y su marcador es correcto: la
+        // correccion de signos no puede tocarlo ni tratarlo como invalido.
+        $this->crearMarcador(true, 0.338139, -78.186917);
+
+        $r = $this->service->validarUbicacion(0.338200, -78.186900, $this->insCode);
+
+        $this->assertTrue($r['valido']);
+        $this->assertTrue($r['verificado']);
+        $this->assertLessThan(100, $r['distancia_m']);
     }
 
     /** @test */
@@ -104,7 +152,10 @@ class VerificacionUbicacionTest extends TestCase
         // Se rechaza JUSTAMENTE porque se pudo medir. Marcarlo como no
         // verificado confundiria "esta lejos" con "no se sabe donde esta".
         $this->assertTrue($r['verificado']);
-        $this->assertStringContainsString('Fuera de geocerca', $r['motivo']);
+        // El mensaje lo lee un guardia en una tablet: antes decia «Fuera de
+        // geocerca (17764506.825468m, radio: 100m)».
+        $this->assertStringContainsString('del punto de marcación', $r['motivo']);
+        $this->assertStringNotContainsString('geocerca', $r['motivo']);
     }
 
     /** @test */

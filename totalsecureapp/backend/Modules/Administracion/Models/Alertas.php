@@ -33,6 +33,11 @@ class Alertas extends Model
         'al_observacion',
         'al_created_user',
         'al_updated_user',
+        'al_client_uuid',
+        'al_sincronizado_en',
+        // Sin esto `create()` la descarta en silencio y la alerta queda sin
+        // fecha, invisible para `scopeDelDia()`.
+        'al_fecha',
     ];
 
     protected $casts = [
