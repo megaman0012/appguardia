@@ -281,6 +281,52 @@ extremos.
 
 ---
 
+## 4-bis. El catálogo de ciudades, ya construido
+
+Migración `2026_09_07_200001_sembrar_ciudades_de_v1`, con el mismo patrón
+idempotente (`updateOrInsert` por clave natural) que el sembrado de países y
+provincias. Crea **15 ciudades**; Guayaquil ya existía.
+
+**Mapeo verificado contra los 137 locales: 137/137, ninguno queda sin ciudad.**
+
+| v1 (texto libre) | → v2 `ciudad` | Provincia | Locales |
+|---|---|---|---:|
+| `Guayaquil` | Guayaquil | Guayas | 95 |
+| `MANTENIMIENTO` | **Guayaquil** | Guayas | 1 |
+| `QUITO` | Quito | Pichincha | 16 |
+| `MANTA` | Manta | Manabí | 11 |
+| `CUENCA` | Cuenca | Azuay | 2 |
+| `AMBATO` | Ambato | Tungurahua | 2 |
+| `PORTOVIEJO` | Portoviejo | Manabí | 1 |
+| `IBARRA` | Ibarra | Imbabura | 1 |
+| `STO. DOMINGO` | Santo Domingo | Sto. Domingo de los Tsáchilas | 1 |
+| `DURÁN` | Durán | Guayas | 1 |
+| `NARANJAL` | Naranjal | Guayas | 1 |
+| `EL TRIUNFO` | El Triunfo | Guayas | 1 |
+| `Nobol` | Nobol | Guayas | 1 |
+| `VILLAMIL PLAYAS` | Playas | Guayas | 1 |
+| `SAN CRISTOBAL` | San Cristóbal | Galápagos | 1 |
+| `BALTRA` | Baltra | Galápagos | 1 |
+
+Tres decisiones de normalización que conviene poder discutir, no adivinar:
+
+- **`VILLAMIL PLAYAS` → Playas, provincia del Guayas.** Se confunde con Santa
+  Elena porque queda en la costa entre las dos; el cantón Playas es del Guayas.
+- **`SAN CRISTOBAL` y `BALTRA` son islas, no ciudades.** Se cargan con el nombre
+  que usa la operación y no el oficial (Puerto Baquerizo Moreno / Santa Cruz),
+  porque es el que reconoce quien mira el panel. Baltra es donde está el
+  aeropuerto, lo que encaja con que haya clientes en aeropuertos.
+- **`MANTENIMIENTO` no es una ciudad**: alguien escribió un área en ese campo. Va
+  a Guayaquil por decisión del usuario. Sin eso, ese local **no pertenecería a
+  ningún país y ningún Líder Operativo lo vería**.
+
+**Colombia queda desactivada (`pa_estado = false`), no borrada.** «Por ahora solo
+Ecuador» implica que puede volver, y el README dice que se opera ahí; borrarla
+obligaría a recrearla con otro id. Chile no se trae: en v1 estaba inactivo y sin
+locales.
+
+---
+
 ## 5. Lo que no tiene origen, y arranca vacío
 
 Nace sin datos, y está bien que así sea: son funciones que v1 no tenía.
@@ -332,7 +378,7 @@ pero no auditable.
 |---|---|
 | 1 | **Imágenes**: las sube el usuario. Pendiente de recibir `public/images/`. |
 | 2 | **Países: solo Ecuador.** Se quita Colombia del catálogo sembrado y no se trae Chile (estaba inactivo y sin locales en v1). |
-| 3 | **El local con ciudad `MANTENIMIENTO` → Guayaquil.** ⚠️ Pendiente de confirmar si «solo Guayaquil» significa además migrar únicamente los 95 locales de Guayaquil, o los 137 creando las 15 ciudades. |
+| 3 | **Se migran los 137 locales**, creando las 15 ciudades que faltaban. El local con ciudad `MANTENIMIENTO` → Guayaquil. **Hecho**: migración `2026_09_07_200001_sembrar_ciudades_de_v1`. |
 | 4 | Pendiente tras la explicación (ver §3.3). |
 | 5 | Pendiente tras la explicación (ver §3.4). |
 | 6 | **`log` y `log_trafico`: empezar limpio.** No se migran las 2.902 filas de auditoría vieja. |
@@ -341,12 +387,9 @@ pero no auditable.
 
 1. **`public/images/` del servidor de v1** (~42.000 archivos). Es lo único que no
    está en el dump y sin eso las fotos se pierden. **En curso.**
-2. **Alcance de «solo Guayaquil»**: ¿los 137 locales (creando 15 ciudades) o solo
-   los 95 de Guayaquil como primera etapa? Cambia si se migran 137 o 95 locales,
-   y con ellos sus rondas, marcajes y accesos.
-3. **`ac_nombre_contrato`**: copiar a `avi_persona_visita` (recomendado, una
+2. **`ac_nombre_contrato`**: copiar a `avi_persona_visita` (recomendado, una
    línea) o aceptar la pérdida de 36 filas.
-4. **Inventario**: apuntar el panel al juego nuevo antes de cargar (recomendado),
+3. **Inventario**: apuntar el panel al juego nuevo antes de cargar (recomendado),
    o cargar al juego viejo y dejar la app escribiendo en otro lado.
 
 Con eso definido, el ETL es escribible y verificable tabla por tabla.
