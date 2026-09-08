@@ -29,3 +29,12 @@ Credencial*todos.txt
 *.rar
 # Datos de v1 fuera del directorio web (ver ANALISIS-MIGRACION-V1.md).
 /datos-v1/
+
+# Entregables y claves de firma. `*.apk` cubria el APK pero NO el keystore que
+# se guarda al lado para poder bajar las dos cosas juntas: sin esta linea, un
+# `git add -A` publicaba la clave de firma en GitHub. Un keystore filtrado
+# permite firmar actualizaciones haciendose pasar por la app, y no se revoca.
+/apk/
+*.jks
+*.keystore
+!totalsecureapp/android/app/debug.keystore

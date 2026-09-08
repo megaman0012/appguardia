@@ -786,6 +786,30 @@ PKCS12 **no admite contraseñas distintas** para el almacen y la clave: keytool
 avisa que ignora `-keypass`. Las dos son la misma, y es el comportamiento normal
 del formato.
 
+#### Respaldos (2026-09-08)
+
+Tres copias identicas, verificadas por sha256:
+
+| Donde | Para que |
+|---|---|
+| `/home/server-dt/keystores/totalsecureapp-release.jks` | el que usa Gradle |
+| `/home/server-dt/keystores/respaldos/…-20260908.jks` | sobrevive un borrado accidental |
+| `apk/totalsecureapp-release.jks` | junto al APK, para bajarlo |
+
+Con `apk/LEEME-keystore.txt`, que trae alias, vigencia y huella SHA-256 **pero no
+la contrasena**: si el .jks y su clave viajan juntos, quien consiga el paquete
+tiene todo.
+
+⚠️ **Las tres copias estan en el mismo disco**, asi que protegen contra un
+borrado, no contra una falla de disco ni contra perder el servidor. El respaldo
+de verdad es una copia **fuera de esta maquina**.
+
+Y una trampa que aparecio al hacerlo: **`.gitignore` cubria `*.apk` pero no el
+`.jks`** que se puso al lado. `apk/` figuraba como no ignorado, asi que un
+`git add -A` habria publicado la clave de firma en GitHub. Ahora se ignoran
+`/apk/`, `*.jks` y `*.keystore`, con excepcion para
+`android/app/debug.keystore`, que es el publico de Android y si va versionado.
+
 #### Por que esto no se puede perder
 
 Android identifica una app por **paquete + clave de firma**. Si se pierde el
@@ -837,10 +861,24 @@ Verificado **dentro del APK**, no solo que compilara:
 
 **Firmado con el keystore de PRODUCCION** (ver la seccion siguiente).
 
-Y sigue faltando lo que no depende del servidor: **el reenvio en el router** de
-`181.198.245.50:3031` y `181.188.232.50:3031` hacia `192.168.3.124:3031`. Se
-comprueba desde fuera de la red con
-`curl -I http://181.198.245.50:3031/acceso/login`.
+### Reenvio del router: funcionando (2026-09-08)
+
+Las **dos** IP publicas responden en el 3031, y la API emite token por las dos:
+
+```
+http://181.198.245.50:3031/acceso/login -> 200
+http://181.188.232.50:3031/acceso/login -> 200
+POST /api/login por ambas               -> access_token
+```
+
+Latencia ~0,04 s por las dos, igual que por la IP local. (La primera medicion dio
+0,77 s en la primaria; era el costo de abrir la conexion, no una diferencia de
+ruta. Repetida, se igualan.)
+
+> La prueba se hizo **desde dentro de la red**: el router hace hairpin NAT y
+> permite salir y volver. Eso demuestra que la regla de reenvio existe y llega al
+> servidor. Lo unico que no cubre es que el ISP bloquee el 3031 entrante; si una
+> tablet con datos moviles no conecta pero por wifi si, ese es el sospechoso.
 
 ## App Expo
 
