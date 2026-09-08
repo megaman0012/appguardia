@@ -139,37 +139,78 @@ class DatabaseSeeder extends Seeder
             ],
         ]);
 
-        $p1 = DB::table('inv_productos')->insertGetId([
-            'pr_nombre' => 'Extintor',
-            'pr_descripcion' => 'Extintor PQS 10 lb',
-            'pr_especificacion' => 'Polvo químico seco',
-            'pr_stock_actual' => 10,
-            'pr_estado' => 1,
-            'pr_created_at' => now(),
-            'pr_updated_at' => now(),
-        ], 'pr_id');
-        $p2 = DB::table('inv_productos')->insertGetId([
-            'pr_nombre' => 'Botiquín',
-            'pr_descripcion' => 'Botiquín primeros auxilios',
-            'pr_especificacion' => 'Completo',
-            'pr_stock_actual' => 5,
-            'pr_estado' => 1,
-            'pr_created_at' => now(),
-            'pr_updated_at' => now(),
-        ], 'pr_id');
+        // Inventario: se siembra el juego de tablas de FASE1
+        // (inv_producto_catalogo / inv_lista / inv_lista_item /
+        // inv_movimiento_cabecera / inv_movimiento_detalle), que es el que usan
+        // la app movil Y el panel.
+        //
+        // Antes sembraba las tablas viejas (inv_productos, inv_listas_productos,
+        // inv_lista_producto_items). Como la app lee las nuevas, el inventario de
+        // demostracion **no existia para la tablet**: la pantalla salia vacia y
+        // parecia que el modulo no funcionaba.
+        //
+        // Los productos ahora son POR LOCAL (`ipc_ins_code`); en el modelo viejo
+        // eran globales.
+        $p1 = DB::table('inv_producto_catalogo')->insertGetId([
+            'ipc_ins_code' => $insId,
+            'ipc_nombre' => 'Extintor',
+            'ipc_descripcion' => 'Extintor PQS 10 lb',
+            'ipc_especificacion' => 'Polvo químico seco',
+            'ipc_stock_actual' => 10,
+            'ipc_activo' => true,
+            'ipc_created_at' => now(),
+            'ipc_updated_at' => now(),
+        ], 'ipc_id');
+        $p2 = DB::table('inv_producto_catalogo')->insertGetId([
+            'ipc_ins_code' => $insId,
+            'ipc_nombre' => 'Botiquín',
+            'ipc_descripcion' => 'Botiquín primeros auxilios',
+            'ipc_especificacion' => 'Completo',
+            'ipc_stock_actual' => 5,
+            'ipc_activo' => true,
+            'ipc_created_at' => now(),
+            'ipc_updated_at' => now(),
+        ], 'ipc_id');
 
-        $lpId = DB::table('inv_listas_productos')->insertGetId([
-            'lp_ins_code' => $insId,
-            'lp_nombre' => 'Checklist Bodega',
-            'lp_descripcion' => 'Revisión mensual de bodega',
-            'lp_estado' => 1,
-            'lp_created_at' => now(),
-            'lp_updated_at' => now(),
-        ], 'lp_id');
+        $listaId = DB::table('inv_lista')->insertGetId([
+            'li_ins_code' => $insId,
+            'li_nombre' => 'Checklist Bodega',
+            'li_descripcion' => 'Revisión mensual de bodega',
+            'li_activo' => true,
+            'li_created_at' => now(),
+            'li_updated_at' => now(),
+        ], 'li_id');
 
-        DB::table('inv_lista_producto_items')->insert([
-            ['lpi_lp_id' => $lpId, 'lpi_pr_id' => $p1, 'lpi_cantidad' => 1, 'lpi_estado' => 1, 'lpi_created_at' => now(), 'lpi_updated_at' => now()],
-            ['lpi_lp_id' => $lpId, 'lpi_pr_id' => $p2, 'lpi_cantidad' => 2, 'lpi_estado' => 1, 'lpi_created_at' => now(), 'lpi_updated_at' => now()],
+        DB::table('inv_lista_item')->insert([
+            ['lia_lista_id' => $listaId, 'lia_producto_id' => $p1, 'lia_cantidad_default' => 1, 'lia_activo' => true, 'lia_created_at' => now(), 'lia_updated_at' => now()],
+            ['lia_lista_id' => $listaId, 'lia_producto_id' => $p2, 'lia_cantidad_default' => 2, 'lia_activo' => true, 'lia_created_at' => now(), 'lia_updated_at' => now()],
+        ]);
+
+        // Un movimiento con su detalle, para que las pantallas del panel se
+        // puedan probar con filas de verdad. Una tabla vacia se renderiza
+        // siempre: los errores de formato aparecen con el primer registro (ver
+        // PantallasConDatosTest).
+        //
+        // Se deja una diferencia a proposito -- 2 esperados, 1 contado, estado
+        // `falta` -- porque el caso interesante del inventario es justamente el
+        // que no cuadra.
+        $movId = DB::table('inv_movimiento_cabecera')->insertGetId([
+            'mc_ins_code' => $insId,
+            'mc_lista_id' => $listaId,
+            'mc_tipo' => 'recepcion',
+            'mc_usuario_id' => $user->id,
+            'mc_fecha' => now(),
+            'mc_lat' => '-2.1890',
+            'mc_lng' => '-79.8890',
+            'mc_observaciones' => 'Recepción de turno, revisión completa',
+            'mc_estado' => 'completado',
+            'mc_created_at' => now(),
+            'mc_updated_at' => now(),
+        ], 'mc_id');
+
+        DB::table('inv_movimiento_detalle')->insert([
+            ['md_movimiento_id' => $movId, 'md_producto_id' => $p1, 'md_cantidad_default' => 1, 'md_cantidad_real' => 1, 'md_recibido' => true, 'md_observacion' => null, 'md_estado' => 'ok', 'md_created_at' => now(), 'md_updated_at' => now()],
+            ['md_movimiento_id' => $movId, 'md_producto_id' => $p2, 'md_cantidad_default' => 2, 'md_cantidad_real' => 1, 'md_recibido' => true, 'md_observacion' => 'Falta un botiquín', 'md_estado' => 'falta', 'md_created_at' => now(), 'md_updated_at' => now()],
         ]);
     }
 }

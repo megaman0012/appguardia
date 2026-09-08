@@ -5,45 +5,65 @@ namespace App\Filament\Resources;
 use App\Support\PerfilPanel;
 
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Select;
 use Filament\Tables\Actions\Action;
-use Filament\Tables\Actions\CreateAction;
 use Filament\Tables\Columns\BadgeColumn;
-use Filament\Tables\Columns\BooleanColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
 use Modules\Administracion\Models\UserHasInstitucion;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use Session;
 use App\Filament\Resources\InvMovimientoResource\Pages;
-use App\Filament\Resources\InvMovimientoResource\RelationManagers;
-use Modules\Administracion\Models\InvMovimiento;
+use Modules\Administracion\Models\MovimientoCabecera;
 use Filament\Forms;
 use Filament\Resources\Form;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 use Filament\Tables;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-
-
+/**
+ * Movimientos de inventario.
+ *
+ * Apunta a `inv_movimiento_cabecera` (el juego de FASE1), NO a
+ * `inv_movimientos`. Es donde escribe la app movil: antes el guardia hacia el
+ * inventario en la tablet y esta pantalla no mostraba nada, porque leia la tabla
+ * vieja. Ver AGENTS.md, seccion Inventario.
+ *
+ * **No fue un cambio de nombres, fue un cambio de forma.** En `inv_movimientos`
+ * una fila era el ciclo COMPLETO, con cuatro juegos de columnas
+ * (`mov_recep_asig_*`, `mov_recep_*`, `mov_devol_*`, `mov_devol_entreg_*`). En
+ * el modelo nuevo **cada fila es UN evento**, y su tipo esta en `mc_tipo`
+ * (recepcion / devolucion / baja). Por eso ya no hay columnas "fecha de
+ * recepcion" y "fecha de devolucion" en la misma fila: hay una `mc_fecha` y el
+ * tipo dice de que es.
+ *
+ * De paso desaparece el filtro de toggles que mostraba y ocultaba los "campos de
+ * recepcion" y los "campos de devolucion": con una fila por evento lo natural es
+ * filtrar por tipo, no esconder columnas vacias.
+ */
 class InvMovimientoResource extends Resource
 {
-    protected static ?string $model = InvMovimiento::class;
+    protected static ?string $model = MovimientoCabecera::class;
 
     /**
-     * Relaciones que usan las columnas de la tabla. Sin esto cada fila
-     * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
-     * 126 consultas en vez de 6.
+     * Fijado para que la URL no cambie: Filament deriva la ruta del modelo, y al
+     * pasar de InvMovimiento a MovimientoCabecera `/admin/inv-movimientos` se
+     * habria convertido en `/admin/movimiento-cabeceras`.
      */
-    protected const RELACIONES_TABLA = ['institucion.cliente', 'lista', 'recep_user'];
+    protected static ?string $slug = 'inv-movimientos';
+
+    /**
+     * Relaciones que usan las columnas de la tabla. Sin esto cada fila dispara
+     * una consulta por relacion (N+1).
+     */
+    protected const RELACIONES_TABLA = ['institucion.cliente', 'lista', 'usuario'];
 
     protected static ?string $navigationGroup = 'Reporteria';
     protected static ?int $navigationSort = 13;
     protected static ?string $navigationLabel = 'Inventario Equipamento';
     protected static ?string $navigationIcon = 'heroicon-o-switch-horizontal';
-    protected static bool $shouldRegisterNavigation = true;
 
     public static function form(Form $form): Form {
         return $form->schema([]);
@@ -53,142 +73,118 @@ class InvMovimientoResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('mov_id')->size('sm')
+                TextColumn::make('mc_id')->size('sm')
                     ->label('Código')
                     ->sortable()
                     ->searchable(),
-                BadgeColumn::make('mov_tipo')->size('sm')
-                    ->label('Estado')
+                BadgeColumn::make('mc_tipo')->size('sm')
+                    ->label('Tipo')
+                    ->enum([
+                        MovimientoCabecera::TIPO_RECEPCION  => 'Recepción',
+                        MovimientoCabecera::TIPO_DEVOLUCION => 'Devolución',
+                        MovimientoCabecera::TIPO_BAJA       => 'Baja',
+                    ])
                     ->colors([
-                        'secondary' => 'Asignacion',
-                        'warning' => 'Recepcion',
-                        'success' => 'Devolucion',
-                        'danger' => 'Finalizado',
-                    ]),
-                //Institucion
+                        'warning'   => MovimientoCabecera::TIPO_RECEPCION,
+                        'success'   => MovimientoCabecera::TIPO_DEVOLUCION,
+                        'danger'    => MovimientoCabecera::TIPO_BAJA,
+                    ])
+                    ->toggleable(),
                 TextColumn::make('institucion.cliente.org_descripcion')->size('sm')
-                    ->label('Organizacion')
-                    ->searchable()
-                    ->visible(fn ($livewire) => $livewire->tableFilters['rec_dev']['institucion'] ?? true),
+                    ->label('Cliente')
+                    ->toggleable()
+                    ->searchable(),
                 TextColumn::make('institucion.ins_descripcion')->size('sm')
                     ->label('Institucion')
+                    ->toggleable()
                     ->searchable(),
-
-                //Lista
-                TextColumn::make('lista.lp_nombre')->size('sm')
+                TextColumn::make('lista.li_nombre')->size('sm')
                     ->label('Lista')
+                    ->toggleable()
                     ->searchable(),
-                TextColumn::make('lista.lp_descripcion')->size('sm')
-                    ->label('Descripcion'),
-
-                //Asignacion
-                /*TextColumn::make('recep_asig_user.usu_nmbcom')->size('sm')
-                    ->label('Asignacion Usuario')
-                    ->searchable()
-                    ->visible(fn ($livewire) => $livewire->tableFilters['rec_dev']['recepcion'] ?? true),
-                TextColumn::make('mov_recep_asig_fecha')->size('sm')
-                    ->label('Asignacion Fecha')
+                TextColumn::make('usuario.usu_nmbcom')->size('sm')
+                    ->label('Registrado por')
+                    ->toggleable()
+                    ->searchable(),
+                TextColumn::make('mc_fecha')->size('sm')
+                    ->label('Fecha')
                     ->sortable()
-                    ->searchable()
-                    ->visible(fn ($livewire) => $livewire->tableFilters['rec_dev']['recepcion'] ?? true),
-                TextColumn::make('mov_recep_asig_obsv')->size('sm')
-                    ->label('Asignacion Observacion')
-                    ->visible(fn ($livewire) => $livewire->tableFilters['rec_dev']['recepcion'] ?? true)
+                    ->searchable(),
+                TextColumn::make('mc_observaciones')->size('sm')
+                    ->label('Observaciones')
+                    ->toggleable()
                     ->limit(25)
-                    ->tooltip(fn ($record) => $record->mov_recep_asig_obsv),*/
-
-                //Recepcion
-                TextColumn::make('recep_user.usu_nmbcom')->size('sm')
-                    ->label('Recepcion Usuario')
-                    ->searchable()
-                    ->visible(fn ($livewire) => $livewire->tableFilters['rec_dev']['recepcion'] ?? true),
-                TextColumn::make('mov_recep_fecha')->size('sm')
-                    ->label('Recepcion Fecha')
-                    ->sortable()
-                    ->searchable()
-                    ->visible(fn ($livewire) => $livewire->tableFilters['rec_dev']['recepcion'] ?? true),
-                /*TextColumn::make('mov_recep_obsv')->size('sm')
-                    ->label('Recepcion Observacion')
-                    ->visible(fn ($livewire) => $livewire->tableFilters['rec_dev']['recepcion'] ?? true)
-                    ->limit(25)
-                    ->tooltip(fn ($record) => $record->mov_recep_obsv),*/
-
-                //Devolucion
-                TextColumn::make('mov_devol_fecha')->size('sm')
-                    ->label('Devolucion Fecha')
-                    ->searchable()
-                    ->visible(fn ($livewire) => $livewire->tableFilters['rec_dev']['devolucion'] ?? true),
-                /*TextColumn::make('mov_devol_obsv')->size('sm')
-                    ->label('Devolucion Observacion')
-                    ->visible(fn ($livewire) => $livewire->tableFilters['rec_dev']['devolucion'] ?? true)
-                    ->limit(25)
-                    ->tooltip(fn ($record) => $record->mov_devol_obsv),*/
-
-                //Finalizado
-                /*TextColumn::make('mov_devol_entreg_user.usu_nmbcom')->size('sm')
-                    ->label('Entregado a Usuario')
-                    ->searchable()
-                    ->visible(fn ($livewire) => $livewire->tableFilters['rec_dev']['devolucion'] ?? true),
-                TextColumn::make('mov_devol_entreg_fecha')->size('sm')
-                    ->label('Entregado Fecha')
-                    ->sortable()
-                    ->searchable()
-                    ->visible(fn ($livewire) => $livewire->tableFilters['rec_dev']['devolucion'] ?? true),*/
-                /*TextColumn::make('mov_devol_entreg_obsv')->size('sm')
-                    ->label('Entregado Observacion')
-                    ->visible(fn ($livewire) => $livewire->tableFilters['rec_dev']['devolucion'] ?? true)
-                    ->limit(25)
-                    ->tooltip(fn ($record) => $record->mov_devol_aprob_obsv),*/
-
-                //Estado
-                BooleanColumn::make('mov_estado')
+                    ->tooltip(fn ($record) => $record->mc_observaciones),
+                BadgeColumn::make('mc_estado')->size('sm')
                     ->label('Estado')
-                    ->sortable()
-                    ->searchable(false),
+                    ->enum([
+                        MovimientoCabecera::ESTADO_PENDIENTE  => 'Pendiente',
+                        MovimientoCabecera::ESTADO_COMPLETADO => 'Completado',
+                        MovimientoCabecera::ESTADO_CANCELADO  => 'Cancelado',
+                    ])
+                    ->colors([
+                        'warning'   => MovimientoCabecera::ESTADO_PENDIENTE,
+                        'success'   => MovimientoCabecera::ESTADO_COMPLETADO,
+                        'danger'    => MovimientoCabecera::ESTADO_CANCELADO,
+                    ])
+                    ->toggleable(),
             ])
             ->filters([
-                Filter::make('rec_dev')
+                SelectFilter::make('mc_tipo')
+                    ->label('Tipo')
+                    ->options([
+                        MovimientoCabecera::TIPO_RECEPCION  => 'Recepción',
+                        MovimientoCabecera::TIPO_DEVOLUCION => 'Devolución',
+                        MovimientoCabecera::TIPO_BAJA       => 'Baja',
+                    ]),
+                SelectFilter::make('mc_estado')
+                    ->label('Estado')
+                    ->options([
+                        MovimientoCabecera::ESTADO_PENDIENTE  => 'Pendiente',
+                        MovimientoCabecera::ESTADO_COMPLETADO => 'Completado',
+                        MovimientoCabecera::ESTADO_CANCELADO  => 'Cancelado',
+                    ]),
+                // El filtro anterior consultaba `mov_fecha_recepcion`, que NO
+                // existe como columna: usarlo reventaba con un error de SQL.
+                // Aqui va contra `mc_fecha`, que es la fecha del evento.
+                Filter::make('mc_fecha')
+                    ->label('Rango de fecha')
                     ->form([
-                        Toggle::make('recepcion')
-                            ->label('Campos Recepcion')
-                            ->default(true),
-                        Toggle::make('devolucion')
-                            ->label('Campos Devolucion')
-                            ->default(true),
-                        Toggle::make('institucion')
-                            ->label('Campos Institucion')
-                            ->default(true),
-                    ])
-                    ->query(fn (Builder $query) => $query),
-                Filter::make('fch_recepcion')
-                    ->label('Recepcion')
-                    ->form([
-                        DatePicker::make('recfrom')
-                            ->label('Fecha Recepcion Desde'),
-                        DatePicker::make('recuntil')
-                            ->label('Fecha Recepcion Hasta'),
+                        DatePicker::make('from')->label('Desde'),
+                        DatePicker::make('until')->label('Hasta'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
                             ->when(
-                                $data['recfrom'],
+                                $data['from'],
                                 fn (Builder $query, $date) =>
-                                $query->whereDate('mov_fecha_recepcion', '>=', $date)
+                                $query->whereDate('mc_fecha', '>=', $date)
                             )
                             ->when(
-                                $data['recuntil'],
+                                $data['until'],
                                 fn (Builder $query, $date) =>
-                                $query->whereDate('mov_fecha_recepcion', '<=', $date)
+                                $query->whereDate('mc_fecha', '<=', $date)
                             );
                     }),
             ])
             ->actions([
                 Action::make('verDetalle')->label('Detalles')
-                    ->url(fn(InvMovimiento $record)=>
-                    InvMovimientoDetalleResource::getUrl(
-                            'index', [ 'mov' => $record->mov_id ]
+                    ->icon('heroicon-o-clipboard-list')
+                    ->url(fn (MovimientoCabecera $record) =>
+                        InvMovimientoDetalleResource::getUrl(
+                            'index', ['mov' => $record->mc_id]
                         )
-                    )
+                    ),
+                // El movimiento se registra en el puesto y guarda su GPS, igual
+                // que un marcaje. Poder abrirlo en el mapa es lo que permite
+                // revisar un inventario que se hizo desde donde no debia.
+                Action::make('gmap')
+                    ->label('Mapa')
+                    ->icon('heroicon-o-map')
+                    ->color('primary')
+                    ->url(fn ($record) => "https://www.google.com/maps?q={$record->mc_lat},{$record->mc_lng}")
+                    ->openUrlInNewTab()
+                    ->visible(fn ($record) => filled($record->mc_lat) && filled($record->mc_lng)),
             ])
             ->bulkActions([
                 ExportBulkAction::make()
@@ -196,16 +192,12 @@ class InvMovimientoResource extends Resource
             ]);
     }
 
-    // ------------------ RELATIONS ------------------
-    public static function getRelations(): array { return [ ]; }
+    public static function getRelations(): array { return []; }
 
-    // ------------------ PAGES ------------------
     public static function getPages(): array
     {
         return [
             'index' => Pages\ListInvMovimientos::route('/'),
-            //'create' => Pages\CreateInvMovimiento::route('/create'),
-            //'edit' => Pages\EditInvMovimiento::route('/{record}/edit'),
         ];
     }
 
@@ -229,14 +221,15 @@ class InvMovimientoResource extends Resource
 
     public static function getEloquentQuery(): Builder {
         $query = parent::getEloquentQuery()->with(self::RELACIONES_TABLA);
-        if(PerfilPanel::alcanceEsPorInstitucion()){
+
+        if (PerfilPanel::alcanceEsPorInstitucion()) {
             $institucionesCodes = UserHasInstitucion::where('ui_usu_id', Session::get('usuID'))
                 ->where('ui_state', 1)
                 ->pluck('ui_ins_code');
             if ($institucionesCodes->isEmpty()) {
                 return $query->whereRaw('1 = 0');
             }
-            return $query->whereIn('mov_ins_code', $institucionesCodes);
+            return $query->whereIn('mc_ins_code', $institucionesCodes);
         }
 
         // El Lider Operativo ve los locales de su(s) pais(es). Sin paises
@@ -246,10 +239,9 @@ class InvMovimientoResource extends Resource
         if ($localesDelPais !== null) {
             return empty($localesDelPais)
                 ? $query->whereRaw('1 = 0')
-                : $query->whereIn('mov_ins_code', $localesDelPais);
+                : $query->whereIn('mc_ins_code', $localesDelPais);
         }
+
         return $query;
     }
-
-
 }

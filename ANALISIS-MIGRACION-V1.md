@@ -379,18 +379,36 @@ pero no auditable.
 | 1 | **Imágenes**: las sube el usuario. Pendiente de recibir `public/images/`. |
 | 2 | **Países: solo Ecuador.** Se quita Colombia del catálogo sembrado y no se trae Chile (estaba inactivo y sin locales en v1). |
 | 3 | **Se migran los 137 locales**, creando las 15 ciudades que faltaban. El local con ciudad `MANTENIMIENTO` → Guayaquil. **Hecho**: migración `2026_09_07_200001_sembrar_ciudades_de_v1`. |
-| 4 | Pendiente tras la explicación (ver §3.3). |
-| 5 | Pendiente tras la explicación (ver §3.4). |
+| 4 | **`ac_nombre_contrato` se copia** a `acceso_visitante.avi_persona_visita`. No se pierde nada. |
+| 5 | **Panel arreglado primero**, y la carga va al juego nuevo. **Hecho**: los 4 resources, el RelationManager y el seeder apuntan a `inv_producto_catalogo` / `inv_lista` / `inv_lista_item` / `inv_movimiento_cabecera` / `inv_movimiento_detalle`. Ver AGENTS.md, sección «Inventario: un solo juego de tablas». |
 | 6 | **`log` y `log_trafico`: empezar limpio.** No se migran las 2.902 filas de auditoría vieja. |
 
 ## 9. Qué falta para poder ejecutar
 
 1. **`public/images/` del servidor de v1** (~42.000 archivos). Es lo único que no
    está en el dump y sin eso las fotos se pierden. **En curso.**
-2. **`ac_nombre_contrato`**: copiar a `avi_persona_visita` (recomendado, una
-   línea) o aceptar la pérdida de 36 filas.
-3. **Inventario**: apuntar el panel al juego nuevo antes de cargar (recomendado),
-   o cargar al juego viejo y dejar la app escribiendo en otro lado.
+2. **Nada más.** Con las imágenes en el servidor, el ETL es escribible completo.
+
+### Lo que el ETL de inventario tiene que hacer, ahora que el destino está fijo
+
+Los 23.790 movimientos de v1 **no se copian fila a fila**: en v1 una fila es el
+ciclo completo y en v2 cada fila es un evento. Hay que **partir cada movimiento
+viejo en hasta tres eventos**, según qué etapas tengan fecha:
+
+| Si tiene… | Se emite un `inv_movimiento_cabecera` con |
+|---|---|
+| `mov_recep_fecha` | `mc_tipo = 'recepcion'`, `mc_fecha = mov_recep_fecha`, usuario `mov_recep_user`, `mc_lat/lng` de `mov_recep_lat/lng` |
+| `mov_devol_fecha` | `mc_tipo = 'devolucion'`, `mc_fecha = mov_devol_fecha`, usuario `mov_devol_user`, lat/lng de `mov_devol_*` |
+| `mov_recep_asig_fecha` sin recepción | queda como `mc_estado = 'pendiente'` |
+
+Y los detalles: `md_cant_asign` → `md_cantidad_default`, `md_cant_recep` →
+`md_cantidad_real` para el evento de recepción, `md_cant_devol` → el de
+devolución. `md_exist` → `md_recibido`, y `md_estado` (booleano) hay que
+traducirlo a `ok`/`falta`/`danado` comparando esperado contra contado.
+
+**Los productos son por local en v2.** Los 16 de `inv_productos` eran globales;
+hay que crear una fila de `inv_producto_catalogo` **por cada (local, producto)**
+que aparezca usado, o las listas quedarían apuntando a productos de otro local.
 
 Con eso definido, el ETL es escribible y verificable tabla por tabla.
 

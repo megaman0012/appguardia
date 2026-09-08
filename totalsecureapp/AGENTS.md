@@ -136,6 +136,70 @@ marcaje de un local sin marcadores. Hoy no se bloquea. Lo que hay que mirar ante
 es cuantas filas salen con `verificada = false`; si son muchas, el problema es la
 carga de datos y no la regla.
 
+## Inventario: un solo juego de tablas (arreglado el 2026-09-07)
+
+**El guardia escribia en unas tablas y el panel leia otras.** FASE1 diseño el
+juego nuevo para reemplazar al viejo, la app movil se movio, y el panel se quedo
+atras. Un inventario hecho desde la tablet no aparecia en el panel, y al reves;
+peor todavia, `DatabaseSeeder` sembraba las tablas VIEJAS, asi que el inventario
+de demostracion **no existia para la app** y su pantalla salia vacia. No lo
+provocaba ninguna migracion: pasaba desde que se hizo FASE1.
+
+Ahora **todo apunta al juego nuevo**:
+
+| Tabla vieja (ya no se usa) | Tabla viva |
+|---|---|
+| `inv_productos` | `inv_producto_catalogo` |
+| `inv_listas_productos` | `inv_lista` |
+| `inv_lista_producto_items` | `inv_lista_item` |
+| `inv_movimientos` | `inv_movimiento_cabecera` |
+| `inv_movimiento_detalles` | `inv_movimiento_detalle` |
+
+- **No fue un cambio de nombres, fue un cambio de forma.** En `inv_movimientos`
+  una fila era el ciclo COMPLETO, con cuatro juegos de columnas
+  (`mov_recep_asig_*`, `mov_recep_*`, `mov_devol_*`, `mov_devol_entreg_*`). Ahora
+  **cada fila es UN evento** y su tipo esta en `mc_tipo`
+  (`recepcion`/`devolucion`/`baja`). Ya no existe una fila con "fecha de
+  recepcion" y "fecha de devolucion" a la vez: hay una `mc_fecha` y el tipo dice
+  de que es. El filtro de toggles que mostraba y escondia "campos de recepcion" y
+  "campos de devolucion" desaparecio porque dejo de tener sentido.
+- Igual en el detalle: `md_cant_asign`/`md_cant_recep`/`md_cant_devol`/
+  `md_cant_final` se reducen a **esperada** (`md_cantidad_default`, que viene de la
+  lista) y **contada** (`md_cantidad_real`). Y `md_estado` dejo de ser booleano:
+  es `ok`/`falta`/`danado`.
+- **Los productos son POR LOCAL** (`ipc_ins_code`); en `inv_productos` eran
+  globales. Por eso `InvProductoResource` ahora tiene alcance por perfil, que
+  antes no le hacia falta, y el selector de producto de una lista solo ofrece los
+  del local de esa lista.
+- **En `Lista`, `items()` y `productos()` NO son lo mismo.** `items()` es el
+  hasMany a las filas del pivote (lo que se edita en el panel) y `productos()` es
+  un belongsToMany a los productos. En el modelo viejo `productos()` era un
+  hasMany al pivote, con el nombre equivocado. Apuntar el RelationManager a
+  `productos` devuelve modelos de producto y las columnas de cantidad quedan
+  vacias.
+- **Los 4 resources declaran `$slug`.** Filament deriva la ruta del nombre del
+  modelo: sin el slug, `/admin/inv-movimientos` se habria convertido en
+  `/admin/movimiento-cabeceras` y el boton «Detalles» habria dejado de resolver.
+
+Tres cosas que estaban rotas y se arreglaron de paso:
+
+1. **El filtro de fecha de movimientos consultaba `mov_fecha_recepcion`**, que no
+   es una columna: usarlo reventaba con error de SQL. Ahora va contra `mc_fecha`.
+2. **`InvMovimientoDetalleResource` no tenia `canViewAny()`** y filtraba solo por
+   el `?mov=` de la URL. Como el id es un entero consecutivo, un supervisor leia
+   el inventario de cualquier local cambiando el numero. Ahora el alcance se
+   aplica **subiendo al movimiento** con `whereHas`, porque el detalle no guarda
+   el local. Verificado: con un local ajeno la tabla sale vacia, con el propio se
+   ven las filas.
+3. **El RelationManager escribia `im_updated_user`**, que no es columna de esa
+   tabla: la auditoria de quien editaba se perdia en silencio.
+
+**Al tocar estas pantallas, probarlas con filas reales.** Las cuatro devolvian 200
+con las tablas vacias antes y despues del cambio; lo que demuestra algo es que
+aparezcan los datos (ver `PantallasConDatosTest`). El seeder ahora deja un
+movimiento con una diferencia a proposito —2 esperados, 1 contado, estado
+`falta`— porque el caso interesante del inventario es el que no cuadra.
+
 ## Offline sync (Fase 7)
 
 - Los 5 endpoints que crean registros en campo (`biometria`, `rondas_detalle_gestion`, `rondas_detalle_qrcode`, `acceso`, `novedad_create`) son **idempotentes** por `client_uuid`: un reintento con el mismo uuid devuelve **200 con el registro existente** y `duplicado: true`, nunca un error. Contrato completo en `API-OFFLINE-SYNC.md` (raíz del monorepo).

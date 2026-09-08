@@ -3,38 +3,62 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\InvMovimientoDetalleResource\Pages;
-use App\Filament\Resources\InvMovimientoDetalleResource\RelationManagers;
+use App\Support\PerfilPanel;
 use Filament\Forms;
 use Filament\Resources\Form;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 use Filament\Tables;
+use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\BooleanColumn;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Modules\Administracion\Models\InvMovimientoDetalle;
+use Modules\Administracion\Models\MovimientoDetalle;
+use Modules\Administracion\Models\UserHasInstitucion;
+use Session;
 
+/**
+ * Detalle de un movimiento de inventario.
+ *
+ * Apunta a `inv_movimiento_detalle` (el juego de FASE1), NO a
+ * `inv_movimiento_detalles`. Ver AGENTS.md, seccion Inventario.
+ *
+ * Cambio de forma respecto al modelo viejo: en `inv_movimiento_detalles` una
+ * fila llevaba las cantidades de TODAS las etapas (`md_cant_asign`,
+ * `md_cant_recep`, `md_cant_devol`, `md_cant_final`). Aqui la fila pertenece a un
+ * evento, asi que hay dos cantidades: la esperada (`md_cantidad_default`, que
+ * viene de la lista) y la contada (`md_cantidad_real`). Y `md_estado` dejo de ser
+ * un booleano: es `ok` / `falta` / `danado`.
+ */
 class InvMovimientoDetalleResource extends Resource
 {
     public static function getNavigationGroup(): ?string {
         return 'Reporteria';
     }
-    protected static ?string $model = InvMovimientoDetalle::class;
+
+    protected static ?string $model = MovimientoDetalle::class;
+
+    /**
+     * Fijado para que la URL no cambie: Filament deriva la ruta del modelo, y al
+     * pasar de InvMovimientoDetalle a MovimientoDetalle
+     * `/admin/inv-movimiento-detalles` se habria convertido en
+     * `/admin/movimiento-detalles`, rompiendo el enlace "Detalles" de la pantalla
+     * de movimientos.
+     */
+    protected static ?string $slug = 'inv-movimiento-detalles';
 
     /**
      * Relaciones que usan las columnas de la tabla. Sin esto cada fila
-     * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
-     * 126 consultas en vez de 6.
+     * dispara una consulta por relacion (N+1).
      */
     protected const RELACIONES_TABLA = ['producto'];
+
     protected static ?int $navigationSort = 14;
     protected static ?string $navigationLabel = 'Movimiento Detalle';
     protected static ?string $navigationIcon = 'heroicon-o-collection';
     protected static bool $shouldRegisterNavigation = false;
 
     public static function form(Form $form): Form { return $form->schema([]); }
-
 
     public static function table(Table $table): Table
     {
@@ -44,73 +68,120 @@ class InvMovimientoDetalleResource extends Resource
                     ->label('Codigo')
                     ->searchable()
                     ->toggleable(),
-                TextColumn::make('producto.pr_nombre')->size('sm')
+                TextColumn::make('producto.ipc_nombre')->size('sm')
                     ->label('Producto')
                     ->searchable()
                     ->toggleable(),
-                TextColumn::make('producto.pr_descripcion')->size('sm')
-                    ->label('Decripcion')
+                TextColumn::make('producto.ipc_descripcion')->size('sm')
+                    ->label('Descripcion')
                     ->searchable()
                     ->toggleable()
                     ->limit(20)
-                    ->tooltip(fn ($record) => $record->producto->pr_descripcion),
-                TextColumn::make('producto.pr_especificacion')->size('sm')
+                    // Con optional(): un detalle cuyo producto se dio de baja
+                    // dejaba la pantalla en 500 al construir el tooltip.
+                    ->tooltip(fn ($record) => optional($record->producto)->ipc_descripcion),
+                TextColumn::make('producto.ipc_especificacion')->size('sm')
                     ->label('Especificacion')
                     ->searchable()
                     ->toggleable(),
-
-                BooleanColumn::make('md_exist')
+                BooleanColumn::make('md_recibido')
                     ->label('Recibido')
                     ->searchable(false),
-
-                TextColumn::make('md_cant_asign')->size('sm')
+                TextColumn::make('md_cantidad_default')->size('sm')
                     ->label('Cantidad Default')
                     ->searchable()
                     ->toggleable(),
-                TextColumn::make('md_cant_recep')->size('sm')
-                    ->label('Cantidad Recepcion')
+                TextColumn::make('md_cantidad_real')->size('sm')
+                    ->label('Cantidad Contada')
                     ->searchable()
                     ->toggleable(),
-                TextColumn::make('md_recep_obsv')->size('sm')
+                TextColumn::make('md_observacion')->size('sm')
                     ->label('Observacion')
                     ->searchable()
                     ->limit(30)
-                    ->tooltip(fn ($record) => $record->md_recep_obsv),
-                /*TextColumn::make('md_cant_devol')->size('sm')
-                    ->label('Cant. Devolucion')
-                    ->searchable()
-                    ->toggleable(),*/
-                /*TextColumn::make('md_cant_final')->size('sm')
-                    ->label('Cant. Finalizado')
-                    ->searchable()
-                    ->toggleable(),*/
-                BooleanColumn::make('md_estado')
+                    ->tooltip(fn ($record) => $record->md_observacion),
+                BadgeColumn::make('md_estado')->size('sm')
                     ->label('Estado')
+                    ->enum([
+                        MovimientoDetalle::ESTADO_OK     => 'OK',
+                        MovimientoDetalle::ESTADO_FALTA  => 'Falta',
+                        MovimientoDetalle::ESTADO_DANADO => 'Dañado',
+                    ])
+                    ->colors([
+                        'success' => MovimientoDetalle::ESTADO_OK,
+                        'warning' => MovimientoDetalle::ESTADO_FALTA,
+                        'danger'  => MovimientoDetalle::ESTADO_DANADO,
+                    ])
                     ->sortable()
                     ->searchable(false),
-
             ])
             ->filters([])
             ->actions([])
             ->bulkActions([]);
     }
 
-    public static function getRelations(): array { return [ ]; }
+    public static function getRelations(): array { return []; }
 
     public static function getPages(): array
     {
         return [
             'index' => Pages\ListInvMovimientoDetalles::route('/'),
-            //'create' => Pages\CreateInvMovimientoDetalle::route('/create'),
-            //'edit' => Pages\EditInvMovimientoDetalle::route('/{record}/edit'),
         ];
     }
 
     public static function canDelete($record): bool { return false; }
 
-    public static function getEloquentQuery(): Builder {
-        $mov_id = request()->query('mov');
-        return parent::getEloquentQuery()->with(self::RELACIONES_TABLA)
-            ->where('md_mov_id', $mov_id );
+    /**
+     * Bloquea la RUTA, no solo el menu.
+     *
+     * `$shouldRegisterNavigation = false` la saca del menu lateral, pero la ruta
+     * seguia abierta y esta pantalla **no tenia canViewAny()**: cualquiera que
+     * pudiera entrar al panel la abria escribiendo la URL.
+     */
+    public static function canViewAny(): bool
+    {
+        return PerfilPanel::puedeOperar();
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $movId = request()->query('mov');
+
+        $query = parent::getEloquentQuery()
+            ->with(self::RELACIONES_TABLA)
+            ->where('md_movimiento_id', $movId);
+
+        // El alcance se aplica SUBIENDO al movimiento, porque el detalle no
+        // guarda el local.
+        //
+        // Antes esta consulta solo filtraba por el `?mov=` de la URL, sin acotar
+        // nada mas: un supervisor de un local podia leer el inventario de otro
+        // cambiando el numero a mano. El id es un entero consecutivo, asi que no
+        // habia nada que adivinar.
+        if (PerfilPanel::alcanceEsPorInstitucion()) {
+            $institucionesCodes = UserHasInstitucion::where('ui_usu_id', Session::get('usuID'))
+                ->where('ui_state', 1)
+                ->pluck('ui_ins_code');
+
+            if ($institucionesCodes->isEmpty()) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            return $query->whereHas('movimiento', function (Builder $q) use ($institucionesCodes) {
+                $q->whereIn('mc_ins_code', $institucionesCodes);
+            });
+        }
+
+        $localesDelPais = PerfilPanel::localesDelUsuario();
+        if ($localesDelPais !== null) {
+            if (empty($localesDelPais)) {
+                return $query->whereRaw('1 = 0');
+            }
+            return $query->whereHas('movimiento', function (Builder $q) use ($localesDelPais) {
+                $q->whereIn('mc_ins_code', $localesDelPais);
+            });
+        }
+
+        return $query;
     }
 }

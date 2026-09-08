@@ -16,3 +16,13 @@ Credencial*todos.txt
 !totalsecureapp/backend/docker/postgres/init/*.sql
 *.dump
 *.sql.gz
+
+# Subidas y respaldos grandes. `images.zip.download` (la carpeta de fotos de v1,
+# ~42.000 archivos) entro por un `git add -A` mientras se estaba subiendo y
+# quedo en el commit 0682009, ya empujado a GitHub. GitHub rechaza archivos de
+# mas de 100 MB, asi que el push siguiente fallo con la subida ya completa.
+*.zip
+*.download
+*.tar
+*.tar.gz
+*.tgz

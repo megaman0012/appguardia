@@ -10,7 +10,7 @@ use Modules\Administracion\Models\UserHasInstitucion;
 use Session;
 use App\Filament\Resources\InvListaProductoResource\Pages;
 use App\Filament\Resources\InvListaProductoResource\RelationManagers\ProductosRelationManager;
-use Modules\Administracion\Models\InvListaProducto;
+use Modules\Administracion\Models\Lista;
 use Filament\Resources\Resource;
 use Filament\Resources\Form;
 use Filament\Resources\Table;
@@ -23,9 +23,23 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BooleanColumn;
 use Filament\Forms;
 
+/**
+ * Listas de inventario.
+ *
+ * Apunta a `inv_lista` (el juego de FASE1), NO a `inv_listas_productos`. Antes
+ * leia el viejo y la app movil escribe en el nuevo, asi que una lista creada
+ * desde el panel no existia para la tablet. Ver AGENTS.md, seccion Inventario.
+ */
 class InvListaProductoResource extends Resource
 {
-    protected static ?string $model = InvListaProducto::class;
+    protected static ?string $model = Lista::class;
+
+    /**
+     * Fijado para que la URL no cambie: Filament deriva la ruta del modelo, y
+     * al pasar de InvListaProducto a Lista `/admin/inv-lista-productos` se
+     * habria convertido en `/admin/listas`.
+     */
+    protected static ?string $slug = 'inv-lista-productos';
 
     /**
      * Relaciones que usan las columnas de la tabla. Sin esto cada fila
@@ -41,7 +55,7 @@ class InvListaProductoResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Select::make('lp_ins_code')
+            Select::make('li_ins_code')
                 ->relationship(
                     'institucion',
                     'ins_descripcion',
@@ -61,16 +75,16 @@ class InvListaProductoResource extends Resource
                 //->searchable()
                 ->required()
                 ->disabledOn('edit'),
-            TextInput::make('lp_nombre')
+            TextInput::make('li_nombre')
                 ->label('Nombre')
                 ->required()
                 ->unique(table: static::$model, callback: function ($rule, $get) {
-                    return $rule->where('lp_ins_code', $get('lp_ins_code'));
+                    return $rule->where('li_ins_code', $get('li_ins_code'));
                 }, ignoreRecord: true),
-            Textarea::make('lp_descripcion')
+            Textarea::make('li_descripcion')
                 ->label('Descripción'),
-            Toggle::make('lp_estado')
-                ->label('Estado')
+            Toggle::make('li_activo')
+                ->label('Activa')
                 ->required()
                 ->default(true),
         ]);
@@ -79,7 +93,7 @@ class InvListaProductoResource extends Resource
     public static function table(Table $table): Table
     {
         return $table->columns([
-            TextColumn::make('lp_id')->size('sm')
+            TextColumn::make('li_id')->size('sm')
                 ->label('Codigo')
                 ->sortable()
                 ->searchable(),
@@ -91,22 +105,25 @@ class InvListaProductoResource extends Resource
                 ->label('Institucion')
                 ->searchable()
                 ->toggleable(),
-            TextColumn::make('lp_nombre')->size('sm')
+            TextColumn::make('li_nombre')->size('sm')
                 ->label('Nombre')
                 ->searchable(),
-            TextColumn::make('lp_descripcion')->size('sm')
+            TextColumn::make('li_descripcion')->size('sm')
                 ->label('Descripcion')
                 ->searchable(),
-            TextColumn::make('productos_count')
-                ->counts('productos')
+            // Cuenta 'items' y no 'productos': en Lista los dos existen y
+            // 'productos' es un belongsToMany que incluiria los items inactivos,
+            // asi que el numero no coincidiria con las filas que se listan abajo.
+            TextColumn::make('items_count')
+                ->counts('items')
                 ->sortable()
                 ->label('Productos'),
-            TextColumn::make('lp_created_at')->size('sm')
+            TextColumn::make('li_created_at')->size('sm')
                 ->label('Fecha de Creación')
                 ->sortable()
                 ->searchable(),
-            BooleanColumn::make('lp_estado')
-                ->label('Estado')
+            BooleanColumn::make('li_activo')
+                ->label('Activa')
                 ->toggleable()
                 ->searchable(false),
         ])->bulkActions([]);
@@ -155,7 +172,7 @@ class InvListaProductoResource extends Resource
             if ($institucionesCodes->isEmpty()) {
                 return $query->whereRaw('1 = 0');
             }
-            return $query->whereIn('lp_ins_code', $institucionesCodes);
+            return $query->whereIn('li_ins_code', $institucionesCodes);
         }
 
         // El Lider Operativo ve los locales de su(s) pais(es). Sin paises
@@ -165,7 +182,7 @@ class InvListaProductoResource extends Resource
         if ($localesDelPais !== null) {
             return empty($localesDelPais)
                 ? $query->whereRaw('1 = 0')
-                : $query->whereIn('lp_ins_code', $localesDelPais);
+                : $query->whereIn('li_ins_code', $localesDelPais);
         }
         return $query;
     }

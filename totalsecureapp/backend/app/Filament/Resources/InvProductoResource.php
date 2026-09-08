@@ -6,8 +6,11 @@ use App\Support\PerfilPanel;
 
 use Session;
 use App\Filament\Resources\InvProductoResource\Pages;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
-use Modules\Administracion\Models\InvProducto;
+use Illuminate\Database\Eloquent\Builder;
+use Modules\Administracion\Models\ProductoCatalogo;
+use Modules\Administracion\Models\UserHasInstitucion;
 use Filament\Resources\Resource;
 use Filament\Resources\Form;
 use Filament\Resources\Table;
@@ -18,9 +21,37 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms;
 use Filament\Tables;
 
+/**
+ * Productos del inventario.
+ *
+ * Apunta a `inv_producto_catalogo` (el juego de tablas de FASE1), NO a
+ * `inv_productos`. Antes leia el viejo, y la app movil escribe en el nuevo: un
+ * producto creado desde el panel no existia para la tablet y al reves. Ver
+ * AGENTS.md, seccion Inventario.
+ *
+ * Cambio de fondo respecto al modelo viejo: **los productos son por local**
+ * (`ipc_ins_code`). En `inv_productos` eran globales y no habia nada que acotar;
+ * aqui hay que filtrar por el alcance del perfil como el resto del panel, o un
+ * supervisor veria el catalogo de locales que no le tocan.
+ */
 class InvProductoResource extends Resource
 {
-    protected static ?string $model = InvProducto::class;
+    protected static ?string $model = ProductoCatalogo::class;
+
+    /**
+     * Fijado para que la URL no cambie.
+     *
+     * Filament deriva la ruta del nombre del modelo: al pasar de InvProducto a
+     * ProductoCatalogo, `/admin/inv-productos` se habria convertido en
+     * `/admin/producto-catalogos`, rompiendo enlaces y marcadores.
+     */
+    protected static ?string $slug = 'inv-productos';
+
+    /**
+     * Relaciones que usan las columnas de la tabla. Sin esto cada fila dispara
+     * una consulta por relacion (N+1).
+     */
+    protected const RELACIONES_TABLA = ['institucion.cliente'];
 
     protected static ?string $navigationGroup = 'Inventario';
     protected static ?int $navigationSort = 5;
@@ -30,17 +61,41 @@ class InvProductoResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
-            TextInput::make('pr_nombre')
+            Select::make('ipc_ins_code')
+                ->label('Institucion')
+                ->relationship(
+                    'institucion',
+                    'ins_descripcion',
+                    function ($query) {
+                        if (PerfilPanel::alcanceEsPorInstitucion()) {
+                            $institucionesCodes = UserHasInstitucion::where('ui_usu_id', Session::get('usuID'))
+                                ->where('ui_state', 1)
+                                ->pluck('ui_ins_code');
+                            if ($institucionesCodes->isEmpty()) {
+                                $query->whereRaw('1 = 0');
+                                return;
+                            }
+                            $query->whereIn('ins_code', $institucionesCodes);
+                        }
+                    }
+                )
+                ->required()
+                ->disabledOn('edit'),
+            TextInput::make('ipc_nombre')
                 ->label('Nombre')
-                ->unique(ignoreRecord: true)
-                ->required(),
-            TextInput::make('pr_especificacion')
+                ->required()
+                // El nombre es unico DENTRO del local, no en todo el sistema:
+                // dos locales pueden tener su propio "Extintor 10 lb".
+                ->unique(table: static::$model, callback: function ($rule, $get) {
+                    return $rule->where('ipc_ins_code', $get('ipc_ins_code'));
+                }, ignoreRecord: true),
+            TextInput::make('ipc_especificacion')
                 ->label('Especificacion')
                 ->required(),
-            Textarea::make('pr_descripcion')
+            Textarea::make('ipc_descripcion')
                 ->label('Descripcion'),
-            Toggle::make('pr_estado')
-                ->label('Estado')
+            Toggle::make('ipc_activo')
+                ->label('Activo')
                 ->required()
                 ->default(true),
         ]);
@@ -50,29 +105,41 @@ class InvProductoResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('pr_id')->size('sm')
+                TextColumn::make('ipc_id')->size('sm')
                     ->label('ID')
                     ->toggleable()
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('pr_nombre')->size('sm')
+                TextColumn::make('institucion.cliente.org_descripcion')->size('sm')
+                    ->label('Cliente')
+                    ->toggleable()
+                    ->searchable(),
+                TextColumn::make('institucion.ins_descripcion')->size('sm')
+                    ->label('Institucion')
+                    ->toggleable()
+                    ->searchable(),
+                TextColumn::make('ipc_nombre')->size('sm')
                     ->label('Producto')
                     ->toggleable()
                     ->searchable(),
-                TextColumn::make('pr_especificacion')->size('sm')
+                TextColumn::make('ipc_especificacion')->size('sm')
                     ->label('Especificacion')
                     ->toggleable()
                     ->searchable(),
-                TextColumn::make('pr_descripcion')->size('sm')
+                TextColumn::make('ipc_descripcion')->size('sm')
                     ->label('Descripcion')
                     ->toggleable()
                     ->searchable(),
-                TextColumn::make('pr_created_at')->size('sm')
+                TextColumn::make('ipc_stock_actual')->size('sm')
+                    ->label('Stock')
+                    ->toggleable()
+                    ->sortable(),
+                TextColumn::make('ipc_created_at')->size('sm')
                     ->label('Fecha de Creación')
                     ->sortable()
                     ->searchable(),
-                BooleanColumn::make('pr_estado')
-                    ->label('Estado')
+                BooleanColumn::make('ipc_activo')
+                    ->label('Activo')
                     ->toggleable()
                     ->searchable(false),
             ])
@@ -110,5 +177,31 @@ class InvProductoResource extends Resource
     {
         return PerfilPanel::puedeConfigurarSistema();
     }
-}
 
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery()->with(self::RELACIONES_TABLA);
+
+        if (PerfilPanel::alcanceEsPorInstitucion()) {
+            $institucionesCodes = UserHasInstitucion::where('ui_usu_id', Session::get('usuID'))
+                ->where('ui_state', 1)
+                ->pluck('ui_ins_code');
+            if ($institucionesCodes->isEmpty()) {
+                return $query->whereRaw('1 = 0');
+            }
+            return $query->whereIn('ipc_ins_code', $institucionesCodes);
+        }
+
+        // El Lider Operativo ve los locales de su(s) pais(es). Sin paises
+        // asignados no ve nada: un lider mal configurado no debe terminar con
+        // acceso global.
+        $localesDelPais = PerfilPanel::localesDelUsuario();
+        if ($localesDelPais !== null) {
+            return empty($localesDelPais)
+                ? $query->whereRaw('1 = 0')
+                : $query->whereIn('ipc_ins_code', $localesDelPais);
+        }
+
+        return $query;
+    }
+}
