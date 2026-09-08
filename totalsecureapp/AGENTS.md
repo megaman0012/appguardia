@@ -273,6 +273,46 @@ nueva con ese nombre, no la resurrección de `sede`.
   - `Stringable::toHtmlString()` — Filament la llama al renderizar `helperText` y `hint`: `Str::of($helperText)->markdown()->sanitizeHtml()->toHtmlString()`. **Sin el shim, cualquier formulario con `helperText` responde 500.** No hace falta shim para `sanitizeHtml()`: la registra el propio Filament.
   - `Model::resolveRouteBindingQuery()` — Filament 2.17 llama a `$model->resolveRouteBindingQuery(...)`, método que Eloquent recién trae desde Laravel 9; en 8.75 no existe y **todas** las páginas de edición del panel respondían 500. Se registra como macro del Builder (`Model::__call` reenvía ahí), lo que cubre los ~20 modelos sin tocarlos. El shim se autodesactiva si el método existe, así que al subir a Laravel 9+ se puede borrar.
 
+## Accesos: seis columnas muertas, y la mas llena invisible (2026-09-08)
+
+La pantalla de Accesos listaba `ac_patente`, `ac_is_sello`, `ac_is_neumatico`,
+`ac_is_carro`, `ac_pta_llave` y `ac_kms`. **Esas columnas ya no existen en
+`acceso`**: v2 las normalizo en `acceso_vehiculo`. Filament no se queja de una
+columna que no existe -- la pinta vacia -- asi que eran **seis columnas muertas
+ocupando ancho** desde que se hizo esa normalizacion.
+
+Ahora salen de la relacion `vehiculo`, y de paso aparecio la que faltaba:
+**`av_empresa` esta llena en el 92% de los accesos y no se veia en ninguna
+parte.** Tambien se sumo `visitante.avi_persona_visita`, que es donde el ETL
+rescato `ac_nombre_contrato`.
+
+`vehiculo` y `visitante` se agregaron a `RELACIONES_TABLA`; sin eso
+`EagerLoadingTest` falla, que es exactamente para lo que existe.
+
+### Columnas casi vacias: ocultas por defecto, no borradas
+
+Medido sobre las filas reales, no a ojo. `toggleable(isToggledHiddenByDefault:
+true)` las saca de la vista inicial pero las deja en el selector de columnas:
+borrarlas perderia el dato de las filas que si lo tienen.
+
+| Columna | Llenado real | |
+|---|---:|---|
+| `acceso.ac_distancia_m` | 0% | todo lo migrado viene sin medir |
+| `acceso.ac_temperatura` | 2,3% | |
+| `acceso.ac_rut_acomp` / `ac_nomb_acomp` | 2-3% | |
+| `acceso.ac_bicicleta` | 7,4% | |
+| `visitante.avi_persona_visita` | 0,4% | |
+| `user_has_biometria.bio_distancia_m` | 0% | idem, todo lo migrado |
+
+La pantalla de Accesos paso de **22 columnas a 15 visibles**.
+
+### El modo oscuro NO estaba forzado
+
+Anotado porque es facil de suponer al revés: `FILAMENT_DARK=true` **no fuerza**
+el tema oscuro, **habilita que cada usuario elija** entre claro, oscuro y «segun
+el sistema». El interruptor ya esta en el menu de usuario y no habia nada que
+arreglar.
+
 ## Escritorio: cuatro filas con titulo (2026-09-08)
 
 **El escritorio era una pared de ceros.** Los tres widgets median alertas activas

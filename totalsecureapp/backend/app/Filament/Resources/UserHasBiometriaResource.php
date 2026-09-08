@@ -109,7 +109,7 @@ class UserHasBiometriaResource extends Resource
                     ->toggleable(),
                 TextColumn::make('bio_distancia_m')->size('sm')
                     ->label('Distancia (m)')
-                    ->toggleable()
+                    ->toggleable(isToggledHiddenByDefault: true)   // 0% en lo migrado
                     ->sortable(),
                 ImageColumn::make('imagen_url')
                     ->label('Imagen')

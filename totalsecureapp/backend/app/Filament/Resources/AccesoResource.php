@@ -52,7 +52,7 @@ class AccesoResource extends Resource
      * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
      * 126 consultas en vez de 6.
      */
-    protected const RELACIONES_TABLA = ['accesoPersona', 'institucion.cliente'];
+    protected const RELACIONES_TABLA = ['accesoPersona', 'institucion.cliente', 'vehiculo', 'visitante'];
     protected static ?string $navigationIcon = 'heroicon-o-shield-check';
     public static function form(Form $form): Form{ return $form->schema([]); }
     public static function table(Table $table): Table
@@ -100,33 +100,59 @@ class AccesoResource extends Resource
                         'secondary' => 'Sin dato',
                     ])
                     ->toggleable(),
+                // Ocultas por defecto, disponibles en el selector de columnas.
+                // El porcentaje es de llenado real sobre las 9.769 filas: una
+                // columna vacia en 97 de cada 100 filas ocupa ancho y no informa,
+                // pero borrarla perderia el dato de las que si la tienen.
                 TextColumn::make('ac_distancia_m')->size('sm')
                     ->label('Distancia (m)')
-                    ->toggleable()
+                    ->toggleable(isToggledHiddenByDefault: true)   // 0% en lo migrado
                     ->sortable(),
                 TextColumn::make('ac_temperatura')->size('sm')
                     ->label('Temperatura')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),  // 2,3%
                 IconColumn::make('ac_bicicleta')->size('sm')
                     ->label('Bicicleta')
-                    ->boolean(),
-                TextColumn::make('ac_patente')->size('sm')
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),  // 7,4%
+                // La persona visitada, que el ETL rescato de ac_nombre_contrato.
+                TextColumn::make('visitante.avi_persona_visita')->size('sm')
+                    ->label('Persona visitada')
+                    ->toggleable(isToggledHiddenByDefault: true)   // 0,4%
+                    ->searchable(),
+                // ── Datos del vehiculo ──
+                //
+                // Estas seis columnas apuntaban a `ac_patente`, `ac_is_sello`,
+                // `ac_is_neumatico`, `ac_is_carro`, `ac_pta_llave` y `ac_kms`, que
+                // **ya no existen en `acceso`**: v2 las normalizo en
+                // `acceso_vehiculo`. La pantalla las seguia listando, asi que
+                // salian siempre vacias sin dar ningun error -- seis columnas
+                // muertas ocupando ancho.
+                //
+                // Ahora salen de la relacion `vehiculo`. Solo el 92% de los
+                // accesos tiene fila de vehiculo, asi que en un acceso peatonal
+                // quedan en blanco con razon.
+                TextColumn::make('vehiculo.av_empresa')->size('sm')
+                    ->label('Empresa')
+                    ->toggleable()
+                    ->searchable(),
+                TextColumn::make('vehiculo.av_patente')->size('sm')
                     ->label('Patente')
                     ->toggleable()
                     ->searchable(),
-                BooleanColumn::make('ac_is_sello')->size('sm')
+                BooleanColumn::make('vehiculo.av_is_sello')->size('sm')
                     ->label('Sello')
-                    ->toggleable(),
-                BooleanColumn::make('ac_is_neumatico')->size('sm')
-                    ->label('Neumaticos')
-                    ->toggleable(),
-                BooleanColumn::make('ac_is_carro')->size('sm')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                BooleanColumn::make('vehiculo.av_is_neumatico')->size('sm')
+                    ->label('Neumáticos')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                BooleanColumn::make('vehiculo.av_is_carro')->size('sm')
                     ->label('Carro')
-                    ->toggleable(),
-                BooleanColumn::make('ac_pta_llave')->size('sm')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                BooleanColumn::make('vehiculo.av_pta_llave')->size('sm')
                     ->label('P.Carga Llave')
-                    ->toggleable(),
-                TextColumn::make('ac_kms')->size('sm')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('vehiculo.av_kms')->size('sm')
                     ->label('Kms')
                     ->toggleable(),
                 ImageColumn::make('imagen_url')
