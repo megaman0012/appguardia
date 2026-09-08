@@ -639,3 +639,86 @@ Cada etapa la ajusta con `setval` al terminar.
   Hoy no hay usuarios con ese rol, así que no bloquea.
 - **Cuadrantes y turnos desde cero**: no existen en v1.
 - **95 fotos de accesos** en disco sin fila que las referencie.
+
+
+---
+
+# Auditoría de los datos cargados (2026-09-07)
+
+Corrida despues del ETL, contra la base ya migrada.
+
+## Integridad referencial: limpia
+
+**Cero filas huerfanas en 13 relaciones**: biometria→local, biometria→usuario,
+ronda_detalle→cabecera, acceso→local, acceso→persona, vinculo→local,
+vinculo→usuario, local→cliente, alerta→local, gestion→usuario, marcador→local,
+inv_item→producto, inv_mov→lista.
+
+Es el resultado de conservar las claves primarias de v1: no hubo remapeo que
+pudiera desalinear una FK.
+
+## Las 26 pantallas del panel abren con los datos reales
+
+Verificadas una por una con sesion de Administrador: todas 200. Y no vacias — se
+ven los clientes reales, los locales con su ciudad, los badges de tipo de
+movimiento, y **las fotos se sirven** (una de abril de 2025 responde 200
+`image/jpeg`).
+
+## Lo que conviene mirar y arreglar
+
+### 1. Ocho locales sin punto QR que YA tienen marcajes
+
+Es el hallazgo mas accionable. 25 locales no tienen marcador activo, y **8 de
+ellos ya registraron asistencia**: 466 marcajes que nadie puede verificar contra
+una geocerca.
+
+| Local | Ciudad | Marcajes |
+|---|---|---:|
+| DHL-ATO-GYE | Guayaquil | **292** |
+| LA FABRIL GARITA DETERGENTE 2 | Manta | 81 |
+| PDS BOYACÁ | Guayaquil | 81 |
+| LATAM-ATO-GYE | Guayaquil | 6 |
+| JBG UNIDAD MEDICA UIO | Quito | 2 |
+| EXPOMEDIO | Guayaquil | 2 |
+| TOTAL SECURITY GYE | Guayaquil | 1 |
+| COPA-ATO-QUITO | Quito | 1 |
+
+Mientras sigan sin marcador, **cada marcaje nuevo entra como «ubicacion no
+verificada»** (ver AGENTS.md, seccion de geocerca). Cargar el punto QR de
+DHL-ATO-GYE es lo que mas rinde.
+
+### 2. Diez usuarios sin ningun rol
+
+No pueden entrar a ninguna parte: ni al panel ni a la app. Puede ser correcto
+(gente que salio) o un olvido.
+
+### 3. Quinientos cinco usuarios sin correo
+
+No es un problema para operar —se entra con cedula— pero **el flujo de
+recuperacion de contrasena no les sirve**: si olvidan la clave, hay que
+cambiarsela a mano.
+
+### 4. Cinco clientes sin ningun local
+
+Y cuatro locales sin ningun guardia vinculado. Probablemente clientes que se
+dieron de alta y no llegaron a operar; vale revisar si corresponde desactivarlos.
+
+## Cifras para tener a mano
+
+| | |
+|---|---|
+| Usuarios | 879 (839 activos, 40 inactivos) |
+| Locales | 137 (130 activos) |
+| Clientes | 21 (16 activos) |
+| Rango de actividad | rondas desde 2025-03-03; biometria y accesos desde 2025-04; inventario desde 2026-01 |
+
+Clientes con mas actividad: **JBGYE** (80 locales, 5.880 marcajes), **DHL** (16,
+2.817), **LA FABRIL** (11, 2.506), **CORPAC** (1, 928).
+
+## Los 12.664 marcajes migrados quedan con verificacion NULL
+
+`bio_ubicacion_verificada` es NULL en todos, y **es lo correcto**: significa
+«fila anterior a la migracion, no se sabe». v1 nunca comprobo la geocerca en el
+marcaje, asi que marcarlos como verificados seria mentir y marcarlos como no
+verificados los confundiria con los que si se comprobaron y fallaron. Los
+marcajes nuevos si traen true o false.
