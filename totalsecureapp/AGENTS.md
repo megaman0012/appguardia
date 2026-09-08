@@ -650,6 +650,83 @@ Fixes aplicados a la web (commit `d42858a`):
   - `POST api/procesar_paswchg` (`user_id`, `password`, `password2`) → valida (mínimo 8 caracteres, mayúscula/minúscula/número, coincidencia, distinta a la anterior) y guarda el hash nuevo. Limpia `remember_token`.
   - El `LoginController` de MobileApp **no** debe usar `message_json()` como función global (no existe); siempre `$this->message_json()`.
 
+## APK: dos IP con respaldo, y el puerto 3031 (2026-09-08)
+
+Configuracion lista para compilar. **Compilar exige JDK y SDK de Android, que
+este servidor NO tiene** (ver «Que falta para compilar»).
+
+### `apiHosts`: una lista, no un host
+
+`app.json` pasa a llevar **dos IP publicas** en `expo.extra.apiHosts`, la
+primera es la principal:
+
+```json
+"extra": {
+  "apiHosts": ["181.198.245.50", "181.188.232.50"],
+  "apiScheme": "http",
+  "apiPort": 3031
+}
+```
+
+`apiHost` (singular) sigue funcionando y se usa si no hay `apiHosts`.
+`constants.ts` expone **`API_URLS`** (todas, en orden) y mantiene `API_URL` como
+la primera para no romper lo que ya la importaba.
+
+### El respaldo solo actua ante fallo DE RED
+
+`api.ts` arranca por la principal y pasa a la siguiente **unicamente cuando no
+hubo respuesta** (sin ruta, conexion rechazada, timeout).
+
+**Esa distincion es lo que hace que sea seguro.** Si el backend contesta --
+aunque sea 401, 422 o 500 -- esta vivo, y reintentar contra el otro host no
+arregla nada: repetiria la operacion contra otra direccion. Un marcaje que
+respondio 422 no se debe reenviar a otro servidor.
+
+- Cada host se prueba **una vez** (`_hostsIntentados`). Sin ese tope, con los dos
+  enlaces caidos la promesa no se resolveria nunca y la pantalla quedaria
+  cargando para siempre en vez de mostrarle el error al guardia.
+- El host elegido vive **en memoria, no en AsyncStorage**, a proposito: al
+  reiniciar la app se vuelve a intentar por la principal. Recordarlo entre
+  arranques dejaria a la tablet pegada al enlace secundario durante semanas sin
+  que nadie se entere.
+
+### Puerto 3031 y no 80
+
+Por decision del usuario. **Se saltea el nginx del host**, que es el unico lugar
+donde despues van TLS, limites y logs; y el router tiene que reenviar el **3031**,
+no el 80. A cambio no depende del reparto del puerto 80 con la v1.
+
+Verificado: `http://192.168.3.124:3031/api/login` emite token. El 3031 esta
+publicado por Docker con DNAT desde `0.0.0.0`, asi que alcanza con reenviarlo.
+
+### El logo va en la pantalla de carga, no en el icono
+
+`logo.png` es de **144x144** y el icono de Android quiere 1024x1024: estirarlo
+11 veces en una tablet lo deja pixelado. Por eso el icono sigue siendo
+`assets/icon.png` (1024x1024) y el logo va al splash.
+
+Y no se estira: `assets/splash-logo.png` es un lienzo de **1024x1024 con el logo
+centrado a su tamaño nativo de 144 px** sobre blanco. Asi la pantalla de carga
+escala el lienzo ~1,5x en vez de escalar el logo 11x. Se compuso con un script
+de PNG en Python puro porque el servidor no tiene Pillow ni ImageMagick.
+
+**Cuando haya un logo de 1024x1024 o vectorial**, reemplazarlo y recompilar: con
+eso se puede usar tambien como icono.
+
+### Que falta para compilar
+
+Este servidor **no tiene JDK ni SDK de Android** (`java` no existe,
+`ANDROID_HOME` sin definir, cero paquetes JDK). El APK que menciona la seccion
+siguiente se compilo en la maquina de desarrollo original, y `android/app/build/`
+esta en `.gitignore`, asi que no vino con el clon.
+
+Para compilar aca hacen falta JDK 17 y el SDK de Android (cmdline-tools,
+platforms;android-36, build-tools), unos 5-10 GB. Es una instalacion nueva en un
+servidor que corre siete proyectos en produccion: **conviene decidirlo antes**.
+
+Lo que si esta verificado sin compilar: `npx tsc --noEmit` pasa limpio con los
+cambios de `constants.ts` y `api.ts`.
+
 ## App Expo
 
 Expo SDK 57. Leer docs versionadas en https://docs.expo.dev/versions/v57.0.0/ antes de escribir código.

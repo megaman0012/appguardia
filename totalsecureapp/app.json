@@ -34,9 +34,12 @@
       "web"
     ],
     "extra": {
-      "apiHost": "181.188.232.50",
+      "apiHosts": [
+        "181.198.245.50",
+        "181.188.232.50"
+      ],
       "apiScheme": "http",
-      "apiPort": 80
+      "apiPort": 3031
     },
     "plugins": [
       [
@@ -50,7 +53,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-icon.png",
+          "image": "./assets/splash-logo.png",
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }

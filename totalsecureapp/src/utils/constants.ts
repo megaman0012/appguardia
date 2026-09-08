@@ -8,7 +8,15 @@ const API_PORT_DEFECTO = 3031;
 interface ExtraConfig {
   /** Override completo, p. ej. "https://api.totalsecureapp.com". Gana sobre todo lo demas. */
   apiUrl?: string;
-  /** Host o dominio del backend. */
+  /**
+   * Varios hosts, el primero es el principal.
+   *
+   * Sirve cuando el servidor sale por dos enlaces de internet distintos: si el
+   * primero no responde POR RED, `api.ts` reintenta con el siguiente y se queda
+   * con el que funciono. Gana sobre `apiHost`.
+   */
+  apiHosts?: string[];
+  /** Host o dominio del backend. Se usa si no hay `apiHosts`. */
   apiHost?: string;
   /** 'http' (defecto) o 'https'. */
   apiScheme?: string;
@@ -76,7 +84,44 @@ function construirApiUrl(): string {
   return `${scheme}://${getHost()}${puerto}/api`;
 }
 
-export const API_URL = construirApiUrl();
+/**
+ * Todas las URLs base, en orden de preferencia.
+ *
+ * Con `apiHosts` en app.json hay una por host; sin eso, una sola. `api.ts`
+ * arranca por la primera y solo pasa a la siguiente si hay error DE RED.
+ */
+function construirApiUrls(): string[] {
+  const extra = getExtra();
+
+  // Un override completo no admite lista: es una URL y punto.
+  if (extra.apiUrl) {
+    return [construirApiUrl()];
+  }
+
+  const hosts = Array.isArray(extra.apiHosts)
+    ? extra.apiHosts.filter((h) => typeof h === 'string' && h.length > 0)
+    : [];
+
+  if (hosts.length === 0) {
+    return [construirApiUrl()];
+  }
+
+  const scheme = extra.apiScheme === 'https' ? 'https' : 'http';
+
+  let puerto = '';
+  if (extra.apiPort !== undefined && extra.apiPort !== null && extra.apiPort !== '') {
+    puerto = `:${extra.apiPort}`;
+  } else if (scheme === 'http') {
+    puerto = `:${API_PORT_DEFECTO}`;
+  }
+
+  return hosts.map((h) => `${scheme}://${h}${puerto}/api`);
+}
+
+export const API_URLS = construirApiUrls();
+
+/** La principal. Se mantiene para no romper lo que ya la importaba. */
+export const API_URL = API_URLS[0];
 
 export const API_ENDPOINTS = {
   AUTH: {
