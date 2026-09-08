@@ -165,7 +165,7 @@ Lo que cambia respecto al local, y por qué importa:
   de los correos de cambio de contraseña.
 - **`FILAMENT_LIVEWIRE=` vacío.** Livewire arma la URL de su JS como
   `<valor>/vendor/livewire/livewire.js`; vacío da la ruta relativa, que sirve en
-  cualquier host. ⚠️ `HISTORIAL_DE_CHAT.md` documenta poner
+  cualquier host. ⚠️ `docs/historia/HISTORIAL_DE_CHAT.md` documenta poner
   `https://totalsecureapp.com/admin` aquí: **eso está mal**, produciría
   `/admin/vendor/livewire/livewire.js` → 404. Sin ese JS el panel se ve pero no
   responde: ni columnas, ni filtros, ni modales. Es exactamente el fallo que

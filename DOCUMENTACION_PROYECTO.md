@@ -61,7 +61,7 @@ Aplicación móvil para gestión de guardias de seguridad, construida con:
 appguardia/
 ├── apk_extracted/              # APK extraído para análisis
 ├── appdeguardias.apk           # APK compilada
-├── HISTORIAL_DE_CHAT.md        # Historial de desarrollo
+├── docs/historia/HISTORIAL_DE_CHAT.md        # Historial de desarrollo
 └── totalsecureapp/             # Código fuente
     ├── src/                    # Frontend React Native
     │   ├── components/         # Componentes reutilizables

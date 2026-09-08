@@ -163,16 +163,43 @@ php artisan usuario:crear --cedula=... --nombres=... --apellidos=... \
 
 ## Documentación
 
+Diez documentos, cada uno con un trabajo distinto. Los históricos están aparte
+para que no compitan con estos.
+
+**Empezar por acá**
+
 | Archivo | Para qué |
 |---|---|
-| `totalsecureapp/AGENTS.md` | **Documentación técnica principal.** Decisiones de diseño, trampas conocidas y por qué las cosas están como están |
-| `CHECKLIST-DESPLIEGUE-V2.md` | Checklist de despliegue: backup obligatorio, orden de migraciones, rollback por fase |
-| `DESPLIEGUE-DOMINIO.md` | Dominio, DNS y certificado |
-| `ANALISIS-MIGRACION-V1.md` | **Migración de la base real de v1 (MariaDB) a v2 (PostgreSQL).** Conteos reales, los cuatro choques de esquema, y dónde están las ~42.000 fotos |
-| `DESPLIEGUE-IP-Y-PUERTO-80.md` | **Publicar por IP en el puerto 80, sin dominio.** Reparto del 80 entre proyectos, qué reenviar en el router, el APK con IP, y por qué el 3031 sigue abierto |
-| `WHATSAPP-EVOLUTION.md` | Canal de WhatsApp con el gateway Evolution (se instala aparte) |
-| `API-OFFLINE-SYNC.md` | Contrato de los endpoints que funcionan sin señal |
-| `openapi.yaml` | API del portal de clientes |
+| `totalsecureapp/AGENTS.md` | **La documentación técnica principal.** Decisiones de diseño, trampas conocidas y por qué las cosas están como están. Si vas a tocar código, empieza acá |
+| `DOCUMENTACION_PROYECTO.md` | Cómo funciona la **app de la tablet**: sus 20 pantallas, el flujo de navegación y qué endpoint usa cada una |
+
+**Poner el sistema en marcha**
+
+| Archivo | Para qué |
+|---|---|
+| `DESPLIEGUE.md` | **Cómo está publicado hoy**: el puerto 80 del panel, el 3031 del APK, qué reenvía el router y los pendientes de seguridad |
+| `DESPLIEGUE-DOMINIO.md` | Cuando haya dominio: DNS, certbot y HTTPS. Es el siguiente paso pendiente |
+| `CHECKLIST-DESPLIEGUE-V2.md` | Aplicar migraciones sobre una base con datos: respaldo obligatorio y rollback por fase |
+| `WHATSAPP-EVOLUTION.md` | El canal de WhatsApp con el gateway Evolution, que se instala aparte |
+
+**La migración desde v1**
+
+| Archivo | Para qué |
+|---|---|
+| `ANALISIS-MIGRACION-V1.md` | **Todo sobre la migración**: los conteos reales, los choques de esquema, el ETL por etapas, dónde están las 45.319 fotos, y la auditoría de los datos cargados |
+
+**Contratos de la API**
+
+| Archivo | Para qué |
+|---|---|
+| `API-OFFLINE-SYNC.md` | Los endpoints que funcionan sin señal y por qué son idempotentes |
+| `openapi.yaml` | La API del portal de clientes |
+
+**Historia**
+
+`docs/historia/` guarda los documentos de diseño previo de las fases 1 a 6 y los
+registros de avance. **Nada de ahí describe el sistema actual** — varios describen
+un estado que ya no existe. Su `README.md` dice qué se implementó de cada uno.
 
 ## Pruebas
 
@@ -210,7 +237,7 @@ docker compose exec -u 1000 backend php artisan test
          en la base no basta: el próximo `db:seed` la vuelve a poner. Hay que
          tocar el seeder, o no correrlo en el servidor real.
       2. La credencial que se usó en el piloto quedó en texto plano en
-         `HISTORIAL_DE_CHAT.md`, que **está versionado y ya viajó a GitHub**:
+         `docs/historia/HISTORIAL_DE_CHAT.md`, que **está versionado y ya viajó a GitHub**:
          tratarla como comprometida donde sea que se haya reutilizado.
       Lo sano en producción es crear el administrador con `usuario:crear` y
       desactivar al usuario demo.

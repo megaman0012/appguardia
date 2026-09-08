@@ -6,7 +6,7 @@
 - `src/` — Código de la app Expo (SDK 57).
 - `android/` — Proyecto nativo Android generado con `expo run:android` (se versiona para que el APK se pueda compilar en otro servidor sin `expo prebuild`).
 - `apk_extracted/` — APK original descompilada (referencia). `appdeguardias.apk` es el APK original.
-- `HISTORIAL_DE_CHAT.md` — Resumen del trabajo previo (en la carpeta padre).
+- `docs/historia/HISTORIAL_DE_CHAT.md` — Resumen del trabajo previo (en la carpeta padre).
 
 ## Backend
 
@@ -37,9 +37,9 @@
 - Middleware CORS/seguridad personalizados (`App\Http\Middleware\HandleCors`, `SecurityHeaders`, `App\Services\CorsService`) se corrigieron para funcionar en PHP 8.3.
 - **BD migrada y sembrada.** `php artisan migrate` crea todo el esquema (incluye tablas de negocio de la app). `php artisan db:seed` crea:
   - Usuario demo: cédula `1234567890` (roles Vigilante **y** Supervisor, con gestión activa). **En un clon nuevo la contraseña ES `123456`**, porque es lo que `DatabaseSeeder` escribe en claro (`'usu_password' => '123456'`). Verificado el 2026-09-07 contra `POST /api/login` en una base recién sembrada.
-    - ⚠️ Corrige lo que decía antes esta línea («la contraseña no es `123456`»). La clave unificada del 18/08/2026 que figura en `HISTORIAL_DE_CHAT.md` era la de **aquella base ya en marcha**, puesta después de sembrar; no es lo que produce el seeder. Confundir las dos cuesta un rato de «clave incorrecta» creyendo que el clon quedó mal.
+    - ⚠️ Corrige lo que decía antes esta línea («la contraseña no es `123456`»). La clave unificada del 18/08/2026 que figura en `docs/historia/HISTORIAL_DE_CHAT.md` era la de **aquella base ya en marcha**, puesta después de sembrar; no es lo que produce el seeder. Confundir las dos cuesta un rato de «clave incorrecta» creyendo que el clon quedó mal.
     - Por lo mismo, **rotar la clave en la base no arregla nada por sí solo**: el próximo `db:seed` la devuelve a `123456`. Para producción hay que tocar el seeder o no correrlo, y crear el administrador con `usuario:crear`.
-    - ⚠️ La clave del piloto sigue en texto plano en `HISTORIAL_DE_CHAT.md`, **versionado y ya en el remoto de GitHub**: tratarla como comprometida donde se haya reutilizado. (`Credencial única todos.txt` sí está en `.gitignore`.)
+    - ⚠️ La clave del piloto sigue en texto plano en `docs/historia/HISTORIAL_DE_CHAT.md`, **versionado y ya en el remoto de GitHub**: tratarla como comprometida donde se haya reutilizado. (`Credencial única todos.txt` sí está en `.gitignore`.)
     - Para probar la API sin usar ninguna credencial, generar un token: `docker compose exec -u 1000 backend php artisan tinker --execute='...createToken("probe")->plainTextToken'`.
   - Institución demo con 2 marcadores QR y un checklist de inventario con 2 productos.
   - Parámetro `access` (login) y roles `Supervisor`/`Vigilante`.
@@ -922,7 +922,7 @@ ruta. Repetida, se igualan.)
 
 Expo SDK 57. Leer docs versionadas en https://docs.expo.dev/versions/v57.0.0/ antes de escribir código.
 
-- **Conectada al backend real.** `src/services/api.ts` apunta a `API_URL` de `src/utils/constants.ts`: el host se toma en orden de prioridad de `Constants.expoConfig.extra.apiHost` (app.json), luego del `hostUri` de Expo, y como último recurso `localhost`. ⚠️ **`apiHost` es una IP concreta y hay que cambiarla al mover el backend**: si apunta a una máquina que no existe en esa red, el login falla por timeout sin decir por qué, y al ir el JS embebido en el APK release hay que **recompilar**. Desde el 2026-09-07 apunta a la IP pública `181.188.232.50` por el **puerto 80** (`apiScheme: http`, `apiPort: 80`), a través del nginx del host. **`apiPort` va explícito**: con esquema `http` y sin él, `constants.ts` cae al 3031. Todo el detalle —reparto del puerto 80, qué reenviar en el router, y los riesgos de ir por IP sin HTTPS— en **`DESPLIEGUE-IP-Y-PUERTO-80.md`**. Puerto 3031 → funciona en web, emulador y dispositivo físico en la misma red.
+- **Conectada al backend real.** `src/services/api.ts` apunta a `API_URL` de `src/utils/constants.ts`: el host se toma en orden de prioridad de `Constants.expoConfig.extra.apiHost` (app.json), luego del `hostUri` de Expo, y como último recurso `localhost`. ⚠️ **`apiHost` es una IP concreta y hay que cambiarla al mover el backend**: si apunta a una máquina que no existe en esa red, el login falla por timeout sin decir por qué, y al ir el JS embebido en el APK release hay que **recompilar**. Desde el 2026-09-07 apunta a la IP pública `181.188.232.50` por el **puerto 80** (`apiScheme: http`, `apiPort: 80`), a través del nginx del host. **`apiPort` va explícito**: con esquema `http` y sin él, `constants.ts` cae al 3031. Todo el detalle —reparto del puerto 80, qué reenviar en el router, y los riesgos de ir por IP sin HTTPS— en **`DESPLIEGUE.md`**. Puerto 3031 → funciona en web, emulador y dispositivo físico en la misma red.
 - **APK release standalone:** `./gradlew :app:assembleRelease` genera `android/app/build/outputs/apk/release/app-release.apk` (~99 MB, firmado con el debug keystore, JS embebido → **no necesita Metro**). La IP del servidor se configura en `expo.extra.apiHost` de `app.json` (si cambia la IP, editarla y recompilar). `expo-build-properties` habilita `usesCleartextTraffic` (HTTP local). El APK debug (`app-debug.apk`) en cambio SÍ requiere Metro corriendo.
 - **Flujo actual completo:**
   - Login (`POST api/login` con `usu_cedula`/`usu_password`) → guarda `access_token` + `usuario` en AsyncStorage (interceptor agrega `Authorization: Bearer`).

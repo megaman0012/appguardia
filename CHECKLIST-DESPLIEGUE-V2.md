@@ -282,5 +282,5 @@ docker compose exec -T db psql -U totalsecure -d coredt360 -c "
 ## 7. Cierre
 
 - [ ] `git tag v2.0.0 && git push --tags` (solo con autorización explícita)
-- [ ] Anotar en `RESUMEN-AVANCE.md` la fecha del despliegue y el commit
+- [ ] Anotar en `docs/historia/RESUMEN-AVANCE.md` la fecha del despliegue y el commit
 - [ ] Conservar el backup pre-migración al menos 30 días

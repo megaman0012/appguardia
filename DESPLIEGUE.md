@@ -1,4 +1,27 @@
-# Publicar por IP en el puerto 80 (sin dominio todavía)
+# Despliegue: cómo sale el sistema a internet
+
+> **Cuál de los tres documentos necesitas**
+>
+> - **Este** — cómo está publicado hoy: reparto del puerto 80 entre proyectos, el
+>   3031 del APK, qué reenvía el router, y los pendientes de seguridad.
+> - **`DESPLIEGUE-DOMINIO.md`** — cuando haya dominio: DNS, certbot y HTTPS. Es el
+>   siguiente paso pendiente.
+> - **`CHECKLIST-DESPLIEGUE-V2.md`** — procedimiento para aplicar las migraciones
+>   de fase sobre una base que ya tiene datos, con respaldo obligatorio y rollback.
+>   La migración de v1 **no** se hizo por ahí (ver `ANALISIS-MIGRACION-V1.md`),
+>   pero su procedimiento de respaldo sigue siendo el bueno.
+
+## Dos puertas, y para qué es cada una
+
+| Entra por | Sirve | Quién lo usa |
+|---|---|---|
+| **80** (nginx del host, por nombre) | el panel web | personas, desde el navegador |
+| **3031** (publicado por Docker) | la API y el panel | **el APK de las tablets** |
+
+El 80 lo reparte el nginx del host entre varios proyectos; el 3031 va directo al
+contenedor. El APK sale por el **3031** por decisión del 2026-09-08, asi que se
+saltea el nginx del host: es mas simple y no depende del reparto del 80 con la
+v1, pero deja fuera el unico lugar donde despues van TLS, limites y logs.
 
 Situación de partida (2026-09-07): la **v1** del proyecto ocupa el puerto 80 en
 **otro servidor**, y esta v2 tiene que salir igual. Hay **dos IP públicas**, y

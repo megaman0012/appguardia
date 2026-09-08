@@ -208,7 +208,7 @@ v1 trae `inv_productos`, `inv_listas_productos`, `inv_lista_producto_items`,
 Esto **no es una decisión de migración: es una inconsistencia que v2 ya tiene**, y
 conviene verla antes de cargar nada.
 
-`FASE1-INVENTARIO-UNIFICADO.md` diseñó el juego **nuevo** para reemplazar al
+`docs/historia/FASE1-INVENTARIO-UNIFICADO.md` diseñó el juego **nuevo** para reemplazar al
 viejo. La app móvil ya se movió; el panel **no**:
 
 | Quién | Modelos | Tablas | Juego |
