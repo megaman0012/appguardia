@@ -115,7 +115,7 @@ class UserHasRolesResource extends Resource
         return [
             'index' => Pages\ListUserHasRoles::route('/'),
             'create' => Pages\CreateUserHasRoles::route('/create'),
-            //'edit' => Pages\EditUserHasRoles::route('/{record}/edit'),
+            'edit' => Pages\EditUserHasRoles::route('/{record}/edit'),
         ];
     }
     protected static function shouldRegisterNavigation(): bool {

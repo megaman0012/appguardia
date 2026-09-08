@@ -38,14 +38,19 @@ class SelectorDeUsuario
         return Select::make($campo)
             ->label($etiqueta)
             ->searchable()
-            ->getSearchResultsUsing(function (string $busqueda): array {
+            // **El parametro DEBE llamarse `$search`.** Filament inyecta los
+            // argumentos de la clausura POR NOMBRE (Select::getSearchResults pasa
+            // 'query', 'search' y 'searchQuery'); con cualquier otro nombre
+            // intenta resolverlo del contenedor y revienta con
+            // BindingResolutionException recien cuando alguien escribe en la caja.
+            ->getSearchResultsUsing(function (string $search): array {
                 return self::base()
-                    ->where(function ($q) use ($busqueda) {
+                    ->where(function ($q) use ($search) {
                         // ILIKE para el nombre (viene en mayusculas en la base y
                         // nadie lo escribe asi al buscar) y LIKE para la cedula,
                         // que son digitos.
-                        $q->where('usu_nmbcom', 'ILIKE', "%{$busqueda}%")
-                            ->orWhere('usu_cedula', 'LIKE', "%{$busqueda}%");
+                        $q->where('usu_nmbcom', 'ILIKE', "%{$search}%")
+                            ->orWhere('usu_cedula', 'LIKE', "%{$search}%");
                     })
                     ->orderBy('usu_nmbcom')
                     ->limit(self::MAX)

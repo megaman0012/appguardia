@@ -506,9 +506,30 @@ mayusculas.
 - De paso deja de cargar 839 filas en cada render del formulario. Verificado:
   cero cedulas incrustadas en el HTML de los formularios de alta.
 
-> Dos de esos recursos (`Locales por usuario` y `Perfil por usuario`) tienen la
-> ruta de **edicion comentada** en su `getPages()` desde antes, asi que ahi el
-> formulario solo se abre al crear.
+### La trampa de la inyeccion por nombre
+
+**El parametro de `getSearchResultsUsing` DEBE llamarse `$search`.** Filament
+inyecta los argumentos de la clausura **por nombre**: `Select::getSearchResults`
+pasa `'query'`, `'search'` y `'searchQuery'`. Con cualquier otro nombre intenta
+resolverlo del contenedor de servicios y revienta con
+`BindingResolutionException` -- **y recien cuando alguien escribe en la caja**, no
+al cargar la pagina. La primera version usaba `$busqueda` y pasaba todas las
+verificaciones de HTTP 200 estando roto.
+
+Se comprueba armando un `ComponentContainer` de verdad y llamando
+`getSearchResults()` y `getOptionLabel()`; el HTML no sirve para esto, porque la
+vista de Filament pide la etiqueta **por Livewire, asincronica**, asi que nunca
+aparece en la respuesta inicial.
+
+### Rutas de edicion habilitadas (2026-09-08)
+
+`Locales por usuario` y `Perfil por usuario` tenian la ruta de edicion
+**comentada** en su `getPages()`: solo se podia crear, asi que corregir un
+vinculo obligaba a borrarlo y volver a crearlo. Descomentadas.
+
+En `Locales por usuario` el selector de usuario esta `disabledOn('edit')`: al
+editar se cambia el local, no la persona. Cambiar las dos cosas seria borrar un
+vinculo y crear otro disfrazado de edicion.
 
 ## Cambiar la contraseña de un usuario (2026-09-08)
 

@@ -158,7 +158,7 @@ class UserHasInstitucionResource extends Resource
         return [
             'index' => Pages\ListUserHasInstitucions::route('/'),
             'create' => Pages\CreateUserHasInstitucion::route('/create'),
-            //'edit' => Pages\EditUserHasInstitucion::route('/{record}/edit'),
+            'edit' => Pages\EditUserHasInstitucion::route('/{record}/edit'),
         ];
     }
 
