@@ -92,8 +92,15 @@ android {
         applicationId 'com.dt360.coreapp'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0.0"
+        // ⚠️ Subir SIEMPRE `versionCode` al publicar un APK nuevo: Android se
+        // niega a instalar encima de una version con codigo MAYOR, y con el
+        // mismo codigo no hay forma de saber en la tablet cual de los dos APK
+        // esta puesto. `versionName` es el que ve la persona.
+        //
+        // `android/` esta versionado, asi que esto NO se toma de
+        // `app.json`: hay que cambiarlo aca y alla.
+        versionCode 2
+        versionName "1.0.1"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }

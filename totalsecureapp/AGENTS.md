@@ -1089,6 +1089,15 @@ a `#BD1212`, **en los dos lados** — `app.json` (para un futuro `prebuild`) y
 porque `android/` esta versionado). `colorPrimary` tambien pasa de `#023c69`
 (azul por defecto de Expo) al rojo de marca.
 
+#### ⚠️ `versionCode` se sube a mano, en dos lugares
+
+`android/app/build.gradle` tenia `versionCode 1` / `versionName "1.0.0"` y
+**no se toma de `app.json`** — otra consecuencia de tener `android/`
+versionado. Publicar un segundo APK con el mismo `versionCode` deja dos
+archivos que la tablet no puede distinguir, y Android se niega a instalar
+encima de una version con codigo mayor. El APK del logo es `versionCode 2` /
+`1.0.1`, cambiado en los dos archivos.
+
 #### Como regenerarla
 
 ```bash

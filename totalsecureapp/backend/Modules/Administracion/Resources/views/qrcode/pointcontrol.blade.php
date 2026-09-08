@@ -47,7 +47,14 @@
 
             <div class="tagInfo" style="padding: 50px 0 30px 0; margin-top: -1px;">
                 <span style="display: inline-block; vertical-align: middle;">
-                    <img src="{{ asset('/images/logo.png') }}" alt="Logo" style="width: 80px; vertical-align: middle;">
+                    {{-- Ruta de DISCO, no `asset()`. Esta vista la renderiza dompdf
+                         dentro del contenedor, y ahi `asset()` devuelve
+                         `http://localhost:3031/...` -- un puerto que solo existe
+                         en el host, porque adentro el servidor escucha en el 80.
+                         dompdf intentaba bajar la imagen por HTTP, fallaba en
+                         SILENCIO y la hoja impresa del marcador QR salia sin
+                         logo. Con `public_path()` la lee del disco. --}}
+                    <img src="{{ public_path('images/logo.png') }}" alt="Logo" style="width: 80px; vertical-align: middle;">
                 </span>
                 <span style="display: inline-block; vertical-align: middle; font-size: 35px; margin-left: 5px; font-weight: bold;">
                     <span style="color: #AFAFAFFF; font-family: Arial, Helvetica, sans-serif;">Total</span> <span style="color: #C0172CFF; font-family: Arial, Helvetica, sans-serif;">Secure</span>
