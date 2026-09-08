@@ -476,6 +476,61 @@ formulario.
     exporta la variable y phpdotenv no sobreescribe lo que ya esta en el
     entorno). Por eso se apaga con `DEBUGBAR_ENABLED`, que compose no define.
 
+## Inventario: el bug que activo la migracion (2026-09-08)
+
+**El mas importante de esta ronda, y lo introdujo el ETL.**
+
+`saveListMov` no permite abrir una recepcion si ya hay una. El chequeo original
+preguntaba, sin filtro de fecha, si existia **alguna** fila de tipo `recepcion`
+para (local, lista, guardia). Y alcanzaba, porque `finishListMov` **muta** la fila:
+al cerrar el turno le cambia `mc_tipo` de `recepcion` a `devolucion`, asi que un
+ciclo cerrado deja de tener fila de recepcion.
+
+**El ETL cargo una fila por evento**, no una que muta: 5.963 recepciones y 5.916
+devoluciones. Se eligio asi porque v1 guardaba las dos fechas en columnas
+distintas y colapsarlas habria perdido la de recepcion. Pero con eso, las
+recepciones historicas se leian como **abiertas**:
+
+> **589 combinaciones bloqueadas: 212 guardias en 91 locales** no habrian podido
+> registrar inventario nunca mas. Y no daba error de sistema: devolvia «Ya existe
+> una recepción registrada para esta lista», que parece una validacion correcta.
+
+**La regla correcta es «sin devolucion posterior»**, no «existe una recepcion».
+Con eso quedan **47** recepciones abiertas, que son exactamente los ciclos que en
+v1 nunca se cerraron. Se desbloquean 542 combinaciones.
+
+Es un arreglo **de servidor: no obliga a recompilar el APK.** El contrato de la
+respuesta (`message` + `id`) no se toco.
+
+### Lo que NO se hizo, y por que
+
+Se penso un **indice unico parcial** para cerrar la carrera entre dos toques
+seguidos (el mismo recurso que `turno_vacante_turno_viva_unique`). Se descarto:
+un guardia recibe la misma lista **una vez por turno**, asi que la unicidad por
+(local, lista, guardia) es falsa -- los datos migrados tienen 346 grupos que la
+violarian. Lo que distingue una recepcion abierta de una cerrada no son las
+claves, es si tiene una devolucion posterior, y eso no cabe en un indice unico.
+
+**La carrera sigue abierta.** Cerrarla de verdad necesita `client_uuid` en este
+endpoint, como los cinco de campo, y eso **si** obliga a cambiar la app.
+
+### Las dos optimizaciones que si entraron
+
+- **Un solo INSERT para los detalles** en vez de uno por producto: eran cuatro
+  viajes a la base por movimiento (4 items por lista en promedio), dentro de la
+  transaccion y sobre la red movil de una tablet. Con `insert()` masivo Eloquent
+  **no llena los timestamps**, asi que hay que ponerlos a mano o quedan nulos.
+- **`idx_movimiento_ciclo`** `(mc_ins_code, mc_lista_id, mc_usuario_id, mc_tipo,
+  mc_fecha)`. Antes el chequeo entraba por `idx_movimiento_lista` y filtraba las
+  otras cuatro condiciones a mano, unas 90 filas por lista. Ahora el plan usa el
+  indice en **las dos** partes de la consulta: 3 filas leidas.
+
+### Lo que ya estaba bien
+
+`allListByInst` -- el endpoint que corre en cada tablet al abrir inventario --
+usa carga anticipada con seleccion de columnas: **3 consultas y 5,5 ms de SQL**,
+sin importar cuantas listas tenga el local. No habia nada que arreglar ahi.
+
 ## Los listados abren mostrando solo lo activo (2026-09-08)
 
 `App\Filament\Tables\FiltroDeEstado`, en ocho pantallas: Usuarios, Locales,

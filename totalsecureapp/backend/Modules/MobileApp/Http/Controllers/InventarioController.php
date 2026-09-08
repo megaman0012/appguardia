@@ -100,11 +100,37 @@ class InventarioController extends Controller
             return $this->message_json('errors', 'Usuario no vinculado a institucion');
         }
 
+        // ¿Tiene una recepcion ABIERTA de esta lista?
+        //
+        // «Abierta» es no tener una devolucion posterior, y no simplemente
+        // «existe una fila de tipo recepcion». La diferencia importa:
+        //
+        // `finishListMov` **muta** la fila de recepcion a devolucion, asi que en
+        // lo que escribe la app un ciclo cerrado deja de tener fila de
+        // recepcion y el chequeo simple alcanzaba. Pero el ETL de v1 cargo
+        // **una fila por evento** -- 5.963 recepciones y 5.916 devoluciones --
+        // porque v1 guardaba las dos fechas y colapsarlas habria perdido la de
+        // recepcion.
+        //
+        // Con el chequeo simple, esas recepciones historicas se leian como
+        // abiertas: **589 combinaciones bloqueadas, 212 guardias en 91 locales**
+        // sin poder registrar inventario nunca mas. Con esta regla quedan 47,
+        // que son exactamente los ciclos que en v1 nunca se cerraron.
         $existe = MovimientoCabecera::where('mc_ins_code', $request->ins_code)
             ->where('mc_lista_id', $request->list_code)
             ->where('mc_tipo', MovimientoCabecera::TIPO_RECEPCION)
             ->where('mc_usuario_id', $us->id)
             ->where('mc_estado', '!=', MovimientoCabecera::ESTADO_CANCELADO)
+            ->whereNotExists(function ($q) use ($request, $us) {
+                $q->select(DB::raw(1))
+                    ->from('inv_movimiento_cabecera as d')
+                    ->where('d.mc_tipo', MovimientoCabecera::TIPO_DEVOLUCION)
+                    ->where('d.mc_estado', '!=', MovimientoCabecera::ESTADO_CANCELADO)
+                    ->where('d.mc_ins_code', $request->ins_code)
+                    ->where('d.mc_lista_id', $request->list_code)
+                    ->where('d.mc_usuario_id', $us->id)
+                    ->whereColumn('d.mc_fecha', '>=', 'inv_movimiento_cabecera.mc_fecha');
+            })
             ->exists();
 
         if ($existe) {
@@ -128,8 +154,14 @@ class InventarioController extends Controller
 
             $productos = json_decode($request->productos);
 
+            // Un solo INSERT en vez de uno por producto. Eran cuatro viajes a la
+            // base por movimiento (4 items por lista en promedio), dentro de la
+            // transaccion y sobre la red movil de la tablet.
+            $ahora = now();
+            $detalles = [];
+
             foreach ($productos as $item) {
-                MovimientoDetalle::create([
+                $detalles[] = [
                     'md_movimiento_id'    => $movimiento->mc_id,
                     'md_producto_id'      => $item->id_producto,
                     'md_cantidad_default' => $item->cantidaddf ?? 0,
@@ -139,7 +171,16 @@ class InventarioController extends Controller
                     'md_estado'           => MovimientoDetalle::ESTADO_OK,
                     'md_created_user'     => $us->id,
                     'md_updated_user'     => $us->id,
-                ]);
+                    // Con insert() masivo Eloquent no llena los timestamps:
+                    // hay que ponerlos, o quedan nulos y el detalle no se puede
+                    // ordenar ni auditar.
+                    'md_created_at'       => $ahora,
+                    'md_updated_at'       => $ahora,
+                ];
+            }
+
+            if ($detalles !== []) {
+                MovimientoDetalle::insert($detalles);
             }
 
             DB::commit();
