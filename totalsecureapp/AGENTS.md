@@ -650,6 +650,44 @@ Fixes aplicados a la web (commit `d42858a`):
   - `POST api/procesar_paswchg` (`user_id`, `password`, `password2`) → valida (mínimo 8 caracteres, mayúscula/minúscula/número, coincidencia, distinta a la anterior) y guarda el hash nuevo. Limpia `remember_token`.
   - El `LoginController` de MobileApp **no** debe usar `message_json()` como función global (no existe); siempre `$this->message_json()`.
 
+## Limpieza de artefactos regenerables (2026-09-08)
+
+La carpeta pesaba **6,5 GB** y quedo en **2,3 GB**. Se borro solo lo que se
+puede reconstruir, y **cada cosa se valido antes**, no se asumio.
+
+| Borrado | Peso | Como se recupera | Que se valido antes |
+|---|---:|---|---|
+| `android/app/build`, `android/build`, `android/.gradle` | 1,8 G | `./gradlew :app:assembleRelease` | Que el APK de `apk/` sea **identico por sha256** al de la carpeta de compilacion |
+| `images.zip` | 1,3 G | ya no hace falta | 45.320 rutas presentes en `public/images`, y **300 archivos al azar comparados por md5: 300 identicos** |
+| `node_modules` | 1,2 G | `npm install` (25 s) | `package-lock.json` versionado |
+| `storage/debugbar/*` | 34 M | se rehace solo | Debugbar apagado; se conservo el `.gitignore` de adentro |
+
+### `vendor/` NO se borro, y es importante saber por que
+
+Son 107 MB y `composer install` los rehace, asi que entraba en la lista. Pero
+`docker-compose.yml` monta `./:/var/www`, o sea que **el contenedor sirve desde
+el disco**: comprobado creando un archivo testigo en `vendor/` y viendolo aparecer
+dentro del contenedor.
+
+Borrarlo **tumba el panel y la API al instante**, con datos reales en produccion.
+107 MB no valen una caida.
+
+### Lo que se conserva y no es basura
+
+| | Peso | |
+|---|---:|---|
+| `backend/public/images` | 1,3 G | **Las 45.319 fotos. Irreemplazables** |
+| `apk/` | 100 M | APK firmado + keystore + su LEEME |
+| `apk_extracted` | 127 M | El APK original de v1, descompilado. **Versionado**: mete ~46 MB al repo |
+| `coredt360_bk.sql` | 31 M | El volcado de v1. Conservar hasta que la migracion lleve semanas validada |
+| `datos-v1/2025.rar` | 83 M | Sacado del directorio web; contenido sin revisar |
+
+### Verificado despues de borrar
+
+Panel y API responden 200 por localhost, IP de red **y las dos IP publicas**; una
+foto de 2026 se sirve con `200 image/jpeg`; las 45.319 siguen en su sitio;
+`npm install` + `npx tsc --noEmit` pasan limpio, y el APK se recompila.
+
 ## APK: dos IP con respaldo, y el puerto 3031 (2026-09-08)
 
 Configuracion lista para compilar. **Compilar exige JDK y SDK de Android, que
