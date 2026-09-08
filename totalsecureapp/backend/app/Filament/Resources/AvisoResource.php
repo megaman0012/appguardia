@@ -28,14 +28,14 @@ class AvisoResource extends Resource
     protected static ?string $modelLabel = 'aviso';
     protected static ?string $pluralModelLabel = 'avisos';
     protected static ?string $navigationIcon = 'heroicon-o-paper-airplane';
-    protected static ?int $navigationSort = 9;
+    protected static ?int $navigationSort = 4;
     protected static ?string $slug = 'avisos';
 
     protected const RELACIONES_TABLA = ['usuario'];
 
     public static function getNavigationGroup(): ?string
     {
-        return 'Operacion';
+        return 'Operación';
     }
 
     public static function form(Form $form): Form

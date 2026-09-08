@@ -29,15 +29,20 @@ use Modules\Administracion\Models\Plantilla;
 class PlantillaResource extends Resource
 {
     protected static ?string $model = Plantilla::class;
-    protected static ?string $navigationLabel = 'Cuadrante de turnos';
+    // Filament arma con esto las migas, el boton «Crear …» y el aviso de
+    // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
+    // «Producto Catalogos» o «User Has Biometrias».
+    protected static ?string $modelLabel = 'cuadrante';
+    protected static ?string $pluralModelLabel = 'cuadrantes';
+    protected static ?string $navigationLabel = 'Cuadrantes';
     protected static ?string $navigationIcon = 'heroicon-o-template';
-    protected static ?int $navigationSort = 7;
+    protected static ?int $navigationSort = 2;
 
     protected const RELACIONES_TABLA = ['institucion'];
 
     public static function getNavigationGroup(): ?string
     {
-        return 'Operacion';
+        return 'Operación';
     }
 
     public static function form(Form $form): Form

@@ -34,15 +34,20 @@ use Modules\MobileApp\Models\users;
 class TurnoResource extends Resource
 {
     protected static ?string $model = Turno::class;
+    // Filament arma con esto las migas, el boton «Crear …» y el aviso de
+    // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
+    // «Producto Catalogos» o «User Has Biometrias».
+    protected static ?string $modelLabel = 'turno';
+    protected static ?string $pluralModelLabel = 'turnos';
     protected static ?string $navigationLabel = 'Turnos';
     protected static ?string $navigationIcon = 'heroicon-o-clock';
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 1;
 
     protected const RELACIONES_TABLA = ['usuario', 'institucion', 'puesto'];
 
     public static function getNavigationGroup(): ?string
     {
-        return 'Operacion';
+        return 'Operación';
     }
 
     public static function form(Form $form): Form

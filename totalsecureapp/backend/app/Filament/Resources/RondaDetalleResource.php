@@ -29,10 +29,15 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class RondaDetalleResource extends Resource
 {
     public static function getNavigationGroup(): ?string {
-        return 'Reporteria';
+        return 'Reportería';
     }
-    protected static ?int $navigationSort = 10;
-    protected static ?string $navigationLabel = 'Ronda Detalle';
+    protected static ?int $navigationSort = 4;
+    // Filament arma con esto las migas, el boton «Crear …» y el aviso de
+    // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
+    // «Producto Catalogos» o «User Has Biometrias».
+    protected static ?string $modelLabel = 'detalle';
+    protected static ?string $pluralModelLabel = 'detalles';
+    protected static ?string $navigationLabel = 'Detalle de ronda';
     protected static ?string $model = ronda_detalle::class;
 
     /**
@@ -51,11 +56,11 @@ class RondaDetalleResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('rondaCabecera.institucion.cliente.org_descripcion')->size('sm')
-                    ->label('Organizacion')
+                    ->label('Cliente')
                     ->searchable()
                     ->toggleable(),
                 TextColumn::make('rondaCabecera.institucion.ins_descripcion')->size('sm')
-                    ->label('Institucion')
+                    ->label('Local')
                     ->searchable()
                     ->toggleable(),
                 TextColumn::make('users.usu_nmbcom')->size('sm')
@@ -76,7 +81,7 @@ class RondaDetalleResource extends Resource
                     ->view('tables.columns.imagen-modal'),
 
                 TextColumn::make('rd_observacion')->size('sm')
-                    ->label('Observacion')
+                    ->label('Observación')
                     ->toggleable()
                     ->searchable(),
 
@@ -88,7 +93,7 @@ class RondaDetalleResource extends Resource
             ->filters([])
             ->actions([
                 Action::make('gmap')
-                    ->label('Ubicacion')
+                    ->label('Ubicación')
                     ->url(fn($record) => "https://www.google.com/maps?q={$record->rd_lat},{$record->rd_lng}")
                     ->openUrlInNewTab()
                     ->icon('heroicon-o-map')

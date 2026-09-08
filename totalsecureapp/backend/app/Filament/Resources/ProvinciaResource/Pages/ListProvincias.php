@@ -4,9 +4,9 @@ namespace App\Filament\Resources\ProvinciaResource\Pages;
 
 use App\Filament\Resources\ProvinciaResource;
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 
-class ListProvincias extends ListRecords
+class ListProvincias extends ListadoBase
 {
     protected static string $resource = ProvinciaResource::class;
 

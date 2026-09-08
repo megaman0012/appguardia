@@ -27,16 +27,21 @@ use Modules\Administracion\Models\Puesto;
 class PuestoResource extends Resource
 {
     protected static ?string $model = Puesto::class;
-    protected static ?string $navigationLabel = 'Puesto de trabajo';
+    // Filament arma con esto las migas, el boton «Crear …» y el aviso de
+    // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
+    // «Producto Catalogos» o «User Has Biometrias».
+    protected static ?string $modelLabel = 'puesto';
+    protected static ?string $pluralModelLabel = 'puestos';
+    protected static ?string $navigationLabel = 'Puestos de trabajo';
     protected static ?string $navigationIcon = 'heroicon-o-location-marker';
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 3;
 
     /** Relaciones que usan las columnas de la tabla (evita el N+1). */
     protected const RELACIONES_TABLA = ['institucion.ciudad.provincia.pais'];
 
     public static function getNavigationGroup(): ?string
     {
-        return 'Ubicacion Geografica';
+        return 'Centros de operación';
     }
 
     public static function form(Form $form): Form

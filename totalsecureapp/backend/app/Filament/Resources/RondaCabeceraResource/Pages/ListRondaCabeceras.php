@@ -4,9 +4,9 @@ namespace App\Filament\Resources\RondaCabeceraResource\Pages;
 
 use App\Filament\Resources\RondaCabeceraResource;
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 
-class ListRondaCabeceras extends ListRecords {
+class ListRondaCabeceras extends ListadoBase {
     protected static string $resource = RondaCabeceraResource::class;
     protected function getActions(): array { return []; }
 }

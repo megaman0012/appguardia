@@ -4,9 +4,9 @@ namespace App\Filament\Resources\CiudadResource\Pages;
 
 use App\Filament\Resources\CiudadResource;
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 
-class ListCiudades extends ListRecords
+class ListCiudades extends ListadoBase
 {
     protected static string $resource = CiudadResource::class;
 

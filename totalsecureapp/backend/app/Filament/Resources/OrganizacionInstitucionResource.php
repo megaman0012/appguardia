@@ -33,7 +33,7 @@ use Modules\Administracion\Models\UserHasInstitucion;
 class OrganizacionInstitucionResource extends Resource
 {
     public static function getNavigationGroup(): ?string {
-        return 'Centros de Operacion';
+        return 'Centros de operación';
     }
 
     protected static ?string $model = OrganizacionInstitucion::class;
@@ -44,15 +44,19 @@ class OrganizacionInstitucionResource extends Resource
      * 126 consultas en vez de 6.
      */
     protected const RELACIONES_TABLA = ['ciudad.provincia.pais', 'cliente'];
-    protected static ?int $navigationSort = 4;
-    protected static ?string $navigationLabel = 'Organizacion > Institucion';
+    protected static ?int $navigationSort = 2;
+    // Filament arma con esto las migas, el boton «Crear …» y el aviso de
+    // tabla vacia. Sin declararlo los deriva del nombre de la clase.
+    protected static ?string $modelLabel = 'local';
+    protected static ?string $pluralModelLabel = 'locales';
+    protected static ?string $navigationLabel = 'Locales';
     protected static ?string $navigationIcon = 'heroicon-o-flag';
 
     public static function form(Form $form): Form {
         return $form->schema([
 
             TextInput::make('ins_descripcion')
-                ->label('Descripcion')
+                ->label('Descripción')
                 ->required()
                 ->maxLength(255)
                 // Antes la unicidad colgaba de la sede. Sin sede, lo que
@@ -68,7 +72,7 @@ class OrganizacionInstitucionResource extends Resource
                 ->maxLength(255),
 
             TextInput::make('ins_direccion')
-                ->label('Direccion')
+                ->label('Dirección')
                 ->required()
                 ->maxLength(255),
 
@@ -100,7 +104,7 @@ class OrganizacionInstitucionResource extends Resource
                 ->helperText('Reemplazado por el selector de Ciudad. Se conserva por los datos ya cargados'),
 
             TextInput::make('ins_telefono')
-                ->label('Telefono')
+                ->label('Teléfono')
                 ->required()
                 ->maxLength(20),
 
@@ -131,7 +135,7 @@ class OrganizacionInstitucionResource extends Resource
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('ins_descripcion')->size('sm')
-                    ->label('Institución')
+                    ->label('Local')
                     ->searchable(),
                 TextColumn::make('cliente.org_descripcion')->size('sm')
                     ->label('Cliente')->sortable()->searchable()->toggleable(),

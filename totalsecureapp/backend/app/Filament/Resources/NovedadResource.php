@@ -26,10 +26,15 @@ use Session;
 class NovedadResource extends Resource
 {
     public static function getNavigationGroup(): ?string {
-        return 'Reporteria';
+        return 'Reportería';
     }
+    // Filament arma con esto las migas, el boton «Crear …» y el aviso de
+    // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
+    // «Producto Catalogos» o «User Has Biometrias».
+    protected static ?string $modelLabel = 'novedad';
+    protected static ?string $pluralModelLabel = 'novedades';
     protected static ?string $navigationLabel = 'Novedades';
-    protected static ?int $navigationSort = 12;
+    protected static ?int $navigationSort = 5;
     protected static ?string $model = Novedad::class;
 
     /**
@@ -47,22 +52,22 @@ class NovedadResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('nv_id')->size('sm')
-                    ->label('Codigo')
+                    ->label('Código')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('institucion.cliente.org_descripcion')->size('sm')
-                    ->label('Organizacion')
+                    ->label('Cliente')
                     ->searchable()
                     ->toggleable(),
                 TextColumn::make('institucion.ins_descripcion')->size('sm')
-                    ->label('Institucion')
+                    ->label('Local')
                     ->searchable()
                     ->toggleable(),
                 TextColumn::make('users.usu_nmbcom')->size('sm')
                     ->label('Usuario')
                     ->searchable(),
                 TextColumn::make('nv_observacion')->size('sm')
-                    ->label('Observacion')
+                    ->label('Observación')
                     ->searchable()
                     ->toggleable(),
                 TextColumn::make('nv_fecha_hora')->size('sm')

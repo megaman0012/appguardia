@@ -4,9 +4,9 @@ namespace App\Filament\Resources\InvProductoResource\Pages;
 
 use App\Filament\Resources\InvProductoResource;
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 
-class ListInvProductos extends ListRecords
+class ListInvProductos extends ListadoBase
 {
     protected static string $resource = InvProductoResource::class;
 

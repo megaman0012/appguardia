@@ -4,9 +4,9 @@ namespace App\Filament\Resources\AlertasResource\Pages;
 
 use App\Filament\Resources\AlertasResource;
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 
-class ListAlertas extends ListRecords
+class ListAlertas extends ListadoBase
 {
     protected static string $resource = AlertasResource::class;
 

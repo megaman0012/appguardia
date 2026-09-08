@@ -31,7 +31,7 @@ class EditOrganizacionInstitucion extends EditRecord {
     {
         return [
             'Formulario' => Tab::make()
-                ->label('Institución')
+                ->label('Local')
                 ->schema($this->getFormSchema()),
 
             'Marcadores' => Tab::make()

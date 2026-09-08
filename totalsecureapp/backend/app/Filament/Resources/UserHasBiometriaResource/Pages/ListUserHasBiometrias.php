@@ -4,9 +4,9 @@ namespace App\Filament\Resources\UserHasBiometriaResource\Pages;
 
 use App\Filament\Resources\UserHasBiometriaResource;
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 
-class ListUserHasBiometrias extends ListRecords
+class ListUserHasBiometrias extends ListadoBase
 {
     protected static string $resource = UserHasBiometriaResource::class;
 

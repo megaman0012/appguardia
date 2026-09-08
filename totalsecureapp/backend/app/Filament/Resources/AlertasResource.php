@@ -36,9 +36,14 @@ use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 class AlertasResource extends Resource
 {
     public static function getNavigationGroup(): ?string {
-        return 'Reporteria';
+        return 'Reportería';
     }
-    protected static ?int $navigationSort = 8;
+    protected static ?int $navigationSort = 6;
+    // Filament arma con esto las migas, el boton «Crear …» y el aviso de
+    // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
+    // «Producto Catalogos» o «User Has Biometrias».
+    protected static ?string $modelLabel = 'alerta';
+    protected static ?string $pluralModelLabel = 'alertas';
     protected static ?string $navigationLabel = 'Alertas';
     protected static ?string $model = Alertas::class;
 
@@ -55,15 +60,15 @@ class AlertasResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('al_code')->size('sm')
-                    ->label('Codigo')
+                    ->label('Código')
                     ->toggleable()
                     ->searchable(),
                 TextColumn::make('institucion.cliente.org_descripcion')->size('sm')
-                    ->label('Organizacion')
+                    ->label('Cliente')
                     ->toggleable()
                     ->searchable(),
                 TextColumn::make('institucion.ins_descripcion')->size('sm')
-                    ->label('Institucion')
+                    ->label('Local')
                     ->toggleable()
                     ->searchable(),
                 TextColumn::make('usuario.usu_nmbcom')->size('sm')

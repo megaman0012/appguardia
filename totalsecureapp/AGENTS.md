@@ -273,6 +273,77 @@ nueva con ese nombre, no la resurrección de `sede`.
   - `Stringable::toHtmlString()` — Filament la llama al renderizar `helperText` y `hint`: `Str::of($helperText)->markdown()->sanitizeHtml()->toHtmlString()`. **Sin el shim, cualquier formulario con `helperText` responde 500.** No hace falta shim para `sanitizeHtml()`: la registra el propio Filament.
   - `Model::resolveRouteBindingQuery()` — Filament 2.17 llama a `$model->resolveRouteBindingQuery(...)`, método que Eloquent recién trae desde Laravel 9; en 8.75 no existe y **todas** las páginas de edición del panel respondían 500. Se registra como macro del Builder (`Model::__call` reenvía ahí), lo que cubre los ~20 modelos sin tocarlos. El shim se autodesactiva si el método existe, así que al subir a Laravel 9+ se puede borrar.
 
+## Panel: como se presenta la informacion (2026-09-08)
+
+Revision de presentacion sobre el panel ya cargado con los datos reales.
+
+### Los nombres del menu decian otra cosa que los datos
+
+El cambio de fondo. `organizacion` **es la tabla de clientes** (ahi va DHL) y
+`organizacion_institucion` son **los locales**; el menu los llamaba
+«Organizacion» y «Organizacion > Institucion». Los documentos de este repo
+hablan de clientes y locales en todas sus paginas, asi que el panel era el unico
+lugar donde se llamaban de otra forma -- y justo el lugar donde alguien aprende
+el sistema.
+
+| Antes | Ahora |
+|---|---|
+| Organizacion | **Clientes** |
+| Organizacion > Institucion | **Locales** |
+| Usuarios > Perfiles | **Perfil por usuario** |
+| Usuarios > Institucion | **Locales por usuario** |
+| Usuarios > Gestion | **Gestiones** |
+| Listas > Productos | **Listas** |
+| Inventario Equipamento | **Movimientos** |
+
+- **El `>` de las etiquetas desaparecio.** Fingia una jerarquia en el nombre
+  cuando para eso estan los grupos, y dejaba cuatro items del menu empezando con
+  la palabra «Usuarios».
+- **Habia DOS items llamados «Perfiles»**: `RolesResource` (el catalogo de
+  perfiles) y `UserHasRolesResource` (que perfil tiene cada usuario). Ahora son
+  «Perfiles y permisos» y «Perfil por usuario».
+- Acentos donde faltaban: Biometria→Biometría, Bitacora→Bitácora,
+  Reporteria→Reportería, y «Equipamento»→ ya no aplica.
+
+### Los grupos se reordenaron por frecuencia de uso
+
+`Filament::registerNavigationGroups()` en `AppServiceProvider`. **Sin eso
+Filament ordena los grupos por el `navigationSort` mas bajo de sus items**, y
+como cada grupo empieza en 1 el orden sale arbitrario: «Inventario» aparecia
+arriba de «Centros de operacion».
+
+Orden: **Operación** (turnos, cuadrantes, cobertura: el dia a dia) → **Reportería**
+(lo que el guardia registro) → **Inventario** → **Centros de operación** (clientes,
+locales, puestos: se cargan y se dejan) → **Ubicación geográfica** (catalogo) →
+**Configuración**.
+
+- **`Puestos de trabajo` salio de «Ubicación geográfica».** Un puesto no es
+  geografia: es una posicion dentro de un local, asi que va con Clientes y
+  Locales.
+- **El inventario quedo junto.** Los movimientos estaban en «Reportería»,
+  separados de sus propios productos y listas.
+
+### `modelLabel` declarado en los 26 recursos
+
+Filament arma con eso las migas, el boton «Crear …» y el aviso de tabla vacia.
+Sin declararlo los deriva del nombre de la clase, y despues de repuntar el
+inventario a los modelos de FASE1 las migas de crear un producto decian
+**«Producto Catalogos»**.
+
+### Sin migas en los listados
+
+`App\Filament\Pages\ListadoBase` (la extienden las 27 paginas de listado)
+devuelve `[]` en `getBreadcrumbs()`. En un listado las migas eran «Novedades /
+Listado»: el segundo eslabon es el encabezado que la pagina ya muestra debajo, y
+el primero apunta a la pagina en la que ya estas.
+
+**En crear y editar se dejan**, porque ahi el primer eslabon es el camino de
+vuelta al listado -- la unica forma comoda de salir de un formulario sin guardar.
+
+Va como clase base y no como override de la vista Blade de Filament porque la
+vista recibe solo el arreglo de migas: no sabe si esta en un listado o en un
+formulario.
+
 ## Panel: ancho y barra de depuracion (2026-09-07)
 
 - **`max_content_width` = `'full'`** en `config/filament.php`. Con `null`

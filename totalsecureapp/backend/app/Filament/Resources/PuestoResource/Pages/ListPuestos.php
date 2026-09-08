@@ -4,9 +4,9 @@ namespace App\Filament\Resources\PuestoResource\Pages;
 
 use App\Filament\Resources\PuestoResource;
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 
-class ListPuestos extends ListRecords
+class ListPuestos extends ListadoBase
 {
     protected static string $resource = PuestoResource::class;
 

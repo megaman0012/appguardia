@@ -4,9 +4,9 @@ namespace App\Filament\Resources\UserHasInstitucionResource\Pages;
 
 use App\Filament\Resources\UserHasInstitucionResource;
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 
-class ListUserHasInstitucions extends ListRecords
+class ListUserHasInstitucions extends ListadoBase
 {
     protected static string $resource = UserHasInstitucionResource::class;
 

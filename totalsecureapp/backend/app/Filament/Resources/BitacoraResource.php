@@ -21,10 +21,15 @@ use Session;
 class BitacoraResource extends Resource
 {
     public static function getNavigationGroup(): ?string {
-        return 'Reporteria';
+        return 'Reportería';
     }
-    protected static ?string $navigationLabel = 'Bitacora';
-    protected static ?int $navigationSort = 11;
+    // Filament arma con esto las migas, el boton «Crear …» y el aviso de
+    // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
+    // «Producto Catalogos» o «User Has Biometrias».
+    protected static ?string $modelLabel = 'registro';
+    protected static ?string $pluralModelLabel = 'registros';
+    protected static ?string $navigationLabel = 'Bitácora';
+    protected static ?int $navigationSort = 7;
     protected static ?string $model = Bitacora::class;
 
     /**
@@ -42,22 +47,22 @@ class BitacoraResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('bt_id')->size('sm')
-                    ->label('Codigo')
+                    ->label('Código')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('institucion.cliente.org_descripcion')->size('sm')
-                    ->label('Organizacion')
+                    ->label('Cliente')
                     ->searchable()
                     ->toggleable(),
                 TextColumn::make('institucion.ins_descripcion')->size('sm')
-                    ->label('Institucion')
+                    ->label('Local')
                     ->searchable()
                     ->toggleable(),
                 TextColumn::make('users.usu_nmbcom')->size('sm')
                     ->label('Usuario')
                     ->searchable(),
                 TextColumn::make('bt_observacion')->size('sm')
-                    ->label('Observacion')
+                    ->label('Observación')
                     ->searchable()
                     ->toggleable(),
                 TextColumn::make('bt_fecha_hora')->size('sm')

@@ -60,9 +60,14 @@ class InvMovimientoResource extends Resource
      */
     protected const RELACIONES_TABLA = ['institucion.cliente', 'lista', 'usuario'];
 
-    protected static ?string $navigationGroup = 'Reporteria';
-    protected static ?int $navigationSort = 13;
-    protected static ?string $navigationLabel = 'Inventario Equipamento';
+    protected static ?string $navigationGroup = 'Inventario';
+    protected static ?int $navigationSort = 3;
+    // Filament arma con esto las migas, el boton «Crear …» y el aviso de
+    // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
+    // «Producto Catalogos» o «User Has Biometrias».
+    protected static ?string $modelLabel = 'movimiento';
+    protected static ?string $pluralModelLabel = 'movimientos';
+    protected static ?string $navigationLabel = 'Movimientos';
     protected static ?string $navigationIcon = 'heroicon-o-switch-horizontal';
 
     public static function form(Form $form): Form {
@@ -95,7 +100,7 @@ class InvMovimientoResource extends Resource
                     ->toggleable()
                     ->searchable(),
                 TextColumn::make('institucion.ins_descripcion')->size('sm')
-                    ->label('Institucion')
+                    ->label('Local')
                     ->toggleable()
                     ->searchable(),
                 TextColumn::make('lista.li_nombre')->size('sm')

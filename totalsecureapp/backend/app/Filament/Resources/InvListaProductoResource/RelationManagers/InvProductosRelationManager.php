@@ -84,11 +84,11 @@ class InvProductosRelationManager extends RelationManager
                 ->sortable()
                 ->searchable(),
             TextColumn::make('producto.ipc_descripcion')->size('sm')
-                ->label('Descripcion')
+                ->label('Descripción')
                 ->sortable()
                 ->searchable(),
             TextColumn::make('producto.ipc_especificacion')->size('sm')
-                ->label('Especificacion')
+                ->label('Especificación')
                 ->sortable()
                 ->searchable(),
             TextColumn::make('lia_cantidad_default')->size('sm')

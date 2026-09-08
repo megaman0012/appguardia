@@ -54,7 +54,12 @@ class InvProductoResource extends Resource
     protected const RELACIONES_TABLA = ['institucion.cliente'];
 
     protected static ?string $navigationGroup = 'Inventario';
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 1;
+    // Filament arma con esto las migas, el boton «Crear …» y el aviso de
+    // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
+    // «Producto Catalogos» o «User Has Biometrias».
+    protected static ?string $modelLabel = 'producto';
+    protected static ?string $pluralModelLabel = 'productos';
     protected static ?string $navigationLabel = 'Productos';
     protected static ?string $navigationIcon = 'heroicon-o-cube';
 
@@ -62,7 +67,7 @@ class InvProductoResource extends Resource
     {
         return $form->schema([
             Select::make('ipc_ins_code')
-                ->label('Institucion')
+                ->label('Local')
                 ->relationship(
                     'institucion',
                     'ins_descripcion',
@@ -90,10 +95,10 @@ class InvProductoResource extends Resource
                     return $rule->where('ipc_ins_code', $get('ipc_ins_code'));
                 }, ignoreRecord: true),
             TextInput::make('ipc_especificacion')
-                ->label('Especificacion')
+                ->label('Especificación')
                 ->required(),
             Textarea::make('ipc_descripcion')
-                ->label('Descripcion'),
+                ->label('Descripción'),
             Toggle::make('ipc_activo')
                 ->label('Activo')
                 ->required()
@@ -115,7 +120,7 @@ class InvProductoResource extends Resource
                     ->toggleable()
                     ->searchable(),
                 TextColumn::make('institucion.ins_descripcion')->size('sm')
-                    ->label('Institucion')
+                    ->label('Local')
                     ->toggleable()
                     ->searchable(),
                 TextColumn::make('ipc_nombre')->size('sm')
@@ -123,11 +128,11 @@ class InvProductoResource extends Resource
                     ->toggleable()
                     ->searchable(),
                 TextColumn::make('ipc_especificacion')->size('sm')
-                    ->label('Especificacion')
+                    ->label('Especificación')
                     ->toggleable()
                     ->searchable(),
                 TextColumn::make('ipc_descripcion')->size('sm')
-                    ->label('Descripcion')
+                    ->label('Descripción')
                     ->toggleable()
                     ->searchable(),
                 TextColumn::make('ipc_stock_actual')->size('sm')
@@ -135,7 +140,7 @@ class InvProductoResource extends Resource
                     ->toggleable()
                     ->sortable(),
                 TextColumn::make('ipc_created_at')->size('sm')
-                    ->label('Fecha de Creación')
+                    ->label('Creado')
                     ->sortable()
                     ->searchable(),
                 BooleanColumn::make('ipc_activo')

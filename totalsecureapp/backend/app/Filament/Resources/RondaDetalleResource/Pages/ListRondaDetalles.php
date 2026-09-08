@@ -6,9 +6,9 @@ use App\Filament\Resources\RondaDetalleResource;
 use App\Filament\Resources\RondaCabeceraResource;
 
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 
-class ListRondaDetalles extends ListRecords
+class ListRondaDetalles extends ListadoBase
 {
     protected static string $resource = RondaDetalleResource::class;
 

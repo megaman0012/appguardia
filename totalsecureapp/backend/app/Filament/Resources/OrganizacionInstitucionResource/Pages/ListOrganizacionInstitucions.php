@@ -6,10 +6,10 @@ use App\Support\PerfilPanel;
 
 use App\Filament\Resources\OrganizacionInstitucionResource;
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 use Session;
 
-class ListOrganizacionInstitucions extends ListRecords {
+class ListOrganizacionInstitucions extends ListadoBase {
     protected static string $resource = OrganizacionInstitucionResource::class;
 
     protected function getActions(): array {

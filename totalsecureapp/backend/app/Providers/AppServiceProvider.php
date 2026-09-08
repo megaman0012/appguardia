@@ -41,6 +41,23 @@ class AppServiceProvider extends ServiceProvider
             ]);
         });
 
+        // Orden de los grupos del menu lateral.
+        //
+        // Sin esto, Filament los ordena por el `navigationSort` mas bajo de sus
+        // items, y como cada grupo empieza en 1 el orden queda arbitrario:
+        // «Inventario» aparecia arriba de «Centros de operacion».
+        //
+        // El criterio es frecuencia de uso, no jerarquia de datos: arriba lo que
+        // se mira todos los dias y abajo lo que se configura una vez.
+        Filament::registerNavigationGroups([
+            'Operación',            // turnos, cuadrantes, coberturas: el dia a dia
+            'Reportería',           // lo que el guardia registro en campo
+            'Inventario',
+            'Centros de operación', // clientes, locales y puestos: se cargan y se dejan
+            'Ubicación geográfica', // catalogo
+            'Configuración',        // usuarios y permisos
+        ]);
+
         Filament::serving(function () {
             Filament::registerUserMenuItems([
                 'mi-opcion' => UserMenuItem::make()

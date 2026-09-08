@@ -39,13 +39,13 @@ class VacanteResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-user-add';
     // Sin esto Filament derivaría la ruta del modelo: /admin/turno-vacantes.
     protected static ?string $slug = 'vacantes';
-    protected static ?int $navigationSort = 8;
+    protected static ?int $navigationSort = 3;
 
     protected const RELACIONES_TABLA = ['institucion', 'puesto', 'ausente'];
 
     public static function getNavigationGroup(): ?string
     {
-        return 'Operacion';
+        return 'Operación';
     }
 
     /** Lo urgente es lo que espera decisión: por confirmar o abierto sin cubrir. */

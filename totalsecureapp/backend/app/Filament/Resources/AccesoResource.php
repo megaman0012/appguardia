@@ -36,10 +36,15 @@ use Session;
 class AccesoResource extends Resource
 {
     public static function getNavigationGroup(): ?string {
-        return 'Reporteria';
+        return 'Reportería';
     }
-    protected static ?int $navigationSort = 9;
-    protected static ?string $navigationLabel = 'Acceso';
+    protected static ?int $navigationSort = 2;
+    // Filament arma con esto las migas, el boton «Crear …» y el aviso de
+    // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
+    // «Producto Catalogos» o «User Has Biometrias».
+    protected static ?string $modelLabel = 'acceso';
+    protected static ?string $pluralModelLabel = 'accesos';
+    protected static ?string $navigationLabel = 'Accesos';
     protected static ?string $model = Acceso::class;
 
     /**
@@ -59,11 +64,11 @@ class AccesoResource extends Resource
                     ->sortable()
                     ->searchable(),
                 TextColumn::make('institucion.cliente.org_descripcion')->size('sm')
-                    ->label('Organizacion')
+                    ->label('Cliente')
                     ->toggleable()
                     ->searchable(),
                 TextColumn::make('institucion.ins_descripcion')->size('sm')
-                    ->label('Institucion')
+                    ->label('Local')
                     ->toggleable()
                     ->searchable(),
                 TextColumn::make('accesoPersona.ap_documento')->size('sm')
@@ -82,7 +87,7 @@ class AccesoResource extends Resource
                 // Hace visible el hueco que antes era invisible: un marcaje que
                 // nadie pudo comprobar se veia igual que uno hecho en la garita.
                 BadgeColumn::make('ac_ubicacion_estado')
-                    ->label('Ubicacion')
+                    ->label('Ubicación')
                     ->getStateUsing(function ($record) {
                         if ($record->ac_ubicacion_verificada === null) {
                             return 'Sin dato';

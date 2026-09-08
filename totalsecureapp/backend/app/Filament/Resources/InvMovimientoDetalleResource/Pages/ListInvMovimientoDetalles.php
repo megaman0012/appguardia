@@ -5,10 +5,10 @@ namespace App\Filament\Resources\InvMovimientoDetalleResource\Pages;
 use App\Filament\Resources\InvMovimientoDetalleResource;
 use App\Filament\Resources\InvMovimientoResource;
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 use Modules\Administracion\Models\InvMovimiento;
 
-class ListInvMovimientoDetalles extends ListRecords
+class ListInvMovimientoDetalles extends ListadoBase
 {
     protected static string $resource = InvMovimientoDetalleResource::class;
 

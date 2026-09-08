@@ -27,12 +27,16 @@ use Session;
 class OrganizacionResource extends Resource {
 
     public static function getNavigationGroup(): ?string {
-        return 'Centros de Operacion';
+        return 'Centros de operación';
     }
 
     protected static ?string $model = Organizacion::class;
-    protected static ?int $navigationSort = 2;
-    protected static ?string $navigationLabel = 'Organizacion';
+    protected static ?int $navigationSort = 1;
+    // Filament arma con esto las migas, el boton «Crear …» y el aviso de
+    // tabla vacia. Sin declararlo los deriva del nombre de la clase.
+    protected static ?string $modelLabel = 'cliente';
+    protected static ?string $pluralModelLabel = 'clientes';
+    protected static ?string $navigationLabel = 'Clientes';
     protected static ?string $navigationIcon = 'heroicon-o-office-building';
 
     public static function form(Form $form): Form
@@ -82,7 +86,7 @@ class OrganizacionResource extends Resource {
                     ->label('Número de Registro')
                     ->searchable(),
                 TextColumn::make('org_descripcion')->size('sm')
-                    ->label('Organización')
+                    ->label('Cliente')
                     ->searchable(),
                 TextColumn::make('org_email')->size('sm')
                     ->label('Correo Electrónico')

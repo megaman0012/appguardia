@@ -19,7 +19,12 @@ use Modules\Administracion\Models\Provincia;
 class ProvinciaResource extends Resource
 {
     protected static ?string $model = Provincia::class;
-    protected static ?string $navigationLabel = 'Provincia';
+    // Filament arma con esto las migas, el boton «Crear …» y el aviso de
+    // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
+    // «Producto Catalogos» o «User Has Biometrias».
+    protected static ?string $modelLabel = 'provincia';
+    protected static ?string $pluralModelLabel = 'provincias';
+    protected static ?string $navigationLabel = 'Provincias';
     protected static ?string $navigationIcon = 'heroicon-o-map';
     protected static ?int $navigationSort = 2;
 
@@ -28,7 +33,7 @@ class ProvinciaResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return 'Ubicacion Geografica';
+        return 'Ubicación geográfica';
     }
 
     public static function form(Form $form): Form

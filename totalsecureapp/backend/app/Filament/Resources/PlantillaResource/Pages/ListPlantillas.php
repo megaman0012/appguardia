@@ -4,9 +4,9 @@ namespace App\Filament\Resources\PlantillaResource\Pages;
 
 use App\Filament\Resources\PlantillaResource;
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 
-class ListPlantillas extends ListRecords
+class ListPlantillas extends ListadoBase
 {
     protected static string $resource = PlantillaResource::class;
 

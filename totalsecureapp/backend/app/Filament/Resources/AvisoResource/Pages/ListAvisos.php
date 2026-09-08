@@ -10,9 +10,9 @@ use App\Support\PerfilPanel;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 
-class ListAvisos extends ListRecords
+class ListAvisos extends ListadoBase
 {
     protected static string $resource = AvisoResource::class;
 

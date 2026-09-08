@@ -4,9 +4,9 @@ namespace App\Filament\Resources\VacanteResource\Pages;
 
 use App\Filament\Resources\VacanteResource;
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 
-class ListVacantes extends ListRecords
+class ListVacantes extends ListadoBase
 {
     protected static string $resource = VacanteResource::class;
 

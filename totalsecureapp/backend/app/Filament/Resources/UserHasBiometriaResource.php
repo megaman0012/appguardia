@@ -31,10 +31,15 @@ use Session;
 class UserHasBiometriaResource extends Resource
 {
     public static function getNavigationGroup(): ?string {
-        return 'Reporteria';
+        return 'Reportería';
     }
-    protected static ?int $navigationSort = 7;
-    protected static ?string $navigationLabel = 'Biometria';
+    protected static ?int $navigationSort = 1;
+    // Filament arma con esto las migas, el boton «Crear …» y el aviso de
+    // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
+    // «Producto Catalogos» o «User Has Biometrias».
+    protected static ?string $modelLabel = 'marcaje';
+    protected static ?string $pluralModelLabel = 'marcajes';
+    protected static ?string $navigationLabel = 'Biometría';
     protected static ?string $model = user_has_biometria::class;
 
     /**
@@ -56,11 +61,11 @@ class UserHasBiometriaResource extends Resource
                     ->sortable()
                     ->searchable(),
                 TextColumn::make('institucion.cliente.org_descripcion')->size('sm')
-                    ->label('Organizacion')
+                    ->label('Cliente')
                     ->toggleable()
                     ->searchable(),
                 TextColumn::make('institucion.ins_descripcion')->size('sm')
-                    ->label('Institucion')
+                    ->label('Local')
                     ->toggleable()
                     ->searchable(),
                 BadgeColumn::make('bio_is_entrada')->size('sm')
@@ -78,7 +83,7 @@ class UserHasBiometriaResource extends Resource
                     ->sortable()
                     ->searchable(),
                 TextColumn::make('usuario.usu_cedula')->size('sm')
-                    ->label('Cedula')
+                    ->label('Cédula')
                     ->toggleable()
                     ->sortable()
                     ->searchable(),
@@ -89,7 +94,7 @@ class UserHasBiometriaResource extends Resource
                 // Hace visible el hueco que antes era invisible: un marcaje que
                 // nadie pudo comprobar se veia igual que uno hecho en la garita.
                 BadgeColumn::make('bio_ubicacion_estado')
-                    ->label('Ubicacion')
+                    ->label('Ubicación')
                     ->getStateUsing(function ($record) {
                         if ($record->bio_ubicacion_verificada === null) {
                             return 'Sin dato';

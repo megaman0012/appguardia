@@ -4,9 +4,9 @@ namespace App\Filament\Resources\OrganizacionResource\Pages;
 
 use App\Filament\Resources\OrganizacionResource;
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 
-class ListOrganizacions extends ListRecords
+class ListOrganizacions extends ListadoBase
 {
     protected static string $resource = OrganizacionResource::class;
 

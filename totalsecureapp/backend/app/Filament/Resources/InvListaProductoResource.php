@@ -48,8 +48,13 @@ class InvListaProductoResource extends Resource
      */
     protected const RELACIONES_TABLA = ['institucion.cliente'];
     protected static ?string $navigationGroup = 'Inventario';
-    protected static ?int $navigationSort = 6;
-    protected static ?string $navigationLabel = 'Listas > Productos';
+    protected static ?int $navigationSort = 2;
+    // Filament arma con esto las migas, el boton «Crear …» y el aviso de
+    // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
+    // «Producto Catalogos» o «User Has Biometrias».
+    protected static ?string $modelLabel = 'lista';
+    protected static ?string $pluralModelLabel = 'listas';
+    protected static ?string $navigationLabel = 'Listas';
     protected static ?string $navigationIcon = 'heroicon-o-collection';
 
     public static function form(Form $form): Form
@@ -94,22 +99,22 @@ class InvListaProductoResource extends Resource
     {
         return $table->columns([
             TextColumn::make('li_id')->size('sm')
-                ->label('Codigo')
+                ->label('Código')
                 ->sortable()
                 ->searchable(),
             TextColumn::make('institucion.cliente.org_descripcion')->size('sm')
-                ->label('Organizacion')
+                ->label('Cliente')
                 ->searchable()
                 ->toggleable(),
             TextColumn::make('institucion.ins_descripcion')->size('sm')
-                ->label('Institucion')
+                ->label('Local')
                 ->searchable()
                 ->toggleable(),
             TextColumn::make('li_nombre')->size('sm')
                 ->label('Nombre')
                 ->searchable(),
             TextColumn::make('li_descripcion')->size('sm')
-                ->label('Descripcion')
+                ->label('Descripción')
                 ->searchable(),
             // Cuenta 'items' y no 'productos': en Lista los dos existen y
             // 'productos' es un belongsToMany que incluiria los items inactivos,
@@ -119,7 +124,7 @@ class InvListaProductoResource extends Resource
                 ->sortable()
                 ->label('Productos'),
             TextColumn::make('li_created_at')->size('sm')
-                ->label('Fecha de Creación')
+                ->label('Creado')
                 ->sortable()
                 ->searchable(),
             BooleanColumn::make('li_activo')

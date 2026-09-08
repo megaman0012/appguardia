@@ -4,9 +4,9 @@ namespace App\Filament\Resources\TurnoResource\Pages;
 
 use App\Filament\Resources\TurnoResource;
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 
-class ListTurnos extends ListRecords
+class ListTurnos extends ListadoBase
 {
     protected static string $resource = TurnoResource::class;
 

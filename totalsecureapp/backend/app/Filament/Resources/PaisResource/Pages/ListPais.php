@@ -4,9 +4,9 @@ namespace App\Filament\Resources\PaisResource\Pages;
 
 use App\Filament\Resources\PaisResource;
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 
-class ListPais extends ListRecords
+class ListPais extends ListadoBase
 {
     protected static string $resource = PaisResource::class;
 

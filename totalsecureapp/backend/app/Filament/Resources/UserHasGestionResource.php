@@ -33,10 +33,15 @@ use Session;
 class UserHasGestionResource extends Resource{
 
     public static function getNavigationGroup(): ?string{
-        return 'Configuracion Sistema';
+        return 'Configuración';
     }
-    protected static ?int $navigationSort = 8;
-    protected static ?string $navigationLabel = 'Usuarios > Gestion';
+    protected static ?int $navigationSort = 4;
+    // Filament arma con esto las migas, el boton «Crear …» y el aviso de
+    // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
+    // «Producto Catalogos» o «User Has Biometrias».
+    protected static ?string $modelLabel = 'gestión';
+    protected static ?string $pluralModelLabel = 'gestiones';
+    protected static ?string $navigationLabel = 'Gestiones';
     protected static ?string $model = user_has_gestions::class;
 
     /**
@@ -77,12 +82,12 @@ class UserHasGestionResource extends Resource{
         return $table
             ->columns([
                 TextColumn::make('ug_code')->size('sm')
-                    ->label('Codigo')
+                    ->label('Código')
                     ->searchable()
                     ->toggleable()
                     ->searchable(),
                 TextColumn::make('usuario.usu_cedula')->size('sm')
-                    ->label('Cedula')
+                    ->label('Cédula')
                     ->searchable()
                     ->toggleable()
                     ->searchable(),

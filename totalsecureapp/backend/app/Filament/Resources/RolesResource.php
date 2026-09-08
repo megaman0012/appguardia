@@ -18,10 +18,15 @@ class RolesResource extends Resource
 {
     public static function getNavigationGroup(): ?string
     {
-        return 'Configuracion Sistema'; // Agrupar bajo "Geografía"
+        return 'Configuración'; // Agrupar bajo "Geografía"
     }
     protected static ?int $navigationSort = 5;
-    protected static ?string $navigationLabel = 'Perfiles';
+    // Filament arma con esto las migas, el boton «Crear …» y el aviso de
+    // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
+    // «Producto Catalogos» o «User Has Biometrias».
+    protected static ?string $modelLabel = 'perfil';
+    protected static ?string $pluralModelLabel = 'perfiles';
+    protected static ?string $navigationLabel = 'Perfiles y permisos';
     protected static ?string $model = roles::class;
     protected static bool $shouldRegisterNavigation = false;
 

@@ -33,7 +33,7 @@ use Session;
 class InvMovimientoDetalleResource extends Resource
 {
     public static function getNavigationGroup(): ?string {
-        return 'Reporteria';
+        return 'Inventario';
     }
 
     protected static ?string $model = MovimientoDetalle::class;
@@ -53,8 +53,13 @@ class InvMovimientoDetalleResource extends Resource
      */
     protected const RELACIONES_TABLA = ['producto'];
 
-    protected static ?int $navigationSort = 14;
-    protected static ?string $navigationLabel = 'Movimiento Detalle';
+    protected static ?int $navigationSort = 4;
+    // Filament arma con esto las migas, el boton «Crear …» y el aviso de
+    // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
+    // «Producto Catalogos» o «User Has Biometrias».
+    protected static ?string $modelLabel = 'detalle';
+    protected static ?string $pluralModelLabel = 'detalles';
+    protected static ?string $navigationLabel = 'Detalle de movimiento';
     protected static ?string $navigationIcon = 'heroicon-o-collection';
     protected static bool $shouldRegisterNavigation = false;
 
@@ -65,7 +70,7 @@ class InvMovimientoDetalleResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('md_id')->size('sm')
-                    ->label('Codigo')
+                    ->label('Código')
                     ->searchable()
                     ->toggleable(),
                 TextColumn::make('producto.ipc_nombre')->size('sm')
@@ -73,7 +78,7 @@ class InvMovimientoDetalleResource extends Resource
                     ->searchable()
                     ->toggleable(),
                 TextColumn::make('producto.ipc_descripcion')->size('sm')
-                    ->label('Descripcion')
+                    ->label('Descripción')
                     ->searchable()
                     ->toggleable()
                     ->limit(20)
@@ -81,7 +86,7 @@ class InvMovimientoDetalleResource extends Resource
                     // dejaba la pantalla en 500 al construir el tooltip.
                     ->tooltip(fn ($record) => optional($record->producto)->ipc_descripcion),
                 TextColumn::make('producto.ipc_especificacion')->size('sm')
-                    ->label('Especificacion')
+                    ->label('Especificación')
                     ->searchable()
                     ->toggleable(),
                 BooleanColumn::make('md_recibido')
@@ -96,7 +101,7 @@ class InvMovimientoDetalleResource extends Resource
                     ->searchable()
                     ->toggleable(),
                 TextColumn::make('md_observacion')->size('sm')
-                    ->label('Observacion')
+                    ->label('Observación')
                     ->searchable()
                     ->limit(30)
                     ->tooltip(fn ($record) => $record->md_observacion),

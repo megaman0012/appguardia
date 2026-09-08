@@ -154,15 +154,15 @@ class InstitucionMarcadoresRelationManager extends RelationManager
         return $table
             ->columns([
                 TextColumn::make('im_code')->size('sm')
-                    ->label('Codigo')
+                    ->label('Código')
                     ->sortable()
                     ->searchable(),
                 TextColumn::make('institucion.cliente.org_descripcion')->size('sm')
-                    ->label('Organizacion')
+                    ->label('Cliente')
                     ->toggleable()
                     ->searchable(false),
                 TextColumn::make('institucion.ins_descripcion')->size('sm')
-                    ->label('Institucion')
+                    ->label('Local')
                     ->toggleable()
                     ->searchable(false),
                 TextColumn::make('im_tipo')->size('sm')

@@ -86,13 +86,13 @@ class InstitucionMarcadoresResource extends Resource
             ->columns([
                 TextColumn::make('im_code')->size('sm')
                     ->sortable()
-                    ->label('Codigo'),
+                    ->label('Código'),
                 TextColumn::make('institucion.cliente.org_descripcion')->size('sm')
-                    ->label('Organizacion')
+                    ->label('Cliente')
                     ->toggleable()
                     ->searchable(),
                 TextColumn::make('institucion.ins_descripcion')->size('sm')
-                    ->label('Institucion')
+                    ->label('Local')
                     ->toggleable()
                     ->searchable(),
                 TextColumn::make('im_tipo')->size('sm')

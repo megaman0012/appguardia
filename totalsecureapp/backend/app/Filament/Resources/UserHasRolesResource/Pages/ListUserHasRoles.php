@@ -4,9 +4,9 @@ namespace App\Filament\Resources\UserHasRolesResource\Pages;
 
 use App\Filament\Resources\UserHasRolesResource;
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 
-class ListUserHasRoles extends ListRecords
+class ListUserHasRoles extends ListadoBase
 {
     protected static string $resource = UserHasRolesResource::class;
 

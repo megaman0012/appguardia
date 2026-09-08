@@ -4,9 +4,9 @@ namespace App\Filament\Resources\AccesoResource\Pages;
 
 use App\Filament\Resources\AccesoResource;
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 
-class ListAccesos extends ListRecords {
+class ListAccesos extends ListadoBase {
     protected static string $resource = AccesoResource::class;
     protected function getActions(): array { return []; }
 }

@@ -25,7 +25,12 @@ use Modules\Administracion\Models\Ciudad;
 class CiudadResource extends Resource
 {
     protected static ?string $model = Ciudad::class;
-    protected static ?string $navigationLabel = 'Ciudad';
+    // Filament arma con esto las migas, el boton «Crear …» y el aviso de
+    // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
+    // «Producto Catalogos» o «User Has Biometrias».
+    protected static ?string $modelLabel = 'ciudad';
+    protected static ?string $pluralModelLabel = 'ciudades';
+    protected static ?string $navigationLabel = 'Ciudades';
     protected static ?string $navigationIcon = 'heroicon-o-office-building';
     protected static ?int $navigationSort = 3;
 
@@ -33,7 +38,7 @@ class CiudadResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return 'Ubicacion Geografica';
+        return 'Ubicación geográfica';
     }
 
     public static function form(Form $form): Form

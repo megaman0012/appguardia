@@ -5,9 +5,9 @@ namespace App\Filament\Resources\InstitucionMarcadoresResource\Pages;
 use App\Filament\Resources\InstitucionMarcadoresResource;
 use App\Filament\Resources\OrganizacionInstitucionResource;
 use Filament\Pages\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Pages\ListadoBase;
 
-class ListInstitucionMarcadores extends ListRecords
+class ListInstitucionMarcadores extends ListadoBase
 {
     protected static string $resource = InstitucionMarcadoresResource::class;
 
