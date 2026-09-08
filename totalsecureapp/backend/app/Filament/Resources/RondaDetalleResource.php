@@ -7,6 +7,7 @@ use App\Filament\Resources\RondaDetalleResource\RelationManagers;
 use Modules\Administracion\Models\ronda_detalle;
 
 use Filament\Resources\Form;
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 
@@ -110,7 +111,9 @@ class RondaDetalleResource extends Resource
                     ->color('success')
                     ->visible(fn($record) => !is_null($record->rd_im_code))
             ])
-            ->bulkActions([]);
+            ->bulkActions([
+                Descarga::enLote('ronda-detalle'),
+            ]);
     }
 
     public static function getRelations(): array { return []; }

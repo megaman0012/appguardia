@@ -10,7 +10,7 @@ class ListVacantes extends ListadoBase
 {
     protected static string $resource = VacanteResource::class;
 
-    protected function getActions(): array
+    protected function accionesPropias(): array
     {
         return [
             Actions\CreateAction::make()->label('Pedir refuerzo'),

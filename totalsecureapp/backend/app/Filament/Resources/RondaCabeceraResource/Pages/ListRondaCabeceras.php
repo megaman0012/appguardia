@@ -8,5 +8,5 @@ use App\Filament\Pages\ListadoBase;
 
 class ListRondaCabeceras extends ListadoBase {
     protected static string $resource = RondaCabeceraResource::class;
-    protected function getActions(): array { return []; }
+    protected function accionesPropias(): array { return []; }
 }

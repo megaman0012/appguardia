@@ -8,6 +8,7 @@ use Modules\Acceso\Models\roles;
 use Modules\Acceso\Models\users;
 use Filament\Forms;
 use Filament\Resources\Form;
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 use Filament\Tables;
@@ -60,6 +61,7 @@ class RolesResource extends Resource
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
+                Descarga::enLote('roles'),
                 Tables\Actions\DeleteBulkAction::make(),
             ]);
     }

@@ -12,7 +12,7 @@ class ListInvMovimientoDetalles extends ListadoBase
 {
     protected static string $resource = InvMovimientoDetalleResource::class;
 
-    protected function getActions(): array {
+    protected function accionesPropias(): array {
         return [
             Actions\Action::make('backmovi')
                 ->label('Volver a Movimientos')

@@ -31,7 +31,7 @@ use Session;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Modules\Administracion\Models\UserHasInstitucion;
-use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use App\Filament\Tables\Descarga;
 
 class AlertasResource extends Resource
 {
@@ -123,8 +123,7 @@ class AlertasResource extends Resource
                     ->color('primary'),
             ])
             ->bulkActions([
-                ExportBulkAction::make()
-                    ->label('Exportar a Excel'),
+                Descarga::enLote('alertas'),
             ]);
     }
 

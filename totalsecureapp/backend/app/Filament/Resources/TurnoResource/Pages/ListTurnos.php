@@ -10,7 +10,7 @@ class ListTurnos extends ListadoBase
 {
     protected static string $resource = TurnoResource::class;
 
-    protected function getActions(): array
+    protected function accionesPropias(): array
     {
         return [Actions\CreateAction::make()->label('Programar turno')];
     }

@@ -13,6 +13,7 @@ use App\Filament\Resources\UsersResource\RelationManagers;
 use Modules\Acceso\Models\users;
 
 use Filament\Resources\Form;
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 
@@ -80,6 +81,42 @@ class UsersResource extends Resource
                     ->label('Estado')
                     ->required()
                     ->default(true),
+
+                // ⚠️ **El rol y los locales van en el alta, y antes no estaban.**
+                // Un usuario necesita cuatro piezas para poder entrar: la fila
+                // en `users`, el rol, una gestion abierta y el vinculo al local.
+                // Este formulario creaba **solo la primera**, asi que quien se
+                // daba de alta desde aca no podia iniciar sesion -- el login
+                // responde «El usuario no tiene una gestion activa» -- y la app
+                // no le dejaba registrar nada. Las otras tres las arma
+                // `CreateUsers::afterCreate()`.
+                //
+                // En edicion no se muestran: cambiar el rol o los locales de
+                // alguien que ya existe se hace desde «Perfil por usuario» y
+                // «Locales por usuario», que llevan su propio historial.
+                Select::make('rol')
+                    ->label('Perfil')
+                    ->options(fn () => \Illuminate\Support\Facades\DB::table('roles')
+                        ->where('estado', 1)
+                        ->orderBy('name')
+                        ->pluck('name', 'name'))
+                    ->required()
+                    ->default('Vigilante')
+                    ->dehydrated(false)
+                    ->visibleOn('create')
+                    ->helperText('Define qué módulos ve en la app y en el panel'),
+
+                Select::make('locales')
+                    ->label('Locales')
+                    ->multiple()
+                    ->options(fn () => \Illuminate\Support\Facades\DB::table('organizacion_institucion')
+                        ->where('ins_estado', true)
+                        ->orderBy('ins_descripcion')
+                        ->pluck('ins_descripcion', 'ins_code'))
+                    ->searchable()
+                    ->dehydrated(false)
+                    ->visibleOn('create')
+                    ->helperText('Sin al menos uno, la app no le permite registrar rondas, accesos ni marcajes'),
 
                 TextInput::make('usu_whatsapp')
                     ->label('WhatsApp')
@@ -278,7 +315,9 @@ class UsersResource extends Resource
                             ->send();
                     }),
             ])
-            ->bulkActions([]);
+            ->bulkActions([
+                Descarga::enLote('users'),
+            ]);
     }
 
     public static function getRelations(): array { return []; }

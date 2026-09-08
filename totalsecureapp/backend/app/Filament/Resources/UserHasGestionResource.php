@@ -15,6 +15,7 @@ use Modules\Acceso\Models\user_has_gestions;
 use Modules\Acceso\Models\users;
 
 use Filament\Resources\Form;
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 
@@ -123,7 +124,9 @@ class UserHasGestionResource extends Resource{
                     ->url(fn ($record) => route('filament.resources.user-has-gestions.edit1', $record))
                     ->color('primary')
             ])
-            ->bulkActions([ ])
+            ->bulkActions([
+                Descarga::enLote('user-has-gestion'),
+            ])
             ;
     }
 

@@ -10,7 +10,7 @@ class ListPlantillas extends ListadoBase
 {
     protected static string $resource = PlantillaResource::class;
 
-    protected function getActions(): array
+    protected function accionesPropias(): array
     {
         return [Actions\CreateAction::make()->label('Nuevo cuadrante')];
     }

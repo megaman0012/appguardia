@@ -11,6 +11,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TimePicker;
 use Filament\Notifications\Notification;
 use Filament\Resources\Form;
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 use Filament\Tables;
@@ -245,7 +246,9 @@ class VacanteResource extends Resource
 
                 Tables\Actions\ViewAction::make(),
             ])
-            ->bulkActions([]);
+            ->bulkActions([
+                Descarga::enLote('vacante'),
+            ]);
     }
 
     /** @return array<int, string> */

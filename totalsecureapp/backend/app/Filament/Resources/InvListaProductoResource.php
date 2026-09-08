@@ -13,6 +13,7 @@ use Session;
 use App\Filament\Resources\InvListaProductoResource\Pages;
 use App\Filament\Resources\InvListaProductoResource\RelationManagers\ProductosRelationManager;
 use Modules\Administracion\Models\Lista;
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Resources\Form;
 use Filament\Resources\Table;
@@ -137,7 +138,9 @@ class InvListaProductoResource extends Resource
     // Abre mostrando solo los activos. Ver App\Filament\Tables\FiltroDeEstado.
     FiltroDeEstado::make('li_activo', true, 'Estado'),
 ])
-->bulkActions([]);
+->bulkActions([
+                Descarga::enLote('inv-lista-producto'),
+            ]);
     }
 
     public static function getRelations(): array

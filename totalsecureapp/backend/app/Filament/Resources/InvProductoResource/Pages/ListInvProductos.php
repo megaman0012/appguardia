@@ -10,7 +10,7 @@ class ListInvProductos extends ListadoBase
 {
     protected static string $resource = InvProductoResource::class;
 
-    protected function getActions(): array {
+    protected function accionesPropias(): array {
         return [ Actions\CreateAction::make()->label('Nuevo Producto'), ];
     }
 

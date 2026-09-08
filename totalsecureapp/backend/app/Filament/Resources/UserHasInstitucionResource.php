@@ -13,6 +13,7 @@ use App\Filament\Resources\UserHasInstitucionResource\RelationManagers;
 
 use App\helpers;
 use Filament\Resources\Form;
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 
@@ -147,7 +148,9 @@ class UserHasInstitucionResource extends Resource
                         helpers::control_log_filament($record->toArray(), 'UserHasInstitucionResource', 'Delete','NOTICE', 'Eliminar User Has Institucion');
                     }),
             ])
-            ->bulkActions([]);
+            ->bulkActions([
+                Descarga::enLote('user-has-institucion'),
+            ]);
     }
 
     public static function getRelations(): array

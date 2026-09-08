@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\AvisoResource\Pages;
 use App\Support\PerfilPanel;
 use Filament\Resources\Form;
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 use Filament\Tables;
@@ -100,7 +101,9 @@ class AvisoResource extends Resource
                         ->where('ae_resultado', '!=', AvisoEnvio::ENVIADO)),
             ])
             ->actions([])
-            ->bulkActions([]);
+            ->bulkActions([
+                Descarga::enLote('aviso'),
+            ]);
     }
 
     public static function getPages(): array

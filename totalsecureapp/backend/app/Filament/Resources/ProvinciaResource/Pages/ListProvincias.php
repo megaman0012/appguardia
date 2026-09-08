@@ -10,7 +10,7 @@ class ListProvincias extends ListadoBase
 {
     protected static string $resource = ProvinciaResource::class;
 
-    protected function getActions(): array
+    protected function accionesPropias(): array
     {
         return [Actions\CreateAction::make()];
     }

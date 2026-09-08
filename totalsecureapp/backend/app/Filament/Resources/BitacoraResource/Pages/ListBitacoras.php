@@ -9,5 +9,5 @@ use App\Filament\Pages\ListadoBase;
 class ListBitacoras extends ListadoBase
 {
     protected static string $resource = BitacoraResource::class;
-    protected function getActions(): array { return []; }
+    protected function accionesPropias(): array { return []; }
 }

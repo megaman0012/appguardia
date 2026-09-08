@@ -8,5 +8,5 @@ use App\Filament\Pages\ListadoBase;
 
 class ListAccesos extends ListadoBase {
     protected static string $resource = AccesoResource::class;
-    protected function getActions(): array { return []; }
+    protected function accionesPropias(): array { return []; }
 }

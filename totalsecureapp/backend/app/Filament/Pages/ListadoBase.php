@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Pages\ListRecords;
 
 /**
@@ -29,5 +30,48 @@ abstract class ListadoBase extends ListRecords
     protected function getBreadcrumbs(): array
     {
         return [];
+    }
+
+    /**
+     * Acciones de la cabecera: las propias del listado mas la descarga.
+     *
+     * ⚠️ **Las pantallas NO deben sobrescribir esto**, sino
+     * `accionesPropias()`. Las 27 sobrescribian `getActions()` directamente, y
+     * agregar la descarga a cada una habria sido copiar la misma linea 27 veces
+     * -- con la garantia de que el listado numero 28 se olvida.
+     */
+    protected function getActions(): array
+    {
+        $acciones = $this->accionesPropias();
+
+        if ($this->nombreDeDescarga() !== null) {
+            $acciones[] = Descarga::enCabecera($this->nombreDeDescarga());
+        }
+
+        return $acciones;
+    }
+
+    /**
+     * Lo que cada listado quiera poner arriba: «Crear», «Volver a Rondas»…
+     *
+     * @return array<int,mixed>
+     */
+    protected function accionesPropias(): array
+    {
+        return [];
+    }
+
+    /**
+     * Base del nombre del archivo, o `null` para no ofrecer descarga.
+     *
+     * Por defecto se deriva del recurso, asi que un listado nuevo tiene
+     * descarga sin hacer nada. Devolver `null` es para los listados donde no
+     * tiene sentido -- una pantalla de configuracion, por ejemplo.
+     */
+    protected function nombreDeDescarga(): ?string
+    {
+        return \Illuminate\Support\Str::slug(
+            (string) (static::$resource)::getPluralModelLabel()
+        );
     }
 }

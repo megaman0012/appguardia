@@ -10,6 +10,7 @@ use App\Filament\Resources\OrganizacionResource\Pages;
 use App\Filament\Resources\OrganizacionResource\RelationManagers;
 use Modules\Administracion\Models\Organizacion;
 use Filament\Resources\Form;
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 
@@ -110,7 +111,9 @@ class OrganizacionResource extends Resource {
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])
-            ->bulkActions([]);
+            ->bulkActions([
+                Descarga::enLote('organizacion'),
+            ]);
     }
 
     public static function getRelations(): array { return []; }

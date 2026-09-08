@@ -31,7 +31,7 @@ use Filament\Tables\Columns\IconColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Modules\Administracion\Models\UserHasInstitucion;
-use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use App\Filament\Tables\Descarga;
 use Session;
 class AccesoResource extends Resource
 {
@@ -224,8 +224,7 @@ class AccesoResource extends Resource
                     ->visible(fn ($record) => filled($record->ac_lat_sal)),
             ])
             ->bulkActions([
-                ExportBulkAction::make()
-                    ->label('Exportar a Excel'),
+                Descarga::enLote('acceso'),
             ]);
     }
 

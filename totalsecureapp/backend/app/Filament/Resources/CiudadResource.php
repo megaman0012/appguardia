@@ -8,6 +8,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Form;
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 use Filament\Tables;
@@ -66,7 +67,9 @@ class CiudadResource extends Resource
             ])
             ->defaultSort('cd_nombre')
             ->actions([Tables\Actions\EditAction::make()])
-            ->bulkActions([]);
+            ->bulkActions([
+                Descarga::enLote('ciudad'),
+            ]);
     }
 
     public static function getPages(): array

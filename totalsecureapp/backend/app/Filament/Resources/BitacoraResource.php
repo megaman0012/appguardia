@@ -6,6 +6,7 @@ use App\Filament\Resources\BitacoraResource\Pages;
 use App\Filament\Resources\BitacoraResource\RelationManagers;
 use Filament\Forms;
 use Filament\Resources\Form;
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 use Filament\Tables;
@@ -86,7 +87,9 @@ class BitacoraResource extends Resource
                 ->icon('heroicon-o-map')
                 ->color('primary'),
             ])
-            ->bulkActions([]);
+            ->bulkActions([
+                Descarga::enLote('bitacora'),
+            ]);
     }
 
     public static function getRelations(): array { return []; }

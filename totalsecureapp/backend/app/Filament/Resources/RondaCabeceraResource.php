@@ -30,7 +30,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Actions\Action;
 use Modules\Administracion\Models\UserHasInstitucion;
-use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use App\Filament\Tables\Descarga;
 use Session;
 
 class RondaCabeceraResource extends Resource
@@ -138,8 +138,7 @@ class RondaCabeceraResource extends Resource
                 )
             ])
             ->bulkActions([
-                ExportBulkAction::make()
-                    ->label('Exportar a Excel'),
+                Descarga::enLote('ronda-cabecera'),
             ]);
     }
 

@@ -10,5 +10,5 @@ class ListAlertas extends ListadoBase
 {
     protected static string $resource = AlertasResource::class;
 
-    protected function getActions(): array { return []; }
+    protected function accionesPropias(): array { return []; }
 }

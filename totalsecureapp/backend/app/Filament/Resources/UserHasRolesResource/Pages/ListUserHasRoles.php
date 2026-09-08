@@ -10,7 +10,7 @@ class ListUserHasRoles extends ListadoBase
 {
     protected static string $resource = UserHasRolesResource::class;
 
-    protected function getActions(): array {
+    protected function accionesPropias(): array {
         return [
             Actions\CreateAction::make()->label('Asignar Perfil'),
         ];

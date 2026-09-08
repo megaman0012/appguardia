@@ -7,6 +7,7 @@ use App\Support\PerfilPanel;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Form;
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 use Filament\Tables;
@@ -67,7 +68,9 @@ class PaisResource extends Resource
             ])
             ->defaultSort('pa_nombre')
             ->actions([Tables\Actions\EditAction::make()])
-            ->bulkActions([]);
+            ->bulkActions([
+                Descarga::enLote('pais'),
+            ]);
     }
 
     public static function getPages(): array

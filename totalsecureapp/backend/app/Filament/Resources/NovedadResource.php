@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Modules\Administracion\Models\Novedad;
 use Modules\Administracion\Models\UserHasInstitucion;
-use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use App\Filament\Tables\Descarga;
 use Session;
 
 class NovedadResource extends Resource
@@ -113,8 +113,7 @@ class NovedadResource extends Resource
                     ->color('primary'),
             ])
             ->bulkActions([
-                ExportBulkAction::make()
-                    ->label('Exportar a Excel'),
+                Descarga::enLote('novedad'),
             ]);
     }
 

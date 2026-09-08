@@ -13,6 +13,7 @@ use Filament\Forms\Components\Toggle;
 use Illuminate\Database\Eloquent\Builder;
 use Modules\Administracion\Models\ProductoCatalogo;
 use Modules\Administracion\Models\UserHasInstitucion;
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Resources\Form;
 use Filament\Resources\Table;
@@ -157,7 +158,9 @@ class InvProductoResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])
-            ->bulkActions([]);
+            ->bulkActions([
+                Descarga::enLote('inv-producto'),
+            ]);
     }
 
     public static function getRelations(): array { return []; }

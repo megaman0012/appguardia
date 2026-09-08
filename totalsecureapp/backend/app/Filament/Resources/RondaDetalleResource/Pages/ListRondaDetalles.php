@@ -12,7 +12,7 @@ class ListRondaDetalles extends ListadoBase
 {
     protected static string $resource = RondaDetalleResource::class;
 
-    protected function getActions(): array {
+    protected function accionesPropias(): array {
         return [
             Actions\Action::make('Volver a Rondas')
             ->label('Volver a Rondas')

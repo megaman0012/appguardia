@@ -10,7 +10,7 @@ class ListPais extends ListadoBase
 {
     protected static string $resource = PaisResource::class;
 
-    protected function getActions(): array
+    protected function accionesPropias(): array
     {
         return [Actions\CreateAction::make()];
     }

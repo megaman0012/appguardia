@@ -12,6 +12,7 @@ use Modules\Administracion\Models\OrganizacionInstitucion;
 use Modules\Administracion\Models\Organizacion;
 use Session;
 use Filament\Resources\Form;
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 
@@ -196,7 +197,9 @@ class OrganizacionInstitucionResource extends Resource
                     : route('filament.resources.organizacion-institucions.view', $record))
                 ->color('primary')
             ])
-            ->bulkActions([]);
+            ->bulkActions([
+                Descarga::enLote('organizacion-institucion'),
+            ]);
     }
 
     public static function getRelations(): array {

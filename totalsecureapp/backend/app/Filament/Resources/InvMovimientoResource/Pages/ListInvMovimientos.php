@@ -11,7 +11,7 @@ use Filament\Forms\Components\Toggle;
 class ListInvMovimientos extends ListadoBase
 {
     protected static string $resource = InvMovimientoResource::class;
-    protected function getActions(): array { return []; }
+    protected function accionesPropias(): array { return []; }
     protected function getTitle(): string {
         return 'Movimientos Cabecera';
     }

@@ -6,6 +6,7 @@ use App\Filament\Resources\InvMovimientoDetalleResource\Pages;
 use App\Support\PerfilPanel;
 use Filament\Forms;
 use Filament\Resources\Form;
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 use Filament\Tables;
@@ -122,7 +123,9 @@ class InvMovimientoDetalleResource extends Resource
             ])
             ->filters([])
             ->actions([])
-            ->bulkActions([]);
+            ->bulkActions([
+                Descarga::enLote('inv-movimiento-detalle'),
+            ]);
     }
 
     public static function getRelations(): array { return []; }

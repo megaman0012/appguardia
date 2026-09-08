@@ -11,7 +11,7 @@ class ListInstitucionMarcadores extends ListadoBase
 {
     protected static string $resource = InstitucionMarcadoresResource::class;
 
-    protected function getActions(): array
+    protected function accionesPropias(): array
     {
         return [
             Actions\Action::make('Volver a Intituciones')

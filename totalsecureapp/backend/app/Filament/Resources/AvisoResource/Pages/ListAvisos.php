@@ -26,7 +26,7 @@ class ListAvisos extends ListadoBase
         return [EstadoWhatsapp::class];
     }
 
-    protected function getActions(): array
+    protected function accionesPropias(): array
     {
         return [
             // Probar sin esperar a que falte un guardia: si la sesión se cayó,

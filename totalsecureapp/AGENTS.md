@@ -1536,6 +1536,130 @@ proxima compilacion. Lo que si aplica ya, sin recompilar, son los dos permisos,
 la correccion de coordenadas, la validacion del formulario y los arreglos del
 backend de alertas.
 
+## Descarga en los 27 listados (2026-09-08)
+
+`pxlrbt/filament-excel` **ya estaba instalado**, pero solo con
+`ExportBulkAction` y solo en 6 de 27 pantallas.
+
+**Por que no servia.** Una accion masiva **exige tildar filas primero** y
+exporta unicamente lo tildado, con la casilla de «seleccionar todo» limitada a
+la pagina visible (25 filas). Para llevarse las 38.247 filas de «Locales por
+usuario» habia que paginar y tildar **1.530 veces**. De ahi que se leyera como
+«reporteria no tiene opcion de descarga»: la que habia no servia para descargar
+un reporte.
+
+Ahora hay dos, en las 27:
+
+- **`Descarga::enCabecera()`** — boton «Descargar» arriba, que se lleva el
+  resultado **completo de la consulta tal como esta filtrada**, sin tildar nada.
+- **`Descarga::enLote()`** — la accion masiva de siempre, para unas pocas filas.
+
+### ⚠️ La de Pages, no la de Tables
+
+El paquete trae `Actions\Tables\ExportAction` y `Actions\Pages\ExportAction`.
+Solo la segunda extiende `Filament\Pages\Actions\Action`; con la de Tables,
+Filament 2 revienta al dibujar la cabecera con «Method ExportAction::livewire
+does not exist». **Filament 2 no tiene acciones de cabecera en la tabla**: las de
+arriba salen del `getActions()` de la pagina.
+
+Por eso la descarga vive en `ListadoBase`, de donde heredan las 27, y las
+pantallas sobrescriben **`accionesPropias()`** y no `getActions()`. Agregar la
+misma linea 27 veces garantizaba que el listado 28 se olvidara.
+
+### `fromTable()`: las columnas que se ven, con sus nombres
+
+Los 6 exports que ya existian llamaban `ExportBulkAction::make()` sin configurar
+nada, y eso volcaba **todos los atributos del modelo con el nombre crudo de la
+columna**: el cliente recibia un Excel con encabezados `al_ins_code`,
+`al_estado_alerta`, `al_created_user`. Con `fromTable()` el archivo lleva las
+columnas visibles y las etiquetas en castellano.
+
+El alcance se respeta solo: el export corre sobre la consulta del listado, que
+ya pasa por `getEloquentQuery()` y `PerfilPanel`. Un Lider Operativo descarga su
+pais, no la base entera.
+
+### Lo que mide, y el techo que tiene
+
+Con el listado mas grande de hoy, «Locales por usuario» con 38.247 filas:
+
+| | |
+|---|---|
+| Archivo | 1,1 MB xlsx |
+| Tiempo | **22 s** |
+| Pico de memoria | **263 MB** de 512 |
+
+El pico no lo pone el escritor del Excel sino la hidratacion de los modelos:
+recorrer las mismas filas por lotes sin exportar usa 46 MB, y en CSV el pico
+sigue en 214 MB. Bajar el tamaño de lote no lo arregla.
+
+⚠️ **Dos descargas grandes a la vez agotan la memoria.** Como paliativo,
+`Descarga` sube el techo a 1 GB solo para esa peticion. **Lo correcto es
+encolarla** (`->queue()` del propio paquete), y para eso hace falta un worker:
+hoy `QUEUE_CONNECTION=sync` y no hay ninguno. El tiempo no es problema:
+`max_execution_time` es 0 y el nginx del host da 300 s.
+
+## Carga masiva de usuarios (2026-09-08)
+
+`UsuarioImportService` + dos botones en el listado de Usuarios: **Revisar
+archivo** (no escribe nada) y **Cargar usuarios**, mas **Modelo de carga**.
+
+### ⚠️ Un usuario necesita CUATRO piezas, no una
+
+Es lo que hace que la carga masiva valga la pena, y lo que se olvida al hacerlo
+a mano:
+
+1. La fila en `users` con `usu_state = 1`.
+2. El rol en `user_has_roles`.
+3. Una gestion **abierta** en `user_has_gestions` (`ug_finish = false`). Sin
+   ella el login responde «El usuario no tiene una gestion activa».
+4. El vinculo en `user_has_institucion`. Sin el, la app movil no puede registrar
+   nada y la API del portal responde 403.
+
+### 🐛 El alta individual del panel creaba solo la primera
+
+Y por eso **un usuario dado de alta desde el panel no podia entrar**: quedaba
+sin rol y sin gestion abierta. El formulario tampoco pedia esas cosas. Ahora
+pide Perfil (obligatorio) y Locales, y `CreateUsers::afterCreate()` arma las
+otras tres, con la misma logica que `usuario:crear` y que la carga masiva.
+
+### 🐛 Y todos salian con la contraseña `123456`
+
+`mutateFormDataBeforeCreate()` hacia `Hash::make('123456')`: **la misma clave
+para todos** los usuarios creados desde el panel, y sin mostrarla en ningun
+lado, asi que nadie sabia cual era. Ahora se genera una por persona y se muestra
+**una sola vez** al terminar.
+
+⚠️ **Hay que hashear a mano en este recurso.** `UsersResource` usa
+`Modules\Acceso\Models\users`, que **no** tiene el evento `saving` que hashea
+-- el que si lo tiene es el de `Modules\MobileApp`, y en el de Acceso ese
+`boot()` esta comentado. Asignar la clave en claro la guardaba **en texto
+plano**; lo detecte al ver la clave legible en el SQL de un test que fallaba por
+otra cosa.
+
+### Decisiones del formato
+
+- **La clave NO va en el archivo de entrada**, a proposito: un CSV con
+  contraseñas se manda por correo, queda en Descargas y en el historial de quien
+  lo abrio. Se genera una por persona y se entrega una sola vez.
+- **El correo es opcional.** 505 de los 879 usuarios reales lo tienen vacio, y
+  la columna **no es unica en la practica** (hay 3 correos repetidos):
+  exigirlo haria inutilizable la carga.
+- **Los locales se separan con «|»**, no con coma, porque el archivo ES un CSV.
+  Y ojo: Excel en español guarda con **punto y coma**, asi que ahi el «;» ya se
+  lo comio el separador de campos.
+- **Se acepta el local por codigo o por nombre**, y el rol sin distinguir
+  mayusculas ni tildes. El modelo descargable sale con los locales y roles
+  **reales de esta base**, que es lo que evita la mitad de los errores.
+- **Todo o nada**: si una fila tiene un error de formato no se crea ninguno. Una
+  nomina cargada a medias es peor que no cargarla, porque no se sabe donde
+  quedo. La excepcion es una cedula que ya existe: esa se omite con aviso y el
+  resto entra.
+- **El BOM de Excel se quita** al leer; sin eso la primera columna se llama
+  `\xEF\xBB\xBFcedula` y no se reconoce ninguna.
+
+19 tests en `CargaMasivaDeUsuariosTest`, 4 en `AltaDeUsuarioEnPanelTest`, 6 en
+`DescargaDeListadosTest`.
+
 ## repomix: empaquetar el repo como contexto (2026-09-08)
 
 `repomix.config.json` en la raiz. Corre con `npx repomix` (no hace falta

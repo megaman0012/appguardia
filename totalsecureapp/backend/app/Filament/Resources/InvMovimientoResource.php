@@ -12,7 +12,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Modules\Administracion\Models\UserHasInstitucion;
-use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use App\Filament\Tables\Descarga;
 use Session;
 use App\Filament\Resources\InvMovimientoResource\Pages;
 use Modules\Administracion\Models\MovimientoCabecera;
@@ -192,8 +192,7 @@ class InvMovimientoResource extends Resource
                     ->visible(fn ($record) => filled($record->mc_lat) && filled($record->mc_lng)),
             ])
             ->bulkActions([
-                ExportBulkAction::make()
-                    ->label('Exportar a Excel'),
+                Descarga::enLote('inv-movimiento'),
             ]);
     }
 

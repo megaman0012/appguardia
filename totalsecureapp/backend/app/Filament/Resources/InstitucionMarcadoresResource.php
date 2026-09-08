@@ -10,6 +10,7 @@ use Modules\Administracion\Models\InstitucionMarcadores;
 use Modules\Administracion\Models\OrganizacionInstitucion;
 
 use Filament\Resources\Form;
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 
@@ -139,7 +140,9 @@ class InstitucionMarcadoresResource extends Resource
                     )
                 ),
             ])
-            ->bulkActions([]);
+            ->bulkActions([
+                Descarga::enLote('institucion-marcadores'),
+            ]);
     }
 
     public static function getRelations(): array { return []; }

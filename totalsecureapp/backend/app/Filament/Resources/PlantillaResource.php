@@ -10,6 +10,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Form;
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 use Filament\Tables;
@@ -110,7 +111,9 @@ class PlantillaResource extends Resource
                     ->url(fn (Plantilla $record) => static::getUrl('grilla', ['record' => $record])),
                 Tables\Actions\EditAction::make(),
             ])
-            ->bulkActions([]);
+            ->bulkActions([
+                Descarga::enLote('plantilla'),
+            ]);
     }
 
     public static function getRelations(): array

@@ -14,6 +14,7 @@ use Modules\Acceso\Models\users;
 use Modules\Acceso\Models\Role;
 
 use Filament\Resources\Form;
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 
@@ -105,7 +106,9 @@ class UserHasRolesResource extends Resource
                     helpers::control_log_filament($record->toArray(), 'UserHasRolesResource', 'Delete','NOTICE', 'Eliminar User Has Roles');
                 }),
             ])
-            ->bulkActions([]);
+            ->bulkActions([
+                Descarga::enLote('user-has-roles'),
+            ]);
     }
 
     public static function getRelations(): array { return []; }

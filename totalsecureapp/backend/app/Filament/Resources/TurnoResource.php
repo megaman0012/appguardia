@@ -11,6 +11,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TimePicker;
 use Filament\Resources\Form;
+use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 use Filament\Tables;
@@ -162,7 +163,9 @@ class TurnoResource extends Resource
             ])
             ->defaultSort('tu_fecha', 'desc')
             ->actions([Tables\Actions\EditAction::make()])
-            ->bulkActions([]);
+            ->bulkActions([
+                Descarga::enLote('turno'),
+            ]);
     }
 
     public static function getPages(): array

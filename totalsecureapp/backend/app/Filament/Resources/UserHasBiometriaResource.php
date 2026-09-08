@@ -25,7 +25,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Modules\Administracion\Models\user_has_biometria;
 use Modules\Administracion\Models\UserHasInstitucion;
-use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use App\Filament\Tables\Descarga;
 use Session;
 
 class UserHasBiometriaResource extends Resource
@@ -157,8 +157,7 @@ class UserHasBiometriaResource extends Resource
                     ->color('primary'),
             ])
             ->bulkActions([
-                ExportBulkAction::make()
-                    ->label('Exportar a Excel'),
+                Descarga::enLote('user-has-biometria'),
             ]);
     }
 
