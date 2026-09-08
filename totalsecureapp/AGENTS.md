@@ -476,6 +476,35 @@ formulario.
     exporta la variable y phpdotenv no sobreescribe lo que ya esta en el
     entorno). Por eso se apaga con `DEBUGBAR_ENABLED`, que compose no define.
 
+## Cambiar la contraseña de un usuario (2026-09-08)
+
+Accion **«Cambiar contraseña»** en Usuarios, visible para quien puede gestionar
+personal (Administrador y Lider Operativo).
+
+**Existe porque no habia forma de hacerlo.** El unico camino web era «Olvido su
+contraseña» en el login, que **manda un correo**, y **505 de los 878 usuarios no
+tienen correo cargado**: para ellos ese flujo no existe. Encima `MAIL_HOST` es
+`mailhog`, un capturador de desarrollo, asi que hoy no sale ningun correo real.
+La alternativa era entrar por linea de comandos al servidor.
+
+- **No afecta a la app movil.** Panel y app leen el mismo hash de
+  `users.usu_password`, asi que la clave nueva sirve en la tablet **sin
+  recompilar el APK**.
+- **Hashea explicitamente con `Hash::make`.** `UsersResource` usa
+  `Modules\Acceso\Models\users`, que **NO tiene** el mutador que si tiene el de
+  MobileApp: lo tiene comentado, y encima forzaba `'123456'`. Guardar el texto
+  plano dejaria al usuario sin poder entrar y la clave legible en la base.
+- **Mismas reglas que el flujo de la app** (minimo 8, una mayuscula, una
+  minuscula y un numero). Si aqui se permitiera algo mas debil, el usuario
+  quedaria con una clave que su propia app rechaza al intentar cambiarla.
+- **Limpia `remember_token`**: si habia un enlace de recuperacion sin usar, deja
+  de servir. Es lo que hace el flujo de la app.
+- Queda registrada en la bitacora (`control_log_filament`), **sin la contraseña**.
+
+Verificado sobre un guardia real: el hash cambia, queda como bcrypt y no como
+texto plano, y `POST api/login` acepta la clave nueva. El hash original se
+restauro desde v1 al terminar la prueba.
+
 ## Roles y alcance de datos
 
 Cinco roles. **No escribir listas de perfiles a mano**: usar `App\Support\PerfilPanel`, que centraliza lo que antes vivía en 24 comprobaciones repartidas en 20 archivos.

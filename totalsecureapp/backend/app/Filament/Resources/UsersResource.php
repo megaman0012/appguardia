@@ -3,6 +3,8 @@
 namespace App\Filament\Resources;
 
 use App\Support\PerfilPanel;
+use App\helpers;
+use Illuminate\Support\Facades\Hash;
 
 use App\Filament\Resources\UsersResource\Pages;
 use App\Filament\Resources\UsersResource\RelationManagers;
@@ -139,6 +141,78 @@ class UsersResource extends Resource
                  * semanas enteras y cada mañana alguien descubriría el puesto
                  * vacío otra vez, uno por uno. Acá se libera todo de una vez.
                  */
+                /**
+                 * Cambiar la contraseña de un usuario.
+                 *
+                 * **Existe porque no habia forma de hacerlo.** El unico camino
+                 * web era «Olvido su contraseña» en el login, que **manda un
+                 * correo**; y 505 de los 878 usuarios no tienen correo cargado,
+                 * asi que para ellos ese flujo no existe. La alternativa era
+                 * entrar por linea de comandos al servidor.
+                 *
+                 * No afecta a la app movil: las dos leen el mismo hash de
+                 * `users.usu_password`, asi que la clave nueva sirve en la
+                 * tablet sin recompilar nada.
+                 */
+                Tables\Actions\Action::make('cambiarPassword')
+                    ->label('Cambiar contraseña')
+                    ->icon('heroicon-o-key')
+                    ->color('warning')
+                    ->modalHeading(fn (users $record) => 'Nueva contraseña para ' . $record->usu_nmbcom)
+                    ->modalSubheading('El usuario entra con su cédula y esta contraseña, tanto en el panel como en la app de la tablet.')
+                    ->modalButton('Cambiar')
+                    ->form([
+                        Forms\Components\TextInput::make('password')
+                            ->label('Contraseña nueva')
+                            ->password()
+                            ->required()
+                            ->minLength(8)
+                            // Mismas reglas que el flujo de la app
+                            // (MobileApp\LoginController::procesar_paswchg): si
+                            // aqui se permitiera algo mas debil, el usuario
+                            // quedaria con una clave que su propia app rechazaria
+                            // al intentar cambiarla.
+                            ->rule('regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/')
+                            ->validationAttribute('contraseña')
+                            ->helperText('Mínimo 8 caracteres, con una mayúscula, una minúscula y un número.')
+                            ->autocomplete('new-password'),
+                        Forms\Components\TextInput::make('password_confirmation')
+                            ->label('Repetir contraseña')
+                            ->password()
+                            ->required()
+                            ->same('password')
+                            ->autocomplete('new-password'),
+                    ])
+                    ->visible(fn () => PerfilPanel::puedeGestionarPersonal())
+                    ->action(function (users $record, array $data) {
+                        // Hasheo explicito: este modelo (Modules\Acceso\Models\users)
+                        // **no** tiene el mutador que si tiene el de MobileApp --
+                        // lo tiene comentado, y encima forzaba '123456'. Guardar
+                        // el texto plano dejaria al usuario sin poder entrar y la
+                        // clave legible en la base.
+                        $record->usu_password = Hash::make($data['password']);
+
+                        // Se invalida el token de recuperacion pendiente: si habia
+                        // un enlace de «olvide mi contraseña» sin usar, deja de
+                        // servir. Es lo mismo que hace el flujo de la app.
+                        $record->remember_token = null;
+                        $record->save();
+
+                        helpers::control_log_filament(
+                            ['user_id' => $record->id, 'usu_cedula' => $record->usu_cedula],
+                            'UsersResource',
+                            'CambiarPassword',
+                            'NOTICE',
+                            'Cambio de contraseña desde el panel'
+                        );
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Contraseña actualizada')
+                            ->body('Avísale a ' . $record->usu_nmbcom . ' cuál es. No queda registrada en ninguna parte.')
+                            ->success()
+                            ->send();
+                    }),
+
                 Tables\Actions\Action::make('darDeBaja')
                     ->label('Registrar baja')
                     ->icon('heroicon-o-user-remove')
