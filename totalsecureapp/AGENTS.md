@@ -713,19 +713,83 @@ de PNG en Python puro porque el servidor no tiene Pillow ni ImageMagick.
 **Cuando haya un logo de 1024x1024 o vectorial**, reemplazarlo y recompilar: con
 eso se puede usar tambien como icono.
 
-### Que falta para compilar
+### El toolchain de compilacion en este servidor (2026-09-08)
 
-Este servidor **no tiene JDK ni SDK de Android** (`java` no existe,
-`ANDROID_HOME` sin definir, cero paquetes JDK). El APK que menciona la seccion
-siguiente se compilo en la maquina de desarrollo original, y `android/app/build/`
-esta en `.gitignore`, asi que no vino con el clon.
+Instalado. Antes no habia nada: `java` no existia y `ANDROID_HOME` estaba sin
+definir.
 
-Para compilar aca hacen falta JDK 17 y el SDK de Android (cmdline-tools,
-platforms;android-36, build-tools), unos 5-10 GB. Es una instalacion nueva en un
-servidor que corre siete proyectos en produccion: **conviene decidirlo antes**.
+| | |
+|---|---|
+| JDK | `java-21-openjdk-devel` en `/usr/lib/jvm/java-21-openjdk` |
+| SDK Android | `/home/server-dt/android-sdk` (**450 MB**, no los 5-10 GB estimados) |
+| Componentes | `platform-tools`, `platforms;android-36`, `build-tools;36.0.0` |
+| Gradle | 9.3.1, lo baja el wrapper a `~/.gradle` (3,2 GB de cache) |
 
-Lo que si esta verificado sin compilar: `npx tsc --noEmit` pasa limpio con los
-cambios de `constants.ts` y `api.ts`.
+**Va JDK 21 y no 17** porque el repositorio de esta distribucion solo ofrece 21.
+Gradle 9.3.1 y el AGP de Expo SDK 57 lo soportan; la compilacion salio limpia.
+
+El SDK vive en el home de `server-dt` y no en `/opt` a proposito: `/` tenia 24 GB
+libres contra 58 GB de `/home`.
+
+```bash
+cd totalsecureapp/android
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk \
+ANDROID_HOME=/home/server-dt/android-sdk \
+./gradlew :app:assembleRelease
+```
+
+`android/local.properties` (con `sdk.dir`) esta en `.gitignore`: es propio de
+esta maquina.
+
+Primera compilacion **30 min** (baja Gradle y las dependencias); las siguientes
+**5 min**.
+
+### ⚠️ `android/` esta versionado: `app.json` NO regenera los recursos nativos
+
+La trampa que costo una compilacion de mas. `android/` se versiona para poder
+compilar sin `expo prebuild`, y **eso significa que los plugins de Expo no vuelven
+a correr**. Consecuencia:
+
+- **`expo.extra` SI se aplica**: se genera en `assets/app.config` en cada
+  compilacion. Las IP y el puerto entraron al primer intento.
+- **La imagen del splash NO**: es un recurso nativo
+  (`res/drawable-*/splashscreen_logo.png`) que solo se rehace con `prebuild`. El
+  primer APK salio con el splash viejo aunque `app.json` ya apuntaba al nuevo.
+
+Se resolvio regenerando los cinco archivos de densidad a mano en vez de correr
+`prebuild`, que rehace toda la carpeta `android/` y se llevaria los ajustes
+manuales que tenga.
+
+**El logo se dibuja a 144dp en todas las densidades** (144, 216, 288, 432 y 576
+px para mdpi…xxxhdpi, en lienzos de 288dp). Asi ocupa el mismo tamaño fisico en
+cualquier pantalla, con el minimo escalado posible desde un original de 144 px.
+El escalado es bilineal, no por vecino mas cercano: al ampliar, suavizar se ve
+mejor que dejar bloques.
+
+### APK compilado y verificado (2026-09-08)
+
+`app-release.apk`, **100 MB**. Copia en `apk/` de la raiz del monorepo
+(`*.apk` esta en `.gitignore`).
+
+Verificado **dentro del APK**, no solo que compilara:
+
+| | |
+|---|---|
+| Paquete | `com.dt360.coreapp` v1.0.0, targetSdk 36 |
+| Nombre | Total Secure App |
+| `apiHosts` | `["181.198.245.50", "181.188.232.50"]` en `assets/app.config` |
+| Puerto / esquema | 3031 / http |
+| Cleartext HTTP | habilitado (sin esto Android 9+ bloquea el trafico) |
+| Splash | los 5 PNG por densidad, **identicos pixel a pixel** a los generados desde `logo.png` |
+
+**Firmado con el keystore de depuracion** (`CN=Android Debug`). Sirve para
+instalar por USB o descarga directa, **no para Google Play**: para eso hay que
+generar un keystore propio.
+
+Y sigue faltando lo que no depende del servidor: **el reenvio en el router** de
+`181.198.245.50:3031` y `181.188.232.50:3031` hacia `192.168.3.124:3031`. Se
+comprueba desde fuera de la red con
+`curl -I http://181.198.245.50:3031/acceso/login`.
 
 ## App Expo
 
