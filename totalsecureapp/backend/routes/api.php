@@ -13,13 +13,26 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
+/*
+ * ⚠️ Aca vivia la ruta de ejemplo de Laravel, `GET /api/user`, y **devolvia
+ * 500**: el archivo importa `Illuminate\Support\Facades\Route` pero nunca
+ * `Illuminate\Http\Request`, asi que el `Request $request` del cierre resolvia
+ * al **alias de la fachada** y `Request::user()` no existe.
+ *
+ * Se borro en vez de arreglarse: no la usa nadie -- el APK no la tiene en
+ * `constants.ts` --, el perfil del usuario sale por `/api/seleccionar_perfil` y
+ * `/api/procesar_perfil`, y una ruta de andamiaje que responde 500 es peor que
+ * no tenerla.
+ *
+ * La encontro `ApiRespondeTest`, la prueba de humo de la Etapa 0 de la
+ * migracion, en su primera corrida.
+ */
 
-Route::get('/test-cors', function () {
-    return response()->json(['message' => 'CORS is working!', 'timestamp' => now()]);
-});
+/*
+ * `GET /api/test-cors` tambien se fue: era una prueba manual de CORS de cuando
+ * se configuro el portal. La configuracion vive en `config/cors.php` y
+ * `App\Services\CorsService`, y el portal se verifica con sus propios tests.
+ */
 
 /*
  * Webhook de Evolution: los mensajes que los guardias responden por WhatsApp.
