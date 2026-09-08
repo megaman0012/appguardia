@@ -14,6 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
 import { getCurrentLocation } from '../utils/location';
+import { ahoraDelDispositivo, useIdempotencia } from '../utils/idempotencia';
 
 interface ItemConteo {
   pr_id: number | string;
@@ -33,6 +34,7 @@ export const InventarioDetalleScreen = ({ navigation, route }: any) => {
   const [refreshing, setRefreshing] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [movId, setMovId] = useState<string | null>(null);
+  const { uuidPara, confirmar } = useIdempotencia();
 
   const insCode = institucion?.ins_code;
 
@@ -92,6 +94,11 @@ export const InventarioDetalleScreen = ({ navigation, route }: any) => {
         list_code: lp_id,
         latitud: coords.lat,
         longitud: coords.lng,
+        // Si esto se envía dos veces (sin señal, el guardia vuelve a tocar
+        // «Guardar»), el servidor devuelve el mismo movimiento en vez de crear
+        // otro. El uuid se suelta recién cuando confirma.
+        client_uuid: uuidPara('recepcion'),
+        ocurrido_en: ahoraDelDispositivo(),
         productos: JSON.stringify(
           productos.map((p) => ({
             id_producto: p.pr_id,
@@ -106,6 +113,7 @@ export const InventarioDetalleScreen = ({ navigation, route }: any) => {
       const response = await api.post(API_ENDPOINTS.INVENTARIO.LIST_SAVE, payload);
       const data = response.data;
       if (data && data.message) {
+        confirmar('recepcion');
         setMovId(String(data.id));
         Alert.alert('Éxito', data.message);
       } else if (data && data.errors) {
@@ -142,6 +150,9 @@ export const InventarioDetalleScreen = ({ navigation, route }: any) => {
               code_mov: movId,
               latitud: coords.lat,
               longitud: coords.lng,
+              // Sin client_uuid: `code_mov` ya identifica el movimiento que se
+              // cierra, así que el reintento es reconocible sin uuid.
+              ocurrido_en: ahoraDelDispositivo(),
             });
             const data = response.data;
             if (data && data.message) {

@@ -31,3 +31,6 @@ composer.phar
 /storage/framework/sessions/*
 /storage/framework/testing/*
 /storage/framework/views/*
+
+# Salida del generador de marca: se rehace con scripts/generar-marca.php
+/scripts/marca/salida

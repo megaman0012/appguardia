@@ -71,8 +71,16 @@ class RbacTest extends TestCase
 
     // ── Seed de permisos ──
 
-    /** @test */
-    public function seed_asigna_21_permisos_a_vigilante_y_31_a_supervisor()
+    /**
+     * El Vigilante paso de 21 a 22 permisos: se le agrego
+     * `inventario.finalizar` en 2026_09_08_210001. Sin el, el guardia recibia
+     * la lista de inventario pero la devolucion le daba 403, la recepcion
+     * quedaba abierta y el turno siguiente era rechazado con «ya existe una
+     * recepcion»: podia registrar inventario una sola vez y quedaba bloqueado.
+     *
+     * @test
+     */
+    public function seed_asigna_22_permisos_a_vigilante_y_31_a_supervisor()
     {
         $vigilanteId = DB::table('roles')->where('name', 'Vigilante')->value('id');
         $supervisorId = DB::table('roles')->where('name', 'Supervisor')->value('id');
@@ -88,7 +96,7 @@ class RbacTest extends TestCase
             ->whereBetween('ps_codigo', [10, 18])
             ->count();
 
-        $this->assertEquals(21, $vig);
+        $this->assertEquals(22, $vig);
         $this->assertEquals(31, $sup);
     }
 

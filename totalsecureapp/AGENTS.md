@@ -514,6 +514,10 @@ claves, es si tiene una devolucion posterior, y eso no cabe en un indice unico.
 **La carrera sigue abierta.** Cerrarla de verdad necesita `client_uuid` en este
 endpoint, como los cinco de campo, y eso **si** obliga a cambiar la app.
 
+> Cerrada el 2026-09-08: ver «Inventario idempotente». El `client_uuid` entro
+> como campo **opcional**, asi que el APK que ya esta en las tablets sigue
+> funcionando igual; la app lo empieza a mandar en la siguiente version.
+
 ### Las dos optimizaciones que si entraron
 
 - **Un solo INSERT para los detalles** en vez de uno por producto: eran cuatro
@@ -530,6 +534,109 @@ endpoint, como los cinco de campo, y eso **si** obliga a cambiar la app.
 `allListByInst` -- el endpoint que corre en cada tablet al abrir inventario --
 usa carga anticipada con seleccion de columnas: **3 consultas y 5,5 ms de SQL**,
 sin importar cuantas listas tenga el local. No habia nada que arreglar ahi.
+
+## Inventario idempotente (2026-09-08)
+
+Inventario era el **unico** modulo de campo sin `client_uuid`: novedad, ronda,
+marcaje, acceso y alerta ya lo tenian. Un guardia sin señal que tocaba «Guardar»
+dos veces creaba dos movimientos.
+
+### El campo es opcional, y esa es la condicion de todo
+
+`'client_uuid' => 'nullable|uuid'`. El APK ya compilado **no lo manda**, y tiene
+que seguir andando; por eso hay tests que existen solo para probar que sin el
+campo el comportamiento es identico al de antes
+(`InventarioOfflineTest::test_el_apk_actual_sin_client_uuid_registra_igual_que_antes`
+y `test_sin_client_uuid_la_segunda_recepcion_sigue_bloqueada`). Si esos dos
+fallan, la app que esta hoy en las tablets se rompe.
+
+### ⚠️ El orden de los dos chequeos no es cosmetico
+
+`saveListMov` tiene dos guardas: «¿ya llego este uuid?» y «¿hay una recepcion
+abierta?». **El del uuid va primero.** Al reves, el reintento choca contra la
+recepcion que dejo abierta *su propio intento anterior*, y el guardia recibe «Ya
+existe una recepcion registrada» por reintentar — con el inventario a medias y
+sin forma de salir. Lo cubre
+`test_el_reintento_no_choca_contra_su_propia_recepcion_abierta`.
+
+La carrera de dos toques simultaneos la cierra el indice unique de
+`mc_client_uuid` mas `OfflineSyncService::registrar()`, que atrapa el 23505 y
+devuelve el registro que gano en vez de un error.
+
+### Los tres endpoints, cada uno con su forma de reintento
+
+| Endpoint | Como reconoce el reintento | Respuesta |
+|---|---|---|
+| `listsave` (recepcion) | `client_uuid` | mismo `id` + `duplicado: true` |
+| `registrar-baja` | `client_uuid` | mismo `id` + `duplicado: true` |
+| `finishsave` (devolucion) | **`code_mov`**, no necesita uuid | `duplicado: true`, sin tocar la fila |
+
+La devolucion no crea filas: **muta** la recepcion. Por eso nunca duplico nada,
+pero reescribia `mc_fecha = now()` en cada envio, y una devolucion hecha a las
+07:00 sin señal terminaba fechada a la hora en que la tablet recupero la red.
+Ahora, si el movimiento ya es `devolucion`, se devuelve tal cual.
+
+### 🐛 El Vigilante no podia cerrar su propio inventario
+
+Encontrado al escribir estos tests: `finishsave` exige `inventario.finalizar` y
+el seed **no** le dio ese permiso al rol Vigilante — solo `ver`, `ver_detalle` y
+`registrar`. La secuencia era:
+
+1. El guardia ve el modulo (`inventario.ver`) y recibe la lista: funciona.
+2. Al salir del turno la app llama `finishsave`: **403**.
+3. La recepcion queda abierta para siempre.
+4. El turno siguiente se rechaza con «Ya existe una recepcion registrada».
+
+O sea: **cada guardia podia registrar inventario una sola vez y quedaba
+bloqueado**, sin forma de arreglarlo desde la app. Recibir y devolver son las
+dos mitades de una misma operacion y las hace la misma persona con el mismo
+token (`InventarioDetalleScreen` llama a los dos endpoints). Corregido en
+`2026_09_08_210001_vigilante_puede_finalizar_inventario`; el Vigilante pasa de
+21 a 22 permisos y `RbacTest` cuenta 22.
+
+### 🐛 `ocurrido_en` en UTC se descartaba en silencio
+
+La app mandaba `new Date().toISOString().slice(0, 19)`: hora **UTC sin decir que
+es UTC**. Laravel corre en `America/Guayaquil` (-05:00), asi que la leia como
+hora local, la veia **5 horas en el futuro** y `ocurridoEn()` la recortaba a la
+hora de llegada — exactamente el dato que se queria preservar. La unica pantalla
+que ya mandaba `ocurrido_en` (`VacantesScreen`) nunca conservo una sola hora
+real.
+
+Dos arreglos:
+
+- **Servidor**: `ocurridoEn()` hace `->setTimezone(config('app.timezone'))`. Sin
+  eso, un instante con offset ajeno (una tablet configurada en otra zona)
+  guardaba la hora de pared del dispositivo: `+02:00` quedaba corrido **siete
+  horas**. Cubierto por tres tests de zona en `OfflineSyncTest`.
+- **App**: `ahoraDelDispositivo()` en `src/utils/idempotencia.ts` emite el
+  offset (`2026-09-08T08:22:02-05:00`). Con eso el servidor convierte bien desde
+  cualquier zona.
+
+### 🐛 El `client_uuid` de la app cambiaba en cada reintento
+
+`VacantesScreen` lo armaba como `` `${vacante.tv_id}-${Date.now()}` ``. Dos
+problemas: no es un UUID (esa columna es `varchar(255)` y no valida formato, por
+eso pasaba), y con `Date.now()` **cambia en cada envio** — el servidor veia un
+evento nuevo cada vez y la deduplicacion no hacia absolutamente nada.
+
+`useIdempotencia()` guarda el uuid **por accion** y solo lo suelta cuando el
+servidor confirma. Si la peticion falla, el siguiente toque manda el mismo uuid.
+Eso es el punto entero: un uuid que no sobrevive al reintento no sirve para
+nada.
+
+`nuevoUuid()` se escribe a mano porque Hermes no tiene `crypto.randomUUID` y el
+proyecto no trae paquete de uuid; da formato RFC 4122 v4 porque el backend
+valida `uuid`. Probado: 200.000 generados, 0 invalidos, 0 colisiones.
+
+### Como se probo
+
+- `InventarioOfflineTest`: 14 tests. Suite completa **306 pasan**.
+- Contra la base real: `listsave` sin `client_uuid` responde igual que siempre y
+  el segundo envio sigue bloqueado; con `client_uuid`, tres envios seguidos
+  devuelven el **mismo id** y crean **una sola fila**. Las filas de prueba se
+  borraron, la secuencia se devolvio a 11.879 y la clave del guardia usado se
+  restauro desde el contenedor `v1_analisis` (identica por hash).
 
 ## Los listados abren mostrando solo lo activo (2026-09-08)
 
@@ -922,17 +1029,88 @@ publicado por Docker con DNAT desde `0.0.0.0`, asi que alcanza con reenviarlo.
 
 ### El logo va en la pantalla de carga, no en el icono
 
-`logo.png` es de **144x144** y el icono de Android quiere 1024x1024: estirarlo
-11 veces en una tablet lo deja pixelado. Por eso el icono sigue siendo
-`assets/icon.png` (1024x1024) y el logo va al splash.
+> **Superado el 2026-09-08.** Llego `LOGO_APP_TOTAL_SECURE.png`, de 1563x1563:
+> ya alcanza para icono. Ver «La marca de la app» mas abajo. Lo de aca queda
+> porque explica por que el primer APK uso el logo solo en el splash.
 
-Y no se estira: `assets/splash-logo.png` es un lienzo de **1024x1024 con el logo
-centrado a su tamaño nativo de 144 px** sobre blanco. Asi la pantalla de carga
-escala el lienzo ~1,5x en vez de escalar el logo 11x. Se compuso con un script
-de PNG en Python puro porque el servidor no tiene Pillow ni ImageMagick.
+`logo.png` era de **144x144** y el icono de Android quiere 1024x1024: estirarlo
+11 veces en una tablet lo deja pixelado. Por eso el icono era `assets/icon.png`
+(el de Expo) y el logo iba solo al splash, en un lienzo de 1024x1024 con el logo
+centrado a su tamaño nativo — asi la pantalla de carga escalaba el lienzo ~1,5x
+en vez de escalar el logo 11x.
 
-**Cuando haya un logo de 1024x1024 o vectorial**, reemplazarlo y recompilar: con
-eso se puede usar tambien como icono.
+### La marca de la app (2026-09-08)
+
+Origen: `LOGO_APP_TOTAL_SECURE.png`, 1563x1563, RGB **sin canal alfa** (el fondo
+es blanco de verdad, no transparente). Colores de marca medidos del archivo:
+**#BD1212** (rojo) y **#666666** (gris del candado).
+
+Se generan **28 archivos** con `backend/storage/app/marca/generar.php`, que corre
+dentro del contenedor de PHP: el servidor **no tiene ImageMagick, ni Pillow, ni
+sharp**, pero el contenedor trae **GD con PNG** (sin WebP, ver abajo).
+
+#### El fondo no se quita con «todo lo blanco es transparente»
+
+El hueco entre el escudo y la S tambien es blanco: esa regla lo perforaria. El
+script **rellena desde los cuatro bordes hacia adentro**, asi solo se vuelve
+transparente el blanco alcanzable desde afuera. (En este logo ese hueco *si*
+esta conectado con el exterior por la banda diagonal, asi que termina
+transparente igual — pero el metodo no depende de esa casualidad.)
+
+La cola del relleno guarda el **indice plano** del pixel, no un par `[x, y]`: con
+2,4 millones de pixeles un arreglo de arreglos agota los 512 MB de PHP, y se
+libera lo ya recorrido cada 200.000.
+
+#### Zonas seguras: por que el arte no llena el lienzo
+
+| Salida | Arte | Por que |
+|---|---|---|
+| `icon.png`, `ic_launcher` | 82% | Icono heredado (Android 7-), sin mascara |
+| `ic_launcher_round` | 72% | Circulo blanco de fondo |
+| `ic_launcher_foreground` | **60%** | El lanzador recorta el lienzo de 108dp a su mascara y **solo garantiza los 66dp centrales** |
+| `splashscreen_logo` (5 densidades) | **60%** | `windowSplashScreenAnimatedIcon` de Android 12+ **tambien** se recorta en circulo |
+| `android-icon-monochrome` | 60% | Silueta blanca sobre transparente: Android descarta el color y aplica su tinte |
+| `public/images/logo.png` | 94% | Panel web, sin recorte |
+
+#### Los `.webp` de `mipmap-*` contienen PNG
+
+`file` lo confirma: `ic_launcher.webp` es «PNG image data». GD de este contenedor
+**no tiene WebP** (`gd_info()['WebP Support'] === false`), asi que se escribe PNG
+con el nombre `.webp` que ya tenian — que es exactamente lo que compilo bien la
+vez anterior. Android resuelve los recursos por nombre sin extension
+(`@mipmap/ic_launcher`), asi que no hay nada que cambiar en el XML.
+
+#### 🐛 El icono de notificacion era invisible
+
+`notification_icon_color` estaba en **`#ffffff`**: Android tiñe el icono chico
+con ese color, y blanco sobre la bandeja de notificaciones blanca no se ve. Pasa
+a `#BD1212`, **en los dos lados** — `app.json` (para un futuro `prebuild`) y
+`android/app/src/main/res/values/colors.xml` (que es lo que realmente compila,
+porque `android/` esta versionado). `colorPrimary` tambien pasa de `#023c69`
+(azul por defecto de Expo) al rojo de marca.
+
+#### Como regenerarla
+
+```bash
+cd totalsecureapp/backend
+docker compose exec -u 1000 backend php -d memory_limit=1G \
+  /var/www/scripts/generar-marca.php
+```
+
+Deja los 28 archivos en `backend/scripts/marca/salida/` (ignorada por git) y
+**no instala nada**: se copian a mano a `assets/`,
+`android/app/src/main/res/` y `public/images/logo.png`. Son dos pasos a
+proposito — conviene mirar el resultado antes de reemplazar 28 archivos
+versionados.
+
+El origen versionado es `backend/scripts/marca/logo-origen.png`. **Ahi vive la
+fuente de verdad**, no en la copia que quedo en la raiz del repo
+(`LOGO_APP_TOTAL_SECURE.png`, sin versionar): son el mismo archivo, pero el
+script lee el de `scripts/marca/`. El script **no** podia vivir en
+`storage/app/` — todo eso esta en `.gitignore` y se habria perdido, dejando 28
+archivos generados por algo que no existe.
+
+Lo reemplazado se puede recuperar del historial de git (`git show HEAD~1:...`).
 
 ### El toolchain de compilacion en este servidor (2026-09-08)
 
@@ -1157,6 +1335,52 @@ Tres cosas se corrigieron a raíz de esta verificación —la raíz que daba 404
 `memory_limit` que tumbaba la suite y la base `coredt360_testing` que no
 existía— y están documentadas en sus secciones. **Lo que sigue pendiente y no se
 tocó** está abajo.
+
+## repomix: empaquetar el repo como contexto (2026-09-08)
+
+`repomix.config.json` en la raiz. Corre con `npx repomix` (no hace falta
+instalarlo) y deja `repomix-output.xml`, que esta en `.gitignore`.
+
+### Para que sirve aca, con numeros
+
+| Paquete | Archivos | Tokens |
+|---|---:|---:|
+| Todo el repo, sin comprimir | 629 | **418.075** |
+| Con la config de este repo (comprimido, sin `docs/historia`, sin binarios) | 596 | **332.800** |
+| Solo `Modules/` + `app/` | 364 | 151.642 |
+| Solo los tests | 29 | 47.285 |
+| Solo la app (`src/`) | 30 | **9.055** |
+
+El numero que importa es el ultimo: **la app movil entera son 9.055 tokens**. Un
+cambio de contrato entre API y APK se puede revisar completo, de los dos lados,
+sin buscar archivo por archivo. Los 332.800 del paquete completo, en cambio,
+entran en una ventana de 1M pero no en una de 200k — para el dia a dia conviene
+`--include` por area.
+
+### Lo que hace la config
+
+- `compress: true` deja firmas y estructura y saca los cuerpos de las
+  funciones. Es lo que baja de 418k a 332k tokens **sin perder el mapa**.
+- Excluye `docs/historia/**`: son **59.897 tokens** de historial de fases
+  (FASE1 a FASE5 y el resumen), util para leer, ruido para empaquetar.
+- Excluye `android/`, `assets/`, imagenes, `.keystore`, `.jks`, `.sql` y `.rar`.
+  Un `.keystore` en un paquete de contexto es una clave de firma de produccion
+  en un archivo de texto.
+- `instructionFilePath: repomix-instrucciones.md`, que va **dentro** del
+  paquete: avisa que es Filament 2 y no 3, que la base es de produccion, que el
+  APK ya instalado obliga a que los campos nuevos sean opcionales, y la trampa
+  de la zona horaria. Sin eso, quien lea el paquete propone `getTabs()` en la
+  primera vuelta.
+- `enableSecurityCheck: true`. Detecto `android/app/debug.keystore` como binario
+  y lo dejo fuera — es la clave de depuracion estandar de Android, no es
+  sensible, pero conviene que quede registrado.
+
+### Lo que NO reemplaza
+
+Este `AGENTS.md`. repomix empaqueta **lo que el codigo dice**; lo que no dice
+—por que el chequeo de inventario es «sin devolucion posterior» y no «existe una
+recepcion», por que `vendor/` no se puede borrar, por que el rol Vigilante
+necesitaba un permiso mas— solo esta escrito aca.
 
 ## Pendientes conocidos
 

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://repomix.com/schemas/latest/schema.json",
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "compress": true,
+    "removeComments": false,
+    "showLineNumbers": true,
+    "topFilesLength": 15,
+    "instructionFilePath": "repomix-instrucciones.md"
+  },
+  "include": [],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "docs/historia/**",
+      "totalsecureapp/backend/public/images/**",
+      "totalsecureapp/android/**",
+      "totalsecureapp/assets/**",
+      "totalsecureapp/backend/scripts/marca/**",
+      "**/*.png",
+      "**/*.webp",
+      "**/*.jpg",
+      "**/*.keystore",
+      "**/*.jks",
+      "**/*.sql",
+      "**/*.rar",
+      "repomix-output.xml",
+      "repomix-instrucciones.md"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  }
+}

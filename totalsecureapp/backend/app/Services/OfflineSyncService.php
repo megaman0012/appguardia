@@ -75,6 +75,21 @@ class OfflineSyncService
      *
      * Un reloj de dispositivo adelantado no debe producir registros en el futuro,
      * asi que se recorta al momento actual.
+     *
+     * ⚠️ **La zona horaria importa y ya nos mordio.** La app corre en tablets y
+     * la base guarda hora local de `config('app.timezone')`
+     * (America/Guayaquil). Si el dispositivo manda un instante con offset
+     * -- `2026-09-08T08:22:02-05:00`, o el mismo instante visto desde otra zona
+     * -- hay que **convertirlo** a la zona de la aplicacion antes de
+     * formatearlo; sin eso se guardaba la hora de pared del dispositivo y un
+     * equipo con otra zona quedaba corrido varias horas.
+     *
+     * Un valor SIN offset (`2026-09-08 08:22:02`) se interpreta como hora local
+     * ya, que es lo unico razonable: no hay forma de saber de donde viene. Por
+     * eso la app manda siempre el offset -- mandaba `toISOString()`, que es
+     * UTC sin offset explicito para Carbon, y al leerse como local caia 5 horas
+     * en el futuro y se recortaba a `now()`: la hora real del evento se perdia
+     * en silencio.
      */
     public function ocurridoEn(?string $valor): string
     {
@@ -85,7 +100,7 @@ class OfflineSyncService
         }
 
         try {
-            $fecha = Carbon::parse($valor);
+            $fecha = Carbon::parse($valor)->setTimezone(config('app.timezone'));
         } catch (\Exception $e) {
             return $ahora->format('Y-m-d H:i:s');
         }

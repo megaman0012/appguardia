@@ -35,6 +35,10 @@ class MovimientoCabecera extends Model
         'mc_estado',
         'mc_created_user',
         'mc_updated_user',
+        // Idempotencia offline (ver 2026_09_08_200001). Nullable: el APK
+        // compilado antes de esto no los envia y sigue funcionando.
+        'mc_client_uuid',
+        'mc_sincronizado_en',
     ];
 
     protected $casts = [

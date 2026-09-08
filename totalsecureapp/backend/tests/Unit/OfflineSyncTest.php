@@ -105,6 +105,55 @@ class OfflineSyncTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_ocurrido_en_convierte_un_instante_con_offset(): void
+    {
+        // La base guarda hora local de America/Guayaquil (-05:00). Un instante
+        // con offset explicito tiene que quedar en esa hora, no en la hora de
+        // pared del dispositivo.
+        config(['app.timezone' => 'America/Guayaquil']);
+        Carbon::setTestNow(Carbon::parse('2026-08-21 10:00:00', 'America/Guayaquil'));
+
+        $this->assertSame(
+            '2026-08-21 07:00:00',
+            $this->offlineSync->ocurridoEn('2026-08-21T07:00:00-05:00')
+        );
+
+        Carbon::setTestNow();
+    }
+
+    public function test_ocurrido_en_convierte_desde_otra_zona_horaria(): void
+    {
+        config(['app.timezone' => 'America/Guayaquil']);
+        Carbon::setTestNow(Carbon::parse('2026-08-21 10:00:00', 'America/Guayaquil'));
+
+        // Mismo instante que 07:00 en Guayaquil, visto desde Madrid (+02:00).
+        // Sin la conversion se guardaba 14:00 y el registro quedaba corrido
+        // siete horas.
+        $this->assertSame(
+            '2026-08-21 07:00:00',
+            $this->offlineSync->ocurridoEn('2026-08-21T14:00:00+02:00')
+        );
+
+        Carbon::setTestNow();
+    }
+
+    public function test_ocurrido_en_acepta_utc_con_z(): void
+    {
+        config(['app.timezone' => 'America/Guayaquil']);
+        Carbon::setTestNow(Carbon::parse('2026-08-21 10:00:00', 'America/Guayaquil'));
+
+        // `toISOString()` de JavaScript produce esto. Antes llegaba sin la Z
+        // (se recortaba el string a 19 caracteres), se leia como hora local,
+        // caia 5 horas en el futuro y se recortaba a `now()`: la hora real del
+        // evento se perdia en silencio.
+        $this->assertSame(
+            '2026-08-21 07:00:00',
+            $this->offlineSync->ocurridoEn('2026-08-21T12:00:00Z')
+        );
+
+        Carbon::setTestNow();
+    }
+
     public function test_ocurrido_en_con_valor_invalido_usa_el_momento_actual(): void
     {
         Carbon::setTestNow('2026-08-21 10:00:00');

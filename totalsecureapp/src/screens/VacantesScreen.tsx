@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { ahoraDelDispositivo, useIdempotencia } from '../utils/idempotencia';
 
 interface TurnoProximo {
   tu_id: number;
@@ -58,6 +59,7 @@ export const VacantesScreen = ({ navigation }: { navigation: any }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [enviando, setEnviando] = useState<number | null>(null);
+  const { uuidPara, confirmar } = useIdempotencia();
 
   const insCode = institucion?.ins_code;
 
@@ -94,11 +96,12 @@ export const VacantesScreen = ({ navigation }: { navigation: any }) => {
         // La hora real de la postulación la manda el dispositivo, igual que en
         // los marcajes: si se envía sin señal y sincroniza después, vale la hora
         // en que el guardia se ofreció, no la que llegó al servidor.
-        ocurrido_en: new Date().toISOString().slice(0, 19).replace('T', ' '),
-        client_uuid: `${vacante.tv_id}-${Date.now()}`,
+        ocurrido_en: ahoraDelDispositivo(),
+        client_uuid: uuidPara(`postular-${vacante.tv_id}`),
       });
 
       if (data?.success) {
+        confirmar(`postular-${vacante.tv_id}`);
         Alert.alert('Listo', data.message || 'Su postulación fue registrada.');
       } else {
         Alert.alert('No se pudo', data?.message || 'Ese turno ya no está disponible.');
@@ -129,9 +132,13 @@ export const VacantesScreen = ({ navigation }: { navigation: any }) => {
       const { data } = await api.post(API_ENDPOINTS.VACANTES.AVISAR_AUSENCIA, {
         tu_id: turno.tu_id,
         motivo,
-        ocurrido_en: new Date().toISOString().slice(0, 19).replace('T', ' '),
-        client_uuid: `aviso-${turno.tu_id}-${Date.now()}`,
+        ocurrido_en: ahoraDelDispositivo(),
+        client_uuid: uuidPara(`aviso-${turno.tu_id}`),
       });
+
+      if (data?.success) {
+        confirmar(`aviso-${turno.tu_id}`);
+      }
 
       Alert.alert(
         data?.success ? 'Aviso enviado' : 'No se pudo',

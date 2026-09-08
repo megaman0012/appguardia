@@ -2,6 +2,7 @@
 
 namespace Modules\MobileApp\Http\Controllers;
 
+use App\Services\OfflineSyncService;
 use App\generalTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,13 @@ use Modules\Administracion\Models\UserHasInstitucion;
 class InventarioController extends Controller
 {
     use generalTrait;
+
+    protected OfflineSyncService $offlineSync;
+
+    public function __construct(OfflineSyncService $offlineSync)
+    {
+        $this->offlineSync = $offlineSync;
+    }
 
     protected array $getListByInstRules = [
         'rules' => [
@@ -73,6 +81,10 @@ class InventarioController extends Controller
             'latitud' => 'required',
             'longitud' => 'required',
             'productos' => 'required',
+            // Opcional a proposito: el APK ya compilado no lo envia y tiene que
+            // seguir funcionando. La idempotencia entra cuando una app lo mande.
+            'client_uuid' => 'nullable|uuid',
+            'ocurrido_en' => 'nullable|date',
         ],
         'messages' => [
             'ins_code.required' => 'Campo intitucion es obligatorio',
@@ -98,6 +110,28 @@ class InventarioController extends Controller
 
         if (!$ins) {
             return $this->message_json('errors', 'Usuario no vinculado a institucion');
+        }
+
+        $clientUuid = $request->input('client_uuid');
+
+        // Si este movimiento ya llego, se devuelve el que esta y no se hace nada
+        // mas. Va ANTES del chequeo de recepcion abierta a proposito: un
+        // reintento del mismo movimiento no debe chocar contra la recepcion que
+        // el propio intento anterior dejo abierta -- si no, el guardia recibe
+        // «ya existe una recepcion» por su propio reintento.
+        //
+        // Con client_uuid nulo (el APK actual) esto no encuentra nada y el flujo
+        // sigue igual que antes.
+        $yaRegistrado = $this->offlineSync->buscar(
+            MovimientoCabecera::class, 'mc_client_uuid', $clientUuid
+        );
+
+        if ($yaRegistrado !== null) {
+            return response()->json([
+                'message'   => 'Recepción registrada con éxito',
+                'id'        => $yaRegistrado->mc_id,
+                'duplicado' => true,
+            ]);
         }
 
         // ¿Tiene una recepcion ABIERTA de esta lista?
@@ -139,18 +173,43 @@ class InventarioController extends Controller
 
         DB::beginTransaction();
         try {
-            $movimiento = MovimientoCabecera::create([
-                'mc_ins_code'     => $request->ins_code,
-                'mc_lista_id'     => $request->list_code,
-                'mc_tipo'         => MovimientoCabecera::TIPO_RECEPCION,
-                'mc_usuario_id'   => $us->id,
-                'mc_fecha'        => now(),
-                'mc_lat'          => $request->latitud,
-                'mc_lng'          => $request->longitud,
-                'mc_estado'       => MovimientoCabecera::ESTADO_COMPLETADO,
-                'mc_created_user' => $us->id,
-                'mc_updated_user' => $us->id,
-            ]);
+            // registrar() atrapa la violacion de unicidad (23505) de dos
+            // reintentos simultaneos y devuelve el que gano, en vez de fallar.
+            // Es lo que cierra la carrera que el chequeo en PHP no puede cerrar.
+            list($movimiento, $duplicado) = $this->offlineSync->registrar(
+                MovimientoCabecera::class,
+                'mc_client_uuid',
+                $clientUuid,
+                function () use ($request, $us, $clientUuid) {
+                    return MovimientoCabecera::create([
+                        'mc_ins_code'     => $request->ins_code,
+                        'mc_lista_id'     => $request->list_code,
+                        'mc_tipo'         => MovimientoCabecera::TIPO_RECEPCION,
+                        'mc_usuario_id'   => $us->id,
+                        // La fecha la manda el dispositivo: un movimiento hecho
+                        // sin señal conserva su hora real. Sin `ocurrido_en`
+                        // (APK actual) queda `now()`, como antes.
+                        'mc_fecha'        => $this->offlineSync->ocurridoEn($request->input('ocurrido_en')),
+                        'mc_lat'          => $request->latitud,
+                        'mc_lng'          => $request->longitud,
+                        'mc_estado'       => MovimientoCabecera::ESTADO_COMPLETADO,
+                        'mc_created_user' => $us->id,
+                        'mc_updated_user' => $us->id,
+                        'mc_client_uuid'  => $clientUuid,
+                        'mc_sincronizado_en' => $this->offlineSync->sincronizadoEn(),
+                    ]);
+                }
+            );
+
+            if ($duplicado) {
+                DB::commit();
+
+                return response()->json([
+                    'message'   => 'Recepción registrada con éxito',
+                    'id'        => $movimiento->mc_id,
+                    'duplicado' => true,
+                ]);
+            }
 
             $productos = json_decode($request->productos);
 
@@ -201,7 +260,11 @@ class InventarioController extends Controller
             'ins_code' => 'required',
             'code_mov' => 'required',
             'latitud' => 'required',
-            'longitud' => 'required'
+            'longitud' => 'required',
+            // Aca no hace falta client_uuid: `code_mov` ya identifica la fila que
+            // se cierra, asi que el reintento es reconocible sin uuid. Solo se
+            // suma la hora real del evento.
+            'ocurrido_en' => 'nullable|date',
         ],
         'messages' => [
             'ins_code.required' => 'Campo intitucion es obligatorio',
@@ -238,12 +301,27 @@ class InventarioController extends Controller
             return $this->message_json('errors', 'El movimiento está cancelado');
         }
 
+        // Este endpoint no crea filas: **muta** la recepcion y la convierte en
+        // devolucion. Por eso un reintento nunca duplico nada... pero si volvia
+        // a escribir `mc_fecha = now()`, y una devolucion hecha a las 07:00 sin
+        // señal terminaba fechada a la hora en que la tablet recupero la red.
+        // Si ya es devolucion, el ciclo esta cerrado y no se toca.
+        if ($movimiento->mc_tipo === MovimientoCabecera::TIPO_DEVOLUCION) {
+            return response()->json([
+                'message'   => 'Devolución registrada con éxito',
+                'id'        => $movimiento->mc_id,
+                'duplicado' => true,
+            ]);
+        }
+
         DB::beginTransaction();
         try {
             $movimiento->update([
                 'mc_tipo'         => MovimientoCabecera::TIPO_DEVOLUCION,
                 'mc_estado'       => MovimientoCabecera::ESTADO_COMPLETADO,
-                'mc_fecha'        => now(),
+                // Hora real de la devolucion. Sin `ocurrido_en` (APK actual)
+                // queda `now()`, identico a antes.
+                'mc_fecha'        => $this->offlineSync->ocurridoEn($request->input('ocurrido_en')),
                 'mc_lat'          => $request->latitud,
                 'mc_lng'          => $request->longitud,
                 'mc_updated_user' => $us->id,
@@ -253,6 +331,7 @@ class InventarioController extends Controller
 
             return response()->json([
                 'message' => 'Devolución registrada con éxito',
+                'id'      => $movimiento->mc_id,
             ]);
 
         } catch (\Exception $e) {
@@ -272,6 +351,9 @@ class InventarioController extends Controller
             'longitud'  => 'required',
             'productos' => 'required',
             'motivo'    => 'required',
+            // Igual que en la recepcion: opcional, para no romper el APK actual.
+            'client_uuid' => 'nullable|uuid',
+            'ocurrido_en' => 'nullable|date',
         ]);
 
         if ($validator->fails()) {
@@ -287,21 +369,58 @@ class InventarioController extends Controller
             return $this->message_json('errors', 'Usuario no vinculado a institucion');
         }
 
+        $clientUuid = $request->input('client_uuid');
+
+        // Mismo reintento, misma baja. Sin esto el segundo envio chocaria
+        // contra el indice unique de mc_client_uuid y el guardia recibiria el
+        // error crudo de Postgres para una operacion que en realidad ya quedo
+        // registrada.
+        $yaRegistrada = $this->offlineSync->buscar(
+            MovimientoCabecera::class, 'mc_client_uuid', $clientUuid
+        );
+
+        if ($yaRegistrada !== null) {
+            return response()->json([
+                'message'   => 'Baja registrada con éxito',
+                'id'        => $yaRegistrada->mc_id,
+                'duplicado' => true,
+            ]);
+        }
+
         DB::beginTransaction();
         try {
-            $movimiento = MovimientoCabecera::create([
-                'mc_ins_code'      => $request->ins_code,
-                'mc_lista_id'      => $request->list_code,
-                'mc_tipo'          => MovimientoCabecera::TIPO_BAJA,
-                'mc_usuario_id'    => $us->id,
-                'mc_fecha'         => now(),
-                'mc_lat'           => $request->latitud,
-                'mc_lng'           => $request->longitud,
-                'mc_observaciones' => $request->motivo,
-                'mc_estado'        => MovimientoCabecera::ESTADO_COMPLETADO,
-                'mc_created_user'  => $us->id,
-                'mc_updated_user'  => $us->id,
-            ]);
+            list($movimiento, $duplicado) = $this->offlineSync->registrar(
+                MovimientoCabecera::class,
+                'mc_client_uuid',
+                $clientUuid,
+                function () use ($request, $us, $clientUuid) {
+                    return MovimientoCabecera::create([
+                        'mc_ins_code'        => $request->ins_code,
+                        'mc_lista_id'        => $request->list_code,
+                        'mc_tipo'            => MovimientoCabecera::TIPO_BAJA,
+                        'mc_usuario_id'      => $us->id,
+                        'mc_fecha'           => $this->offlineSync->ocurridoEn($request->input('ocurrido_en')),
+                        'mc_lat'             => $request->latitud,
+                        'mc_lng'             => $request->longitud,
+                        'mc_observaciones'   => $request->motivo,
+                        'mc_estado'          => MovimientoCabecera::ESTADO_COMPLETADO,
+                        'mc_client_uuid'     => $clientUuid,
+                        'mc_sincronizado_en' => $this->offlineSync->sincronizadoEn(),
+                        'mc_created_user'    => $us->id,
+                        'mc_updated_user'    => $us->id,
+                    ]);
+                }
+            );
+
+            if ($duplicado) {
+                DB::commit();
+
+                return response()->json([
+                    'message'   => 'Baja registrada con éxito',
+                    'id'        => $movimiento->mc_id,
+                    'duplicado' => true,
+                ]);
+            }
 
             $productos = json_decode($request->productos);
 

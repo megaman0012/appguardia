@@ -38,3 +38,6 @@ Credencial*todos.txt
 *.jks
 *.keystore
 !totalsecureapp/android/app/debug.keystore
+
+# Paquete de contexto generado por repomix
+repomix-output.xml
