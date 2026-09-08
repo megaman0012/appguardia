@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\PlantillaResource\RelationManagers;
 
+use App\Filament\Forms\SelectorDeUsuario;
+
 use App\Support\PerfilPanel;
 use Filament\Forms;
 use Filament\Forms\Components\Repeater;
@@ -61,15 +63,10 @@ class FranjasRelationManager extends RelationManager
                 ->label('Guardias asignados')
                 ->relationship()
                 ->schema([
-                    Select::make('pa_usu_id')
-                        ->label('Guardia')
-                        ->options(
-                            users::where('usu_state', 1)
-                                ->orderBy('usu_nmbcom')
-                                ->get()
-                                ->mapWithKeys(fn ($u) => [$u->id => $u->usu_nmbcom . ' — ' . $u->usu_cedula])
-                        )
-                        ->searchable()
+                    // Busca por nombre Y por cedula. Ver App\Filament\Forms\SelectorDeUsuario:
+                    // antes filtraba el texto de la etiqueta en el navegador, asi que
+                    // buscar por cedula solo funcionaba donde la etiqueta la incluia.
+                    SelectorDeUsuario::make('pa_usu_id', 'Guardia')
                         ->required(),
                     Forms\Components\DatePicker::make('pa_desde')
                         ->label('Desde')

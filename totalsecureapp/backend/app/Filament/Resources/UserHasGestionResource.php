@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\SelectorDeUsuario;
+
 use App\Support\PerfilPanel;
 use Closure;
 use App\Filament\Resources\UserHasGestionResource\Pages;
@@ -54,17 +56,10 @@ class UserHasGestionResource extends Resource{
 
     public static function form(Form $form): Form {
         return $form->schema([
-            Select::make('ug_user_id')
-                ->label('Usuario')
-                ->options(
-                    users::where('usu_state', 1)
-                    ->orderBy('usu_nmbcom')
-                    ->get()
-                    ->mapWithKeys(function ($item) {
-                        return [$item->id => $item->usu_nmbcom];
-                    })
-                )
-                ->searchable()
+            // Busca por nombre Y por cedula. Ver App\Filament\Forms\SelectorDeUsuario:
+            // antes filtraba el texto de la etiqueta en el navegador, asi que
+            // buscar por cedula solo funcionaba donde la etiqueta la incluia.
+            SelectorDeUsuario::make('ug_user_id', 'Usuario')
                 ->disabledOn('edit')
                 ->required(),
             DatePicker::make('ug_ingreso')

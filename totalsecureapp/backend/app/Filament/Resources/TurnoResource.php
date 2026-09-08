@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\SelectorDeUsuario;
+
 use App\Filament\Resources\TurnoResource\Pages;
 use App\Support\PerfilPanel;
 use Filament\Forms\Components\DatePicker;
@@ -53,15 +55,10 @@ class TurnoResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Select::make('tu_usu_id')
-                ->label('Guardia')
-                ->options(
-                    users::where('usu_state', 1)
-                        ->orderBy('usu_nmbcom')
-                        ->get()
-                        ->mapWithKeys(fn ($u) => [$u->id => $u->usu_nmbcom . ' — ' . $u->usu_cedula])
-                )
-                ->searchable()
+            // Busca por nombre Y por cedula. Ver App\Filament\Forms\SelectorDeUsuario:
+            // antes filtraba el texto de la etiqueta en el navegador, asi que
+            // buscar por cedula solo funcionaba donde la etiqueta la incluia.
+            SelectorDeUsuario::make('tu_usu_id', 'Guardia')
                 ->required(),
 
             Select::make('tu_ins_code')

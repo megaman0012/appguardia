@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\SelectorDeUsuario;
+
 use App\Support\PerfilPanel;
 
 use App\Filament\Resources\UserHasRolesResource\Pages;
@@ -55,18 +57,11 @@ class UserHasRolesResource extends Resource
     public static function form(Form $form): Form {
         return $form
             ->schema([
-                Select::make('user_id')
-                ->label('Usuario')
-                ->options(
-                    users::where('usu_state', 1)
-                    ->orderBy('usu_nmbcom')
-                    ->get()
-                    ->mapWithKeys(function ($item) {
-                        return [$item->id => $item->usu_nmbcom];
-                    })
-                )
-                ->searchable()
-                ->required(),
+                // Busca por nombre Y por cedula. Ver App\Filament\Forms\SelectorDeUsuario:
+                // antes filtraba el texto de la etiqueta en el navegador, asi que
+                // buscar por cedula solo funcionaba donde la etiqueta la incluia.
+                SelectorDeUsuario::make('user_id', 'Usuario')
+                    ->required(),
                 Select::make('role_id')
                 ->label('Perfil')
                 ->options(

@@ -476,6 +476,40 @@ formulario.
     exporta la variable y phpdotenv no sobreescribe lo que ya esta en el
     entorno). Por eso se apaga con `DEBUGBAR_ENABLED`, que compose no define.
 
+## Elegir un usuario: por nombre Y por cedula (2026-09-08)
+
+`App\Filament\Forms\SelectorDeUsuario` — un solo lugar, cinco usos:
+`Locales por usuario`, `Gestiones`, `Perfil por usuario`, `Turnos` y las
+asignaciones de las franjas del cuadrante.
+
+**El problema.** Los cinco cargaban los 839 usuarios activos en un arreglo de
+opciones y dejaban que `searchable()` filtrara el texto **en el navegador**:
+
+- Tres mostraban solo `usu_nmbcom`, asi que **buscar por cedula no encontraba
+  nada**. Y la cedula es lo que el guardia dice por telefono y lo que trae su
+  credencial; buscar por nombre obliga a saber como esta escrito
+  («CASTRO ALVARES ANDRES ARTURO»: sin tildes y con los apellidos primero).
+- Los otros dos si la encontraban, **pero por coincidencia**: la cedula estaba
+  pegada en la etiqueta. Acortar ese texto habria roto la busqueda por cedula
+  sin que nada avisara.
+
+Ahora la busqueda es explicita y va a la base: `usu_nmbcom ILIKE` **o**
+`usu_cedula LIKE`, con tope de 50. Verificado: cedula completa, cedula parcial
+(«092551»), apellido, y nombre en minusculas contra una base que los guarda en
+mayusculas.
+
+- **`ILIKE` para el nombre, `LIKE` para la cedula.** Los nombres estan en
+  mayusculas y nadie los escribe asi al buscar; la cedula son digitos.
+- **`getOptionLabelUsing` incluye a los INACTIVOS**, a diferencia de la
+  busqueda: un vinculo de un guardia dado de baja apareceria vacio y se veria
+  como un dato corrupto.
+- De paso deja de cargar 839 filas en cada render del formulario. Verificado:
+  cero cedulas incrustadas en el HTML de los formularios de alta.
+
+> Dos de esos recursos (`Locales por usuario` y `Perfil por usuario`) tienen la
+> ruta de **edicion comentada** en su `getPages()` desde antes, asi que ahi el
+> formulario solo se abre al crear.
+
 ## Cambiar la contraseña de un usuario (2026-09-08)
 
 Accion **«Cambiar contraseña»** en Usuarios, visible para quien puede gestionar
