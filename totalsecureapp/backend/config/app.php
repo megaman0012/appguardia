@@ -174,7 +174,12 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
 
-        Yajra\DataTables\DataTablesServiceProvider::class,
+        /*
+         * `Yajra\DataTables` se quito: **0 usos en el codigo**. Estaba solo
+         * registrado aca y en `config/datatables.php`, y su v9 no pasa de
+         * Laravel 9, asi que era un bloqueo puro para subir de version sin
+         * nada a cambio. Los listados del panel los dibuja Filament.
+         */
         Barryvdh\DomPDF\ServiceProvider::class,
         Spatie\Html\HtmlServiceProvider::class,
         App\Providers\CorsServiceProvider::class,
@@ -233,7 +238,6 @@ return [
         'URL' => Illuminate\Support\Facades\URL::class,
         'Validator' => Illuminate\Support\Facades\Validator::class,
         'View' => Illuminate\Support\Facades\View::class,
-        'DataTables' => Yajra\DataTables\Facades\DataTables::class,
         'PDF' => Barryvdh\DomPDF\Facade::class,
         // 'Form' => Collective\Html\FormFacade::class,
         'Html' => Spatie\Html\Facades\Html::class,

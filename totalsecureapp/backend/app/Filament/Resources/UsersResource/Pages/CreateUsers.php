@@ -3,13 +3,13 @@
 namespace App\Filament\Resources\UsersResource\Pages;
 
 use App\Filament\Resources\UsersResource;
+use App\Services\UsuarioImportService;
 use App\helpers;
 use Filament\Notifications\Notification;
 use Filament\Pages\Actions;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class CreateUsers extends CreateRecord
 {
@@ -46,11 +46,11 @@ class CreateUsers extends CreateRecord
         // el formulario no muestra nada de contraseñas. Ahora se genera una por
         // persona y se muestra una sola vez al terminar.
         //
-        // Cumple las reglas que exige el cambio de clave de la app: 8+
-        // caracteres con mayuscula, minuscula y numero.
-        $this->claveTemporal = Str::upper(Str::random(2))
-            . Str::lower(Str::random(4))
-            . random_int(10, 99);
+        // Se usa el mismo generador que la carga masiva, que elige los
+        // caracteres **por clase**: con `Str::random` la clave podia salir sin
+        // ninguna minuscula y no cumplir las reglas del cambio de clave de la
+        // app (8+ con mayuscula, minuscula y numero).
+        $this->claveTemporal = app(UsuarioImportService::class)->claveTemporal();
 
         // ⚠️ **Hay que hashear aca, a mano.** Este recurso usa
         // `Modules\Acceso\Models\users`, que **no** tiene el evento `saving`

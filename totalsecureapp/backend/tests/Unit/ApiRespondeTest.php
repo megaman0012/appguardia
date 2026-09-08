@@ -86,21 +86,33 @@ class ApiRespondeTest extends TestCase
     /**
      * Las rutas registradas con prefijo `api/`.
      *
-     * ⚠️ Un `dataProvider` corre **antes** de que exista la aplicacion, asi que
-     * la fachada `Route` no sirve aca: falla con «A facade root has not been
-     * set». Se arranca una instancia desechable solo para enumerar las rutas, y
-     * los tests despues usan la suya propia.
+     * ⚠️ **Esto no puede ser un `dataProvider`.** Un proveedor corre antes de
+     * que exista la aplicacion, asi que la fachada `Route` falla con «A facade
+     * root has not been set» y `app_path()` con «Call to undefined method
+     * Container::path()».
      *
-     * @return array<string,array{0: string, 1: string}>
+     * La primera version lo esquivaba arrancando una **segunda** aplicacion ahi
+     * mismo (`require bootstrap/app.php` + `bootstrap()`). Funcionaba, pero es
+     * una trampa: `Facade::setFacadeApplication()` queda apuntando a esa
+     * instancia desechable, que lee el `.env` de verdad y no el de
+     * `phpunit.xml` -- o sea que pone la base de **produccion** al alcance de
+     * los tests. Por eso ahora es **un solo test que recorre las rutas** con la
+     * aplicacion que PHPUnit ya arranco.
+     *
+     * (El desastre que llevo a mirar esto -- corridas con 242 y 57 errores
+     * «relation users does not exist» -- **no era esto**: eran procesos de
+     * phpunit huerfanos de unas corridas que se habian colgado, vivos y
+     * compitiendo por la base de pruebas, cada uno haciendo `migrate:fresh`
+     * debajo del otro. Vale anotarlo: si la suite se pone no determinista, lo
+     * primero es `ps` y `pg_stat_activity`, no el codigo.)
+     *
+     * @return array<int,array{0: string, 1: string}>
      */
-    public static function rutasDeApi(): array
+    private function rutasDeApi(): array
     {
-        $app = require __DIR__ . '/../../bootstrap/app.php';
-        $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+        $rutas = [];
 
-        $casos = [];
-
-        foreach ($app->make('router')->getRoutes() as $ruta) {
+        foreach (app('router')->getRoutes() as $ruta) {
             $uri = $ruta->uri();
 
             if (!str_starts_with($uri, 'api/')) {
@@ -112,23 +124,26 @@ class ApiRespondeTest extends TestCase
                     continue;
                 }
 
-                $casos["{$metodo} {$uri}"] = [$metodo, $uri];
+                $rutas[] = [$metodo, $uri];
             }
         }
 
-        ksort($casos);
+        sort($rutas);
 
-        return $casos;
+        return $rutas;
     }
 
-    /**
-     * @dataProvider rutasDeApi
-     */
-    public function test_la_ruta_no_revienta(string $metodo, string $uri): void
+    public function test_ninguna_ruta_de_la_api_revienta(): void
     {
-        // Los parametros de ruta se rellenan con 1: si el registro no existe, el
-        // controlador debe responder «no encontrado», no explotar.
-        $camino = '/' . preg_replace('/\{[^}]+\}/', '1', $uri);
+        $rutas = $this->rutasDeApi();
+
+        // Si esto baja, alguien borro rutas o el recorrido dejo de encontrarlas
+        // y el test estaria pasando sin probar nada.
+        //
+        // Eran 57 y quedaron 55: se borraron `GET /api/user` -- la ruta de
+        // ejemplo de Laravel, que devolvia 500 -- y `GET /api/test-cors`. Los
+        // encontro esta misma prueba.
+        $this->assertGreaterThanOrEqual(55, count($rutas), 'Se perdieron rutas de la API');
 
         $payload = [
             'ins'         => $this->insCode,
@@ -136,28 +151,36 @@ class ApiRespondeTest extends TestCase
             'institucion' => $this->insCode,
         ];
 
-        $respuesta = $this->withHeaders([
-            'Authorization' => "Bearer {$this->token}",
-            'Accept'        => 'application/json',
-        ])->json($metodo, $camino, $payload);
+        $reventadas = [];
 
-        $codigo = $respuesta->status();
+        foreach ($rutas as list($metodo, $uri)) {
+            // Los parametros de ruta se rellenan con 1: si el registro no
+            // existe, el controlador debe responder «no encontrado», no
+            // explotar.
+            $camino = '/' . preg_replace('/\{[^}]+\}/', '1', $uri);
 
-        $this->assertLessThan(
-            500,
-            $codigo,
-            "{$metodo} {$uri} devolvió {$codigo}.\n" . mb_substr((string) $respuesta->getContent(), 0, 600)
+            $respuesta = $this->withHeaders([
+                'Authorization' => "Bearer {$this->token}",
+                'Accept'        => 'application/json',
+            ])->json($metodo, $camino, $payload);
+
+            if ($respuesta->status() >= 500) {
+                $reventadas[] = sprintf(
+                    "%s %s -> %d
+   %s",
+                    $metodo,
+                    $uri,
+                    $respuesta->status(),
+                    mb_substr((string) $respuesta->getContent(), 0, 300)
+                );
+            }
+        }
+
+        $this->assertSame(
+            [],
+            $reventadas,
+            count($reventadas) . " ruta(s) devolvieron 5xx:\n\n" . implode("\n\n", $reventadas)
         );
     }
 
-    public function test_estan_todas_las_rutas_de_la_api(): void
-    {
-        // Si esto baja, alguien borro rutas o el proveedor dejo de encontrarlas
-        // y el test estaria pasando sin probar nada.
-        //
-        // Eran 57 y quedaron 55: se borraron `GET /api/user` -- la ruta de
-        // ejemplo de Laravel, que devolvia 500 -- y `GET /api/test-cors`. Este
-        // mismo guardia fue el que aviso de la baja.
-        $this->assertGreaterThanOrEqual(55, count(self::rutasDeApi()));
-    }
 }

@@ -398,12 +398,32 @@ class UsuarioImportService
      *
      * Cumple las mismas reglas que exige el cambio de clave de la app: 8+
      * caracteres con mayuscula, minuscula y numero.
+     *
+     * ⚠️ **Se eligen los caracteres por clase, no con `Str::random`.** La
+     * primera version era `Str::upper(Str::random(2)) . Str::lower(Str::random(4)) . random_int(10,99)`,
+     * y `Str::random` puede devolver **solo digitos**: salio `HL025830`, sin
+     * ninguna minuscula, y no habria pasado la validacion del cambio de clave
+     * de la app. Un fallo que aparece una vez cada tantas cargas es peor que uno
+     * que aparece siempre.
      */
-    private function claveTemporal(): string
+    public function claveTemporal(): string
     {
-        return Str::upper(Str::random(2))
-            . Str::lower(Str::random(4))
-            . random_int(10, 99);
+        $mayusculas = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+        $minusculas = 'abcdefghijkmnopqrstuvwxyz';
+        $digitos    = '23456789';
+
+        $clave = [
+            $mayusculas[random_int(0, strlen($mayusculas) - 1)],
+            $mayusculas[random_int(0, strlen($mayusculas) - 1)],
+            $minusculas[random_int(0, strlen($minusculas) - 1)],
+            $minusculas[random_int(0, strlen($minusculas) - 1)],
+            $minusculas[random_int(0, strlen($minusculas) - 1)],
+            $minusculas[random_int(0, strlen($minusculas) - 1)],
+            $digitos[random_int(0, strlen($digitos) - 1)],
+            $digitos[random_int(0, strlen($digitos) - 1)],
+        ];
+
+        return implode('', $clave);
     }
 
     private function normalizarWhatsapp(string $numero): string

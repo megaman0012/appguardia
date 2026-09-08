@@ -110,38 +110,126 @@ Un `dataProvider` corre **antes de que exista la aplicación**:
 Sin la Etapa 0, el resto del plan es a ciegas. Con ella, cada etapa se valida en
 un minuto.
 
-## 4. Etapa 1 — Desatascar Composer (sin subir nada todavía)
+## 4. Etapa 1 — Desatascar Composer ✅ HECHA
 
-`composer.json` tiene **nueve dependencias clavadas sin `^`**, y algunas son
-bloqueos duros para Laravel 10:
+Resultado: **Laravel 8.75.0 → 8.83.29**, `minimum-stability` de `dev` a
+`stable`, ocho paquetes fuera, y **un CVE de severidad alta cerrado**. Los 389
+tests pasan y la API responde por las dos IP públicas.
 
-| Paquete | Pin actual | Problema |
+### 🔓 Lo más importante: se cerró CVE-2024-52301
+
+Al poner `minimum-stability: stable`, Composer **se negó a instalar cualquier
+Laravel 8.83.x** porque toda la línea arrastra avisos de seguridad. Antes eso
+estaba tapado: con `dev` resolvía a `8.x-dev`, una **rama de desarrollo**, y los
+avisos van sobre versiones publicadas.
+
+De los cuatro avisos que afectan a Laravel 8, uno **sí tiene arreglo dentro de
+la 8.x**:
+
+| Aviso | Severidad | Afecta | ¿Arreglable en 8.x? |
+|---|---|---|---|
+| **PKSA-w7xr-vk7n-rstm** (CVE-2024-52301) — manipulación del entorno por query string | **alta** | `<8.83.28` | **Sí → cerrado** |
+| PKSA-3r5d-mb8f-1qw9 — inyección CRLF en la regla `email` | alta | `<12.60.0` | No |
+| PKSA-8qx3-n5y5-vvnd (CVE-2025-27515) — bypass de validación de archivos | media | `<10.48.29` | No |
+| PKSA-m5cs-t1y6-qpcs — confusión de rutas en URLs firmadas temporales | media | `<12.61.1` | No |
+
+Estábamos en **8.75.0**, o sea **expuestos**, y este servidor tiene
+`register_argc_argv = On`, que es justo la precondición del CVE. Subir a
+8.83.29 lo cierra.
+
+Los otros tres se dejan explícitos en `config.policy.advisories.ignore-id`
+**menos** el que sí se arregla: dejarlo bloqueado es lo que **obliga** a Composer
+a instalar 8.83.28 o superior. Y no tienen arreglo posible: Laravel 8 no recibe
+parches de seguridad desde enero de 2023. **Se cierran subiendo de major, no
+antes.**
+
+### 🔓 dompdf: seis avisos, y una mitigación que sí se pudo aplicar hoy
+
+`dompdf/dompdf` 2.0.8 —la última que admite Laravel 8— arrastra seis avisos
+(`<3.1.6`), todos **media o baja**: lectura de archivos locales y filtración de
+existencia de rutas vía SVG, agotamiento de recursos por BMP declarados
+enormes, y un salto del *chroot*. Los críticos de dompdf son todos `<2.0.x`, así
+que no aplican.
+
+Los seis necesitan HTML o SVG controlado por quien ataca, y **`enable_remote` es
+lo que los hace alcanzables**. Se apagó en `config/dompdf.php`: la única vista
+que se renderiza a PDF es la hoja imprimible del marcador QR, y desde hoy carga
+el logo por `public_path()` —ruta de disco, no URL—, así que no hay ninguna
+carga remota en ningún PDF. Verificado: la hoja sigue saliendo igual, 42.102
+bytes con el logo incrustado.
+
+La solución de fondo es `barryvdh/laravel-dompdf` ^3.1, que usa dompdf 3 y
+**exige Laravel ≥ 9**. Es la razón más concreta para no dejar la Etapa 2 para
+más adelante.
+
+### Los pins, resueltos
+
+| Paquete | Antes | Ahora |
 |---|---|---|
-| `laravel/framework` | `8.75` | Sin `^`: ni los parches de la 8.83 entran |
-| `monolog/monolog` | `2.9.2` | Laravel 10 exige monolog **^3** |
-| `symfony/mime` | `5.4.*` | Laravel 10 exige **^6.2** |
-| `symfony/mailer` | `6.0` | Idem, clavado en la menor |
-| `guzzlehttp/guzzle` | `7.15` | Debería ser `^7.8` |
-| `nesbot/carbon` | `2.73.0` | Laravel 11+ va con **^3** |
-| `league/uri-interfaces` | `7.0` | Transitiva, no debería estar aquí |
-| `symfony/html-sanitizer` | `7.4.12` | Transitiva |
-| `barryvdh/laravel-debugbar` | `v3.6.8` | Además está en `require`, no en `require-dev` |
+| `laravel/framework` | `8.75` | **`^8.83`** → v8.83.29 |
+| `monolog/monolog` | `2.9.2` | fuera (transitiva) → 2.11.1 |
+| `symfony/mime` | `5.4.*` | fuera (transitiva) |
+| `symfony/mailer` | `6.0` | fuera — Laravel 8 usa swiftmailer |
+| `symfony/html-sanitizer` | `7.4.12` | fuera (transitiva) |
+| `league/uri-interfaces` | `7.0` | fuera (transitiva) |
+| `guzzlehttp/guzzle` | `7.15` | `^7.8` → 7.15.5 |
+| `nesbot/carbon` | `2.73.0` | `^2.73` |
+| `minimum-stability` | **`dev`** | **`stable`** |
 
-Y dos paquetes que se pueden **quitar**, lo que ahorra trabajo en todas las
-etapas siguientes:
+Y fuera del `require`:
 
-- **`yajra/laravel-datatables-oracle` — 0 usos en el código.** Solo está
-  registrado en `config/app.php` y `config/datatables.php`. Su v9 no pasa de
-  Laravel 9, así que hoy es un bloqueo puro sin nada a cambio.
-- **`facade/ignition`** hay que cambiarlo por `spatie/laravel-ignition` (el
-  paquete se renombró en Laravel 9). No es opcional.
+- **`yajra/laravel-datatables-oracle`** — 0 usos. Se quitó también de
+  `config/app.php` y se borró `config/datatables.php`.
+- **`facade/ignition`** → **`spatie/laravel-ignition`** ^1.7 (el paquete se
+  renombró en Laravel 9; la v1 admite Laravel ^8.77, que es justo lo que
+  habilita el nuevo pin).
+- **`barryvdh/laravel-debugbar`** pasó a `require-dev`.
 
-`barryvdh/laravel-debugbar` a `require-dev`: es la barra que ya se apagó por
-configuración, pero seguirla instalando en producción no tiene sentido.
+Quedan 4 paquetes marcados como abandonados (`swiftmailer`, `tgalopin/html-sanitizer`,
+`league/uri-parser`, `maximebf/debugbar`): son dependencias de Laravel 8 y del
+debugbar, y desaparecen con el framework.
 
-**Resultado de la etapa:** el proyecto sigue en Laravel 8 y funcionando, pero
-Composer deja de tener nudos artificiales. Verificable con los 358 tests + las
-dos pruebas de humo.
+### 🐛 Y apareció un cuelgue que nadie había visto
+
+Después de subir a 8.83.29, **toda la suite se colgaba sin decir nada**: PHPUnit
+imprimía su cabecera y se quedaba quieto para siempre. La causa:
+
+```php
+// database/migrations/2019_08_19_000000_create_failed_jobs_table.php
+protected $connection = 'mysql';
+```
+
+Dos migraciones (`create_failed_jobs_table` y `create_permission_section_table`)
+declaraban la conexión **`mysql`**, herencia de cuando el proyecto corría sobre
+MySQL en v1. Este proyecto es PostgreSQL, y la conexión `mysql` de
+`config/database.php` toma `DB_HOST` y `DB_PORT` del `.env` — o sea que apuntaba
+**el driver de MySQL contra el puerto 5432 de Postgres**. El TCP conecta,
+el cliente manda el saludo de MySQL, y se queda esperando una respuesta que
+nunca llega: cuelgue indefinido, sin error ni traza.
+
+**Laravel 8.75 no respetaba ese `$connection` y 8.83 sí.** Por eso la tabla
+`failed_jobs` existe en Postgres en producción y la migración figura aplicada en
+el lote 1: históricamente corrió sobre la conexión por defecto. Quitadas las dos
+líneas, las 56 migraciones corren completas.
+
+### Dos cosas para la próxima vez
+
+- **Si la suite se pone no determinista, mirar `ps` antes que el código.** Tuve
+  corridas con 242 errores «relation users does not exist», luego 57, luego
+  ninguno. No era el código: eran **procesos de phpunit huérfanos** de las
+  corridas que se habían colgado, vivos y haciendo `migrate:fresh` debajo unos
+  de otros. `pg_stat_activity` mostraba 35 sesiones sobre la base de pruebas.
+- **`composer update` toca producción al instante**, porque `vendor/` está
+  montado en vivo (`./:/var/www`). Se hizo con `artisan down` puesto: 16
+  segundos de 503 con `Retry-After`, en vez de errores de clase inexistente
+  llegando a las tablets. Respaldo previo de `composer.json`, `composer.lock` y
+  `vendor/` completo.
+
+### Lo que sigue bloqueado por Laravel 8
+
+`laravel/sail` (1.25 → 1.67) y `spatie/laravel-html` (3.5 → 3.13) tienen
+actualizaciones **dentro de su propio major** y no se pueden tomar: las dos
+exigen Laravel ≥ 9. Es el techo de esta etapa.
 
 ## 5. Etapa 2 — Laravel 8 → 10
 
@@ -291,7 +379,7 @@ cabeza en cada etapa:
 | Etapa | Alcance | Riesgo | Se puede parar acá |
 |---|---|---|---|
 | **0** Red de seguridad ✅ | 2 tests guiados por datos (+86) | Ninguno | **Hecha** |
-| **1** Desatascar Composer | 9 pins, quitar 1 paquete, cambiar ignition | Bajo | Sí |
+| **1** Desatascar Composer ✅ | 9 pins, 8 paquetes fuera, 8.75→8.83.29, **1 CVE alto cerrado** | Bajo | **Hecha** |
 | **2** Laravel 8 → 10 | Framework, sanctum, permission, modules | Medio | Sí |
 | **3** Filament 2 → 3 + Livewire 3 | 27 recursos, 81 páginas, 96 iconos, 4 vistas | **Alto** | Sí |
 | **4** Laravel 12 + Filament 4 | Saltos cortos sobre stack moderno | Bajo | — |

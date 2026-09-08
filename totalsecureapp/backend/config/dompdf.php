@@ -264,7 +264,27 @@ return array(
          *
          * @var bool
          */
-        "enable_remote" => true,
+        /*
+         * ⚠️ **Apagado a proposito (2026-09-08).**
+         *
+         * `dompdf/dompdf` 2.0.8 -- la ultima que admite Laravel 8 -- arrastra
+         * seis avisos de seguridad (`<3.1.6`), todos de severidad media o baja:
+         * lectura de archivos locales y filtracion de existencia de rutas via
+         * SVG, agotamiento de recursos por imagenes BMP declaradas enormes, y
+         * un salto del chroot. **Todos necesitan HTML o SVG controlado por
+         * quien ataca, y `enable_remote` es lo que los hace alcanzables.**
+         *
+         * Aca no hace falta: la unica vista que se renderiza a PDF es la hoja
+         * imprimible del marcador QR, y desde hoy carga el logo por
+         * `public_path()` -- ruta de disco, no URL -- porque por HTTP no
+         * funcionaba. No hay ninguna carga remota en ninguna vista de PDF.
+         *
+         * La solucion de fondo es `barryvdh/laravel-dompdf` ^3.1, que usa
+         * dompdf 3 y **exige Laravel >= 9**: entra en la Etapa 2 de
+         * `ROADMAP-MIGRACION.md`. Es, de hecho, la razon mas concreta para no
+         * dejar esa etapa para mas adelante.
+         */
+        "enable_remote" => false,
 
         /**
          * A ratio applied to the fonts height to be more like browsers' line height

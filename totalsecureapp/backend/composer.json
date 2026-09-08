@@ -2,40 +2,37 @@
     "name": "laravel/laravel",
     "type": "project",
     "description": "The Laravel Framework.",
-    "keywords": ["framework", "laravel"],
+    "keywords": [
+        "framework",
+        "laravel"
+    ],
     "license": "MIT",
     "require": {
-        "php": "^8.1",
-        "barryvdh/laravel-debugbar": "v3.6.8",
         "barryvdh/laravel-dompdf": "^2.2",
         "blade-ui-kit/blade-heroicons": "^1.6",
         "chillerlan/php-qrcode": "^5.0",
         "filament/filament": "^2.17",
-        "guzzlehttp/guzzle": "7.15",
-        "laravel/framework": "8.75",
+        "guzzlehttp/guzzle": "^7.8",
+        "laravel/framework": "^8.83",
         "laravel/sanctum": "^2.0",
         "laravel/tinker": "^2.5",
-        "league/uri-interfaces": "7.0",
         "livewire/livewire": "^2.12",
         "mervick/aes-everywhere": "^1.1",
-        "monolog/monolog": "2.9.2",
-        "nesbot/carbon": "2.73.0",
+        "nesbot/carbon": "^2.73",
         "nwidart/laravel-modules": "^8.6",
+        "php": "^8.1",
         "pxlrbt/filament-excel": "^1.1",
         "spatie/laravel-html": "^3.0",
-        "spatie/laravel-permission": "^5.11",
-        "symfony/html-sanitizer": "7.4.12",
-        "symfony/mailer": "6.0",
-        "symfony/mime": "5.4.*",
-        "yajra/laravel-datatables-oracle": "^9.21"
+        "spatie/laravel-permission": "^5.11"
     },
     "require-dev": {
-        "facade/ignition": "^2.5",
+        "barryvdh/laravel-debugbar": "^3.6",
         "fakerphp/faker": "^1.9.1",
         "laravel/sail": "^1.0.1",
         "mockery/mockery": "^1.4.4",
         "nunomaduro/collision": "^5.10",
-        "phpunit/phpunit": "^9.5.10"
+        "phpunit/phpunit": "^9.5.10",
+        "spatie/laravel-ignition": "^1.7"
     },
     "autoload": {
         "psr-4": {
@@ -72,12 +69,29 @@
     },
     "config": {
         "audit": {
-            "ignore": ["PKSA-ddwf-kgzy-ytq1"]
+            "ignore": [
+                "PKSA-ddwf-kgzy-ytq1"
+            ]
         },
         "optimize-autoloader": true,
         "preferred-install": "dist",
-        "sort-packages": true
+        "sort-packages": true,
+        "policy": {
+            "advisories": {
+                "ignore-id": [
+                    "PKSA-cv56-2228-pzr6",
+                    "PKSA-6r8f-nxsb-67bq",
+                    "PKSA-gh7h-hhy4-byg7",
+                    "PKSA-mwt3-h9tv-kx78",
+                    "PKSA-hp6n-n4kz-21wk",
+                    "PKSA-mckv-s5hg-868k",
+                    "PKSA-m5cs-t1y6-qpcs",
+                    "PKSA-3r5d-mb8f-1qw9",
+                    "PKSA-8qx3-n5y5-vvnd"
+                ]
+            }
+        }
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "prefer-stable": true
 }
