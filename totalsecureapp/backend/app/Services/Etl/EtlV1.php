@@ -305,6 +305,420 @@ class EtlV1
         return $this->conMensajes($r);
     }
 
+    /** Rondas: cabecera y detalle. El detalle trae 29.243 fotos. */
+    public function rondas(): array
+    {
+        // Las PK de v1 no siguen un patron: unas son *_code y otras *_id
+        // (rc_id, rd_id, nv_id, bt_id). Asumirlo cuesta un fallo por tabla.
+        $cab = $this->copiar('ronda_cabecera', 'ronda_cabecera', 'rc_id');
+        $det = $this->copiar('ronda_detalle', 'ronda_detalle', 'rd_id');
+
+        return $this->sumar([$cab, $det]);
+    }
+
+    /** Marcajes de asistencia. Las 12.664 filas traen foto. */
+    public function biometria(): array
+    {
+        return $this->copiar('user_has_biometria', 'user_has_biometria', 'bio_code');
+    }
+
+    public function novedades(): array
+    {
+        return $this->copiar('novedad', 'novedad', 'nv_id');
+    }
+
+    /**
+     * Alertas. El estado viene capitalizado y v2 tiene un CHECK en minusculas.
+     *
+     * v1 guarda 'Finalizada' en las 278 filas; el constraint de v2 solo acepta
+     * pendiente / en_atencion / finalizada / cancelada. Es un choque de
+     * mayusculas, no de significado, asi que se normaliza.
+     */
+    public function alertas(): array
+    {
+        $estados = ['pendiente', 'en_atencion', 'finalizada', 'cancelada'];
+
+        return $this->copiar('alertas', 'alertas', 'al_code',
+            function (array $fila, $origen) use ($estados) {
+                if (!array_key_exists('al_estado_alerta', $fila)) {
+                    return $fila;
+                }
+
+                $valor = mb_strtolower(trim((string) $fila['al_estado_alerta']));
+
+                if ($valor === '' ) {
+                    $fila['al_estado_alerta'] = null;
+                } elseif (in_array($valor, $estados, true)) {
+                    $fila['al_estado_alerta'] = $valor;
+                } else {
+                    // Un valor que no esta en la lista se deja en null en vez de
+                    // inventar uno: el CHECK acepta null, y una alerta sin estado
+                    // se ve en el panel como pendiente de revisar.
+                    $this->nota("al_estado_alerta '{$fila['al_estado_alerta']}' fuera de la lista: se guarda null");
+                    $fila['al_estado_alerta'] = null;
+                }
+
+                return $fila;
+            }
+        );
+    }
+
+    /** Bitacora, tokens push y parametros. Poco volumen, pero hacen falta. */
+    public function varios(): array
+    {
+        return $this->sumar([
+            $this->copiar('bitacora', 'bitacora', 'bt_id'),
+            $this->copiar('user_has_push_tkn', 'user_has_push_tkn', 'pt_code'),
+            $this->copiar('parametros', 'parametros', 'pr_code'),
+        ]);
+    }
+
+    /**
+     * Accesos, con las columnas que v2 movio a otras tablas.
+     *
+     * Siete columnas de `acceso` no existen en el `acceso` de v2 porque se
+     * normalizaron en `acceso_vehiculo`, y **tienen datos**: `ac_empresa` en
+     * 8.975 de 9.769 filas. Un ETL columna a columna las tiraria en silencio.
+     *
+     * `ac_nombre_contrato` (36 filas) va a `acceso_visitante.avi_persona_visita`:
+     * mirando los valores se ve que guardaba la persona visitada o el
+     * responsable que autorizaba, en texto libre.
+     */
+    public function accesos(): array
+    {
+        // Las personas primero: el acceso apunta a ellas.
+        $personas = $this->copiar('acceso_persona', 'acceso_persona', 'ap_code');
+
+        $cab = $this->copiar('acceso', 'acceso', 'ac_code',
+            function (array $fila, $origen) {
+                // `ac_tipo` NO significa lo mismo en las dos versiones.
+                //
+                // En v1 es el MEDIO DE TRANSPORTE, un entero que apunta a
+                // `acceso_transporte_tipo`: 1=Caminando, 2=Bicicleta, 3=Moto,
+                // 4=Vehiculo. Se confirma con los datos: las 1.320 filas con
+                // ac_tipo=4 son las unicas que traen patente.
+                //
+                // En v2 es el TIPO DE ACCESO: peatonal / vehicular / proveedor /
+                // empleado / visitante. Copiar el entero tal cual dejaria "1" y
+                // "4" en una columna de texto, y `Acceso::esVehicular()` diria
+                // que ningun acceso lo es.
+                $transporte = (int) $origen->ac_tipo;
+
+                $fila['ac_tipo'] = in_array($transporte, [3, 4], true)
+                    ? 'vehicular'   // moto o vehiculo
+                    : 'peatonal';   // caminando o bicicleta
+
+                // La bicicleta no se pierde: v2 tiene una columna propia para
+                // eso. En v1 `ac_bicicleta` esta casi sin usar (17 filas en
+                // 9.769), asi que el dato real vivia en ac_tipo=2.
+                if ($transporte === 2) {
+                    $fila['ac_bicicleta'] = true;
+                }
+
+                return $fila;
+            }
+        );
+
+        $this->exigirVacia('acceso_vehiculo');
+        $this->exigirVacia('acceso_visitante');
+
+        $vehiculos = 0;
+        $visitantes = 0;
+
+        $this->v1()->table('acceso')->orderBy('ac_code')->chunk(self::LOTE,
+            function ($lote) use (&$vehiculos, &$visitantes) {
+                $veh = [];
+                $vis = [];
+
+                foreach ($lote as $a) {
+                    // Solo se crea la fila si hay algo que guardar: un acceso
+                    // peatonal sin nada de vehiculo no necesita una fila vacia.
+                    //
+                    // `ac_pta_llave` va aparte y NO por algunoConDato: es un
+                    // varchar con '0'/'1', y '0' no es cadena vacia, asi que
+                    // contaba como dato y se creaba una fila para los 9.769
+                    // accesos. Con esto quedan 8.993, que es lo que dice la
+                    // consulta equivalente sobre v1.
+                    $tieneVehiculo = $this->algunoConDato([$a->ac_patente, $a->ac_empresa, $a->ac_kms])
+                        || (bool) $a->ac_is_carro
+                        || (bool) $a->ac_is_sello
+                        || (bool) $a->ac_is_neumatico
+                        || (bool) $a->ac_pta_llave;
+
+                    if ($tieneVehiculo) {
+                        $veh[] = [
+                            'av_ac_code'      => $a->ac_code,
+                            'av_patente'      => $this->texto($a->ac_patente),
+                            'av_empresa'      => $this->texto($a->ac_empresa),
+                            'av_is_sello'     => (bool) $a->ac_is_sello,
+                            'av_is_neumatico' => (bool) $a->ac_is_neumatico,
+                            'av_is_carro'     => (bool) $a->ac_is_carro,
+                            // varchar '0'/'1' en v1, booleano en v2.
+                            'av_pta_llave'    => (bool) $a->ac_pta_llave,
+                            'av_kms'          => $this->texto($a->ac_kms),
+                            'created_at'      => $a->ac_created_at,
+                            'updated_at'      => $a->ac_updated_at,
+                        ];
+                    }
+
+                    if ($this->algunoConDato([$a->ac_nombre_contrato])) {
+                        $vis[] = [
+                            'avi_ac_code'        => $a->ac_code,
+                            'avi_persona_visita' => $this->texto($a->ac_nombre_contrato),
+                            'created_at'         => $a->ac_created_at,
+                            'updated_at'         => $a->ac_updated_at,
+                        ];
+                    }
+                }
+
+                if ($veh !== []) {
+                    DB::table('acceso_vehiculo')->insert($veh);
+                    $vehiculos += count($veh);
+                }
+                if ($vis !== []) {
+                    DB::table('acceso_visitante')->insert($vis);
+                    $visitantes += count($vis);
+                }
+            }
+        );
+
+        $r = $this->sumar([$personas, $cab]);
+        $r['avisos'][] = "{$vehiculos} filas de acceso_vehiculo creadas desde las columnas que v2 movio";
+        $r['avisos'][] = "{$visitantes} filas de acceso_visitante con la persona visitada (ac_nombre_contrato)";
+
+        return $r;
+    }
+
+    /**
+     * Inventario. Es la etapa que NO puede conservar los ids, y por que.
+     *
+     * Dos cambios de forma:
+     *
+     * **1. Los productos eran globales y ahora son por local.** Los 16 de
+     * `inv_productos` se convierten en 523 filas de `inv_producto_catalogo`, una
+     * por cada par (local, producto) realmente usado. Un id de v1 pasa a ser N
+     * ids de v2, asi que aqui hace falta un mapa; es el unico lugar del ETL
+     * donde los ids se reasignan.
+     *
+     * **2. Un movimiento era el ciclo completo y ahora cada fila es un evento.**
+     * En los datos reales los 5.963 movimientos tienen fecha de recepcion y
+     * 5.916 tambien de devolucion, asi que salen **11.879 eventos**. Ninguno
+     * tiene asignacion ni entrega, asi que esas dos etapas no generan nada.
+     */
+    public function inventario(): array
+    {
+        foreach (['inv_producto_catalogo', 'inv_lista', 'inv_lista_item',
+                  'inv_movimiento_cabecera', 'inv_movimiento_detalle'] as $t) {
+            $this->exigirVacia($t);
+        }
+
+        $this->notas = [];
+        $this->avisos = [];
+
+        // ── Listas (ids conservados) ──
+        $listas = $this->v1()->table('inv_listas_productos')->get();
+        DB::table('inv_lista')->insert($listas->map(fn ($l) => [
+            'li_id'           => $l->lp_id,
+            'li_ins_code'     => $l->lp_ins_code,
+            'li_nombre'       => $l->lp_nombre,
+            'li_descripcion'  => $l->lp_descripcion,
+            'li_activo'       => (bool) $l->lp_estado,
+            'li_created_user' => $l->lp_created_user,
+            'li_updated_user' => $l->lp_updated_user,
+            'li_created_at'   => $l->lp_created_at,
+            'li_updated_at'   => $l->lp_updated_at,
+        ])->all());
+        $this->ajustarSecuencia('inv_lista', 'li_id');
+
+        $localPorLista = $listas->pluck('lp_ins_code', 'lp_id');
+
+        // ── Productos: uno por (local, producto) usado ──
+        $productos = $this->v1()->table('inv_productos')->get()->keyBy('pr_id');
+        $items = $this->v1()->table('inv_lista_producto_items')->get();
+
+        // El catalogo se arma con TODOS los pares (local, producto) realmente
+        // referenciados, y eso incluye los movimientos, no solo las listas.
+        //
+        // Nueve detalles apuntan a un producto que no esta en ninguna lista de
+        // su local (locales 22, 158 y 162): probablemente la lista se cambio
+        // despues del movimiento. Armando el catalogo solo desde las listas,
+        // esos nueve detalles se descartaban en silencio.
+        $pares = [];
+        foreach ($items as $it) {
+            $ins = $localPorLista[$it->lpi_lp_id] ?? null;
+            if ($ins !== null) {
+                $pares[$ins . ':' . $it->lpi_pr_id] = [$ins, $it->lpi_pr_id];
+            }
+        }
+
+        $usadosEnMovimientos = $this->v1()->table('inv_movimiento_detalles as d')
+            ->join('inv_movimientos as m', 'm.mov_id', '=', 'd.md_mov_id')
+            ->select('m.mov_ins_code', 'd.md_pr_id')
+            ->distinct()
+            ->get();
+
+        foreach ($usadosEnMovimientos as $u) {
+            $pares[$u->mov_ins_code . ':' . $u->md_pr_id] = [$u->mov_ins_code, $u->md_pr_id];
+        }
+
+        // Sin array_chunk a proposito: `array_chunk` DESCARTA las claves de
+        // texto salvo que se le pase preserve_keys, y con eso el mapa quedaba
+        // indexado 0,1,2... En la primera corrida ningun item pudo resolver su
+        // producto y se omitieron los 526, sin ningun error.
+        $mapaProducto = [];   // "local:pr_id" => ipc_id
+        foreach ($pares as $clave => [$ins, $prId]) {
+            {
+                $p = $productos[$prId] ?? null;
+                if ($p === null) {
+                    $this->nota("producto {$prId} referenciado y no existe en inv_productos");
+                    continue;
+                }
+                $mapaProducto[$clave] = DB::table('inv_producto_catalogo')->insertGetId([
+                    'ipc_ins_code'       => $ins,
+                    'ipc_nombre'         => $p->pr_nombre,
+                    'ipc_descripcion'    => $p->pr_descripcion,
+                    'ipc_especificacion' => $p->pr_especificacion,
+                    'ipc_stock_actual'   => $p->pr_stock_actual,
+                    'ipc_activo'         => (bool) $p->pr_estado,
+                    'ipc_created_at'     => $p->pr_created_at,
+                    'ipc_updated_at'     => $p->pr_updated_at,
+                ], 'ipc_id');
+            }
+        }
+
+        // ── Items de lista (ids conservados) ──
+        $filasItems = [];
+        $itemsHuerfanos = 0;
+        foreach ($items as $it) {
+            $ins = $localPorLista[$it->lpi_lp_id] ?? null;
+            $ipc = $mapaProducto[$ins . ':' . $it->lpi_pr_id] ?? null;
+            if ($ipc === null) {
+                $itemsHuerfanos++;
+                continue;
+            }
+            $filasItems[] = [
+                'lia_id'               => $it->lpi_id,
+                'lia_lista_id'         => $it->lpi_lp_id,
+                'lia_producto_id'      => $ipc,
+                'lia_cantidad_default' => $it->lpi_cantidad,
+                'lia_activo'           => (bool) $it->lpi_estado,
+                'lia_created_user'     => $it->lpi_created_user,
+                'lia_updated_user'     => $it->lpi_updated_user,
+                'lia_created_at'       => $it->lpi_created_at,
+                'lia_updated_at'       => $it->lpi_updated_at,
+            ];
+        }
+        foreach (array_chunk($filasItems, self::LOTE) as $lote) {
+            DB::table('inv_lista_item')->insert($lote);
+        }
+        $this->ajustarSecuencia('inv_lista_item', 'lia_id');
+
+        // ── Movimientos: un evento por etapa con fecha ──
+        $detallesPorMov = $this->v1()->table('inv_movimiento_detalles')->get()->groupBy('md_mov_id');
+        $eventos = 0;
+        $detalles = 0;
+        $detallesSinProducto = 0;
+
+        foreach ($this->v1()->table('inv_movimientos')->orderBy('mov_id')->cursor() as $m) {
+            $etapas = [];
+            if ($m->mov_recep_fecha !== null) {
+                $etapas[] = ['recepcion', $m->mov_recep_fecha, $m->mov_recep_user,
+                             $m->mov_recep_lat, $m->mov_recep_lng, $m->mov_recep_obsv];
+            }
+            if ($m->mov_devol_fecha !== null) {
+                $etapas[] = ['devolucion', $m->mov_devol_fecha, $m->mov_devol_user,
+                             $m->mov_devol_lat, $m->mov_devol_lng, $m->mov_devol_obsv];
+            }
+
+            foreach ($etapas as [$tipo, $fecha, $usuario, $lat, $lng, $obsv]) {
+                $mcId = DB::table('inv_movimiento_cabecera')->insertGetId([
+                    'mc_ins_code'      => $m->mov_ins_code,
+                    'mc_lista_id'      => $m->mov_lp_id,
+                    'mc_tipo'          => $tipo,
+                    'mc_usuario_id'    => $usuario,
+                    'mc_fecha'         => $fecha,
+                    'mc_lat'           => $this->texto($lat),
+                    'mc_lng'           => $this->texto($lng),
+                    'mc_observaciones' => $this->texto($obsv),
+                    'mc_estado'        => 'completado',
+                    'mc_created_at'    => $m->mov_created_at,
+                    'mc_updated_at'    => $m->mov_updated_at,
+                ], 'mc_id');
+                $eventos++;
+
+                // **El detalle solo se crea para la recepcion.**
+                //
+                // `md_cant_devol` esta NULL en las 23.790 filas de v1: la
+                // devolucion se registraba solo en la cabecera (fecha, usuario,
+                // GPS), nunca producto por producto. Crear detalles para el
+                // evento de devolucion obligaria a inventar la cantidad
+                // devuelta -- y "asumo que devolvio todo" es exactamente la
+                // clase de dato que despues alguien lee como si fuera real.
+                //
+                // El evento de devolucion queda con su cabecera, que es todo lo
+                // que v1 sabia.
+                $filasDet = [];
+                foreach ($tipo === 'recepcion' ? ($detallesPorMov[$m->mov_id] ?? []) : [] as $d) {
+                    $ipc = $mapaProducto[$m->mov_ins_code . ':' . $d->md_pr_id] ?? null;
+                    if ($ipc === null) {
+                        $detallesSinProducto++;
+                        continue;
+                    }
+
+                    // Lo esperado es lo asignado y lo contado lo recibido.
+                    $esperado = $d->md_cant_asign;
+                    $contado  = $d->md_cant_recep;
+
+                    $filasDet[] = [
+                        'md_movimiento_id'    => $mcId,
+                        'md_producto_id'      => $ipc,
+                        'md_cantidad_default' => $esperado,
+                        'md_cantidad_real'    => $contado,
+                        'md_recibido'         => (bool) $d->md_exist,
+                        'md_observacion'      => $this->texto($d->md_recep_obsv),
+                        // v1 tenia un booleano; v2 distingue ok/falta/danado.
+                        // "danado" no tiene origen, asi que solo se deduce si
+                        // cuadra o falta.
+                        'md_estado'           => ((float) $contado >= (float) $esperado) ? 'ok' : 'falta',
+                        'md_created_at'       => $d->md_created_at,
+                        'md_updated_at'       => $d->md_updated_at,
+                    ];
+                }
+
+                foreach (array_chunk($filasDet, self::LOTE) as $lote) {
+                    DB::table('inv_movimiento_detalle')->insert($lote);
+                    $detalles += count($lote);
+                }
+            }
+        }
+
+        $this->ajustarSecuencia('inv_movimiento_cabecera', 'mc_id');
+        $this->ajustarSecuencia('inv_movimiento_detalle', 'md_id');
+
+        $movV1 = $this->v1()->table('inv_movimientos')->count();
+        $this->aviso("{$movV1} movimientos de v1 -> {$eventos} eventos (uno por etapa con fecha)");
+        $this->aviso(count($mapaProducto) . ' productos por local creados desde ' . $productos->count() . ' productos globales');
+        if ($itemsHuerfanos > 0) {
+            $this->aviso("{$itemsHuerfanos} items de lista omitidos: su producto no se pudo resolver");
+        }
+
+        $detV1 = $this->v1()->table('inv_movimiento_detalles')->count();
+        $this->aviso("{$detV1} detalles de v1 -> {$detalles} (solo los de recepcion: v1 nunca guardo cantidades devueltas por producto)");
+        if ($detallesSinProducto > 0) {
+            $this->aviso("{$detallesSinProducto} detalles omitidos: su producto no existe en inv_productos");
+        }
+
+        return [
+            // El origen que se compara es el de las LISTAS: es lo unico que
+            // conserva una relacion 1 a 1 entre las dos versiones.
+            'origen'     => $this->v1()->table('inv_listas_productos')->count(),
+            'destino'    => DB::table('inv_lista')->count(),
+            'insertadas' => $eventos + $detalles,
+            'notas'      => $this->notas,
+            'avisos'     => $this->avisos,
+        ];
+    }
+
     // ─────────────────────────── Interno ───────────────────────────
 
     private function v1(): ConnectionInterface
@@ -559,6 +973,38 @@ class EtlV1
             "SELECT setval(?, COALESCE((SELECT MAX({$pk}) FROM {$tabla}), 1))",
             [$secuencia->s]
         );
+    }
+
+    private function texto($v): ?string
+    {
+        return $v === null ? null : (string) $v;
+    }
+
+    private function algunoConDato(array $valores): bool
+    {
+        foreach ($valores as $v) {
+            if ($v !== null && trim((string) $v) !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** Junta varias copias en un solo resultado, sumando los conteos. */
+    private function sumar(array $partes): array
+    {
+        $r = ['origen' => 0, 'destino' => 0, 'insertadas' => 0, 'notas' => [], 'avisos' => []];
+
+        foreach ($partes as $p) {
+            $r['origen'] += $p['origen'];
+            $r['destino'] += $p['destino'];
+            $r['insertadas'] += $p['insertadas'];
+            $r['notas'] = array_merge($r['notas'], $p['notas'] ?? []);
+            $r['avisos'] = array_merge($r['avisos'], $p['avisos'] ?? []);
+        }
+
+        return $r;
     }
 
     private function nota(string $t): void

@@ -43,6 +43,13 @@ class EtlV1Command extends Command
         'roles'      => 'Roles de cada usuario, traducidos por nombre',
         'vinculos'   => 'Que locales ve cada usuario',
         'marcadores' => 'Puntos QR de cada local',
+        'rondas'     => 'Rondas: cabecera y detalle (29.243 fotos)',
+        'biometria'  => 'Marcajes de asistencia (12.664 fotos)',
+        'accesos'    => 'Accesos, personas, y lo que v2 movio a otras tablas',
+        'novedades'  => 'Novedades',
+        'alertas'    => 'Alertas',
+        'inventario' => 'Inventario: productos por local y movimientos por evento',
+        'varios'     => 'Bitacora, tokens push y parametros',
     ];
 
     public function handle(EtlV1 $etl): int

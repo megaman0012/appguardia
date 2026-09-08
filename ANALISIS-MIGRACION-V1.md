@@ -304,26 +304,21 @@ que quedaron intactos.
 
 ### Dos cosas que aparecieron en el zip
 
-**1. 3.329 fotos de accesos que no se pueden reconectar.** La carpeta
-`accesos/` trae 3.333 archivos con el mismo formato de nombre
-(`<usu_id>_<ug_code>_<timestamp>.jpg`), pero **`acceso` en v1 no tiene ninguna
-columna de foto**: el módulo las guardaba en disco y nunca registraba cuál
-pertenecía a cada acceso.
+**1. Las fotos de accesos SÍ están referenciadas.** ⚠️ Corrige lo que decía antes
+esta sección.
 
-Se intentó reconstruir el vínculo por usuario + gestión + tiempo. No sale:
+Se afirmó que `acceso` en v1 no tenía columna de foto y que las 3.333 fotos de
+`accesos/` eran huérfanas. **Es falso.** `acceso.ac_foto` existe, es de tipo
+`text`, y **3.428 filas la tienen poblada**. La búsqueda de columnas de imagen que
+llevó a esa conclusión exigía la forma `tipo(numero)` —`varchar(255)`— y por eso
+pasó por alto una columna `text`.
 
-| Ventana | Fotos emparejables |
-|---|---:|
-| exacta | 4 (0,1%) |
-| ±60 s | 37 (1,1%) |
-| ±1 h | 570 (17,1%) |
-| ±24 h | 3.286 (98,7%) |
+Verificado como las demás: **3.428 referencias, 3.237 rutas distintas, todas
+presentes en disco, 0 faltantes.** (Algunos accesos comparten archivo, de ahí la
+diferencia entre filas y rutas.) Sobran 95 archivos en disco sin ninguna fila que
+los referencie.
 
-El timestamp del archivo es el de **subida**, no el del acceso. La ventana de 24 h
-empareja casi todo pero no sirve de nada: un guardia registra muchos accesos en un
-día, así que asignaría fotos casi al azar. **Conclusión: se conservan como
-archivos y no se vinculan.** v2 sí tiene `ac_foto`, así que los accesos nuevos no
-repetirán el problema.
+`ac_foto` existe también en v2, así que el ETL las trae sin nada especial.
 
 **2. Un `2025.rar` de 83 MB dentro del directorio web.** Alguien archivó las fotos
 de 2025 y dejó el .rar en `public/images/accesos/`. Nginx sirve todo `public/`,
@@ -440,7 +435,7 @@ pero no auditable.
 
 1. **`public/images/` del servidor de v1** (~42.000 archivos). Es lo único que no
    está en el dump y sin eso las fotos se pierden. **En curso.**
-2. **Nada más.** Con las imágenes en el servidor, el ETL es escribible completo.
+2. **Nada más.** El ETL está escrito y corrido; ver abajo.
 
 ### Lo que el ETL de inventario tiene que hacer, ahora que el destino está fijo
 
@@ -476,3 +471,171 @@ Cuando no se necesite:
 ```bash
 docker rm -f v1_analisis
 ```
+
+
+---
+
+# El ETL: escrito, corrido y verificado (2026-09-07)
+
+```bash
+php artisan etl:v1 --lista        # etapas y su orden
+php artisan etl:v1 <etapa>        # una etapa
+php artisan etl:v1 --todo         # todas, en orden
+```
+
+`app/Services/Etl/EtlV1.php` + `app/Console/Commands/EtlV1Command.php`.
+
+**Cada etapa informa origen y destino, y que los dos números coincidan ES la
+verificación.** Si una no cuadra, el comando se detiene: seguir cargaría datos
+que cuelgan de lo que no entró.
+
+## Precondición: base recién migrada
+
+El ETL **conserva las claves primarias de v1**. Es lo que hace triviales las
+claves ajenas —un `ronda_detalle` sigue apuntando al mismo `ronda_cabecera`— y el
+precio es que el destino tiene que estar vacío. Cada etapa lo exige y dice cómo
+llegar a ese estado:
+
+```bash
+php artisan migrate:fresh --force     # SIN db:seed
+php artisan etl:v1 --todo
+php artisan usuario:crear --rol=Administrador ...   # el admin va DESPUÉS
+```
+
+La geografía (2 países, 24 provincias, 15 ciudades) y los roles y permisos los
+siembran **migraciones**, así que `migrate:fresh` los deja listos. El usuario
+administrador hay que recrearlo después: `migrate:fresh` lo borra.
+
+## Resultado contra los datos reales
+
+| Etapa | Origen → Destino | |
+|---|---|---|
+| `clientes` | 21 → 21 | |
+| `locales` | 137 → 137 | 0 sin ciudad, 0 sin cliente |
+| `usuarios` | 878 → 878 | |
+| `gestiones` | 886 → 886 | |
+| `roles` | 932 → 919 | 13 descartados, explicados abajo |
+| `vinculos` | 38.246 → 38.246 | |
+| `marcadores` | 118 → 118 | 25 locales quedan sin punto QR |
+| `rondas` | 46.282 → 46.282 | cabecera + detalle |
+| `biometria` | 12.664 → 12.664 | |
+| `accesos` | 11.405 → 11.405 | + 8.993 vehículo, + 36 visitante |
+| `novedades` | 7 → 7 | |
+| `alertas` | 278 → 278 | |
+| `inventario` | 132 listas | 532 productos, 11.879 eventos, 23.790 detalles |
+| `varios` | 194 → 194 | bitácora, tokens push, parámetros |
+
+Y de punta a punta: el panel abre con los clientes reales (DHL, LA FABRIL,
+LATAM), los locales con su ciudad, y **una foto de biometría de abril de 2025 se
+sirve con HTTP 200 `image/jpeg`** desde la pantalla de marcajes.
+
+## Lo que casi salió muy mal: los ids de rol
+
+**Significan cosas distintas en cada versión.**
+
+| id | v1 | v2 |
+|---|---|---|
+| 1 | Administrador General | **Supervisor** |
+| 2 | Administrador | **Vigilante** |
+| 3 | Supervisor | **Cliente** |
+| 4 | Vigilante | **Administrador** |
+| 5 | Administrador Institucion | **Lider Operativo** |
+| 6 | Consola Notificacion | **Consola** |
+
+Copiar `user_has_roles` conservando `role_id` habría convertido a los **867
+vigilantes en Administradores** y a los 50 supervisores en Clientes: todo el RBAC
+al revés, sin un solo error en el log. Se traduce **por nombre**, con una tabla
+explícita en `EtlV1::ROLES`.
+
+Verificado después de cargar: 856 vigilantes, 50 supervisores, 9 consola, 4
+administradores — idéntico a v1 agrupado por nombre.
+
+Los 13 descartados son explicables: 11 filas repetidas en v1, más 2 usuarios que
+tienen los dos «Administrador», que en v2 son uno solo y chocarían en la clave
+primaria compuesta.
+
+## Los otros choques que aparecieron con datos reales
+
+Ninguno se veía en el esquema; todos aparecieron al cargar.
+
+- **Nueve `tinyint` que en Postgres son `boolean`.** Postgres rechaza un `1`
+  entero donde espera booleano. El casteo va por el **tipo de destino**, leído de
+  `information_schema`: mapear ~130 columnas a mano en 20 tablas era garantizar un
+  error silencioso.
+- **Fechas `0000-00-00` de MySQL**, que Postgres rechaza. 69 en
+  `usu_email_verified_at`. Significan «sin fecha»: van a null.
+- **`organizacion.org_created_user` es varchar y trae `'admin'`** en tres filas.
+  No es un id y no hay a quién apuntar: va a null, contado en las notas.
+- **15 columnas que v2 exige y v1 permitía vacías.** Solo `users` tiene filas así:
+  665 sin nombres y apellidos separados, 505 sin correo. Se guardan vacías — el
+  nombre completo (`usu_nmbcom`) nunca falta, así que no se pierde a nadie. En una
+  columna **numérica no se rellena**: un 0 en una clave ajena crearía un vínculo a
+  un local inexistente, que es peor que fallar.
+- **`alertas.al_estado_alerta` viene `'Finalizada'`** y el CHECK de v2 solo acepta
+  minúsculas. Choque de mayúsculas, no de significado: se normaliza.
+- **Las claves primarias de v1 no siguen un patrón**: unas son `*_code` y otras
+  `*_id` (`rc_id`, `rd_id`, `nv_id`, `bt_id`). Asumirlo cuesta un fallo por tabla.
+- **`av_patente` y `av_kms` eran varchar(20) y no alcanzaban.** En producción son
+  texto libre que el guardia escribió: `"Placa GTK-8594 Trailblazer auto"` (31),
+  `"CRJ 0809. - SELLO ROTO LEVAPAN. CRJ 3684"` (43). Truncar a 20 no era opción,
+  así que se ensancharon a 100 (migración `2026_09_07_300001`).
+
+## `ac_tipo`: la columna que cambió de significado
+
+En v1 es el **medio de transporte**, un entero que apunta a
+`acceso_transporte_tipo`: 1=Caminando, 2=Bicicleta, 3=Moto, 4=Vehiculo. Se
+confirma con los datos: las 1.320 filas con `ac_tipo=4` son las únicas que traen
+patente.
+
+En v2 es el **tipo de acceso**: peatonal / vehicular / proveedor / empleado /
+visitante. Copiar el entero habría dejado `"1"` y `"4"` en una columna de texto, y
+`Acceso::esVehicular()` habría dicho que ningún acceso lo es.
+
+Se traduce: 1 y 2 → `peatonal`, 3 y 4 → `vehicular`. Y **la bicicleta no se
+pierde**: `ac_tipo=2` pone `ac_bicicleta = true`, que es la columna que v2 tiene
+para eso (en v1 `ac_bicicleta` está casi sin usar, 17 filas en 9.769).
+
+## Inventario: la etapa que no puede conservar los ids
+
+Dos cambios de forma, y es el único lugar del ETL donde los ids se reasignan.
+
+**1. Los productos eran globales y ahora son por local.** Los 16 de
+`inv_productos` se convierten en **532** filas de `inv_producto_catalogo`, una por
+cada par (local, producto) realmente usado. Un id de v1 pasa a ser N de v2, así
+que hace falta un mapa.
+
+> El catálogo se arma con los pares de **las listas Y de los movimientos**. Nueve
+> detalles apuntan a un producto que ya no está en ninguna lista de su local
+> (locales 22, 158 y 162): probablemente la lista se cambió después. Armándolo
+> solo desde las listas, esos nueve detalles se descartaban en silencio.
+
+**2. Un movimiento era el ciclo completo y ahora cada fila es un evento.** Los
+5.963 movimientos tienen fecha de recepción y 5.916 también de devolución, así que
+salen **11.879 eventos**. Ninguno tiene asignación ni entrega, así que esas dos
+etapas no generan nada.
+
+> **El detalle solo se crea para la recepción.** `md_cant_devol` está NULL en las
+> 23.790 filas de v1: la devolución se registraba solo en la cabecera, nunca
+> producto por producto. Crear detalles para el evento de devolución obligaría a
+> inventar la cantidad devuelta, y «asumo que devolvió todo» es exactamente la
+> clase de dato que después alguien lee como si fuera real. El evento de
+> devolución queda con su cabecera, que es todo lo que v1 sabía.
+
+`md_estado` pasó de booleano a `ok`/`falta`/`danado`. Se deduce comparando contado
+contra esperado; **`danado` no tiene origen** y no se usa.
+
+## Un detalle que solo aparece en producción
+
+Insertar ids explícitos **no mueve la secuencia de Postgres**. Sin ajustarla, el
+primer registro que cree la aplicación arranca en 1 y falla con violación de clave
+primaria — y el síntoma aparece recién cuando un guardia marca por primera vez.
+Cada etapa la ajusta con `setval` al terminar.
+
+## Pendientes después de cargar
+
+- **25 locales sin marcador activo**: su asistencia entrará como «ubicación no
+  verificada» hasta que se les cargue el punto QR.
+- **`user_has_pais` vacío**: ningún Líder Operativo ve nada hasta que se pueble.
+  Hoy no hay usuarios con ese rol, así que no bloquea.
+- **Cuadrantes y turnos desde cero**: no existen en v1.
+- **95 fotos de accesos** en disco sin fila que las referencie.
