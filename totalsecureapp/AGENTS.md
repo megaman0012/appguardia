@@ -766,6 +766,59 @@ cualquier pantalla, con el minimo escalado posible desde un original de 144 px.
 El escalado es bilineal, no por vecino mas cercano: al ampliar, suavizar se ve
 mejor que dejar bloques.
 
+### Keystore de produccion (2026-09-08)
+
+| | |
+|---|---|
+| Archivo | `/home/server-dt/keystores/totalsecureapp-release.jks` (**fuera del repo**) |
+| Formato | PKCS12, RSA 4096, SHA384withRSA |
+| Alias | `totalsecureapp` |
+| Vigencia | hasta **2054-01-24** (10.000 dias) |
+| Titular | `CN=Total Secure App, OU=Sistemas, O=Total Pacific Group, L=Guayaquil, ST=Guayas, C=EC` |
+| Huella SHA-256 | `E0:84:FD:69:65:AA:55:A2:45:81:8F:C6:4E:77:CF:1C:F7:DE:16:28:E3:2C:34:9B:CA:87:44:6C:AF:1C:96:A7` |
+
+**Las credenciales viven en `~/.gradle/gradle.properties`** (modo 600), no en el
+proyecto: `~/.gradle` esta fuera del arbol de trabajo, asi que **ningun
+`git add` lo puede arrastrar al repositorio**. Las cuatro propiedades son
+`TSA_STORE_FILE`, `TSA_STORE_PASSWORD`, `TSA_KEY_ALIAS` y `TSA_KEY_PASSWORD`.
+
+PKCS12 **no admite contraseñas distintas** para el almacen y la clave: keytool
+avisa que ignora `-keypass`. Las dos son la misma, y es el comportamiento normal
+del formato.
+
+#### Por que esto no se puede perder
+
+Android identifica una app por **paquete + clave de firma**. Si se pierde el
+keystore:
+
+- **No se puede volver a actualizar la app instalada.** Android rechaza un APK
+  cuya firma no coincide con la instalada: hay que **desinstalar y reinstalar**,
+  con lo que se pierden los datos locales de la tablet (incluida la cola de
+  registros hechos sin señal).
+- En Google Play seria peor: no se puede volver a publicar bajo el mismo paquete.
+- **Un keystore filtrado tampoco se puede revocar.** Quien lo tenga puede firmar
+  actualizaciones haciendose pasar por la app.
+
+**Respaldarlo fuera de este servidor**, junto con su contraseña y por separado de
+ella.
+
+#### La firma se elige sola, y el build lo dice
+
+`app/build.gradle` usa `signingConfigs.release` cuando existe `TSA_STORE_FILE` y
+cae al de depuracion cuando no. La reserva existe para que otra maquina pueda
+compilar para probar sin tener el keystore.
+
+Y lo anuncia en la salida, porque **los dos APK se ven iguales** hasta que
+alguien intenta instalar uno encima del otro:
+
+```
+> Task :app:assembleRelease
+Firma release: keystore de PRODUCCION (totalsecureapp)
+```
+
+⚠️ **El APK de depuracion que se genero antes NO se puede actualizar con este.**
+Si alguna tablet ya tiene instalado el anterior, hay que desinstalarlo primero.
+
 ### APK compilado y verificado (2026-09-08)
 
 `app-release.apk`, **100 MB**. Copia en `apk/` de la raiz del monorepo
@@ -782,9 +835,7 @@ Verificado **dentro del APK**, no solo que compilara:
 | Cleartext HTTP | habilitado (sin esto Android 9+ bloquea el trafico) |
 | Splash | los 5 PNG por densidad, **identicos pixel a pixel** a los generados desde `logo.png` |
 
-**Firmado con el keystore de depuracion** (`CN=Android Debug`). Sirve para
-instalar por USB o descarga directa, **no para Google Play**: para eso hay que
-generar un keystore propio.
+**Firmado con el keystore de PRODUCCION** (ver la seccion siguiente).
 
 Y sigue faltando lo que no depende del servidor: **el reenvio en el router** de
 `181.198.245.50:3031` y `181.188.232.50:3031` hacia `192.168.3.124:3031`. Se

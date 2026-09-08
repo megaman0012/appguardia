@@ -104,15 +104,45 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+
+        // Firma de PRODUCCION.
+        //
+        // El keystore y sus contrasenas NO estan en el repositorio: se leen de
+        // ~/.gradle/gradle.properties, que vive fuera del arbol de trabajo y por
+        // eso ningun `git add` lo puede arrastrar. Un keystore filtrado permite
+        // publicar actualizaciones haciendose pasar por la app, y **no se puede
+        // revocar**: hay que cambiar de clave, y cambiar de clave rompe la
+        // actualizacion de todas las instalaciones existentes.
+        //
+        // Las cuatro propiedades: TSA_STORE_FILE, TSA_STORE_PASSWORD,
+        // TSA_KEY_ALIAS y TSA_KEY_PASSWORD.
+        release {
+            if (project.hasProperty('TSA_STORE_FILE')) {
+                storeFile file(TSA_STORE_FILE)
+                storePassword TSA_STORE_PASSWORD
+                keyAlias TSA_KEY_ALIAS
+                keyPassword TSA_KEY_PASSWORD
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Se firma con el keystore de produccion cuando esta configurado, y
+            // con el de depuracion cuando no.
+            //
+            // La reserva existe para que otra maquina pueda seguir compilando sin
+            // tener el keystore -- para probar, no para publicar. Un APK firmado
+            // en depuracion **no se puede instalar encima** de uno de produccion:
+            // Android rechaza la actualizacion si cambia la firma.
+            //
+            // Al compilar, el propio Gradle informa cual se uso (ver la tarea
+            // avisarFirmaRelease mas abajo).
+            signingConfig project.hasProperty('TSA_STORE_FILE')
+                ? signingConfigs.release
+                : signingConfigs.debug
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds
@@ -178,5 +208,22 @@ dependencies {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
+    }
+}
+
+/**
+ * Deja dicho en la salida de la compilacion con que clave se firmo.
+ *
+ * Sin esto, un APK firmado en depuracion se ve igual que uno de produccion hasta
+ * que alguien lo intenta instalar encima del otro y Android lo rechaza. Que lo
+ * diga el propio build evita descubrirlo con la tablet en la mano.
+ */
+tasks.matching { it.name == 'assembleRelease' }.configureEach {
+    doFirst {
+        if (project.hasProperty('TSA_STORE_FILE')) {
+            logger.lifecycle("Firma release: keystore de PRODUCCION (${TSA_KEY_ALIAS})")
+        } else {
+            logger.lifecycle("Firma release: keystore de DEPURACION. No publicable, y no se instala encima de uno de produccion.")
+        }
     }
 }
