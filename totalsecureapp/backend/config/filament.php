@@ -246,7 +246,10 @@ return [
             'have_inline_labels' => false,
         ],
         'footer' => [
-            'should_show_logo' => true,
+            // Filament pinta su propio logo con enlace a filamentphp.com al pie
+            // de cada pagina. Es un panel que ven los clientes: la marca de la
+            // libreria no va ahi.
+            'should_show_logo' => false,
         ],
         // 'full' = sin ancho maximo.
         //

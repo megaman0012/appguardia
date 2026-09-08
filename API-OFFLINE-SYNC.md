@@ -45,7 +45,18 @@ Ambos son opcionales, así que un cliente viejo sigue funcionando sin cambios.
 | Campo | Tipo | Descripción |
 |---|---|---|
 | `client_uuid` | UUID v4 | Idempotency key generada en el dispositivo. Único por registro, estable entre reintentos. |
-| `ocurrido_en` | `Y-m-d H:i:s` | Momento real del evento en campo. Si no llega, se asume "ahora". Una fecha futura se recorta al momento actual (reloj de dispositivo adelantado). |
+| `ocurrido_en` | ISO-8601 **con offset** (`2026-09-08T07:00:00-05:00`) | Momento real del evento en campo. Si no llega, se asume "ahora". Una fecha futura se recorta al momento actual (reloj de dispositivo adelantado). |
+
+> ⚠️ **Mandar el offset no es opcional en la práctica.** La aplicación corre en
+> `America/Guayaquil` (-05:00) y la base guarda hora local. Un valor **sin**
+> offset se interpreta como hora local ya, que es lo único razonable cuando no
+> hay de dónde deducirla. La APK mandaba
+> `new Date().toISOString().slice(0, 19).replace('T', ' ')` — hora UTC sin decir
+> que era UTC —, así que el servidor la leía 5 horas en el futuro y la recortaba
+> a la hora de llegada: **el dato que se quería preservar se perdía en
+> silencio**. Con el offset, el servidor convierte desde cualquier zona
+> (`->setTimezone(config('app.timezone'))`). En la app usar
+> `ahoraDelDispositivo()` de `src/utils/idempotencia.ts`.
 
 ### Por qué `ocurrido_en` es necesario
 
@@ -59,7 +70,7 @@ contra `sincronizado_en` **es** la latencia de red en campo.
 
 ## 4. Endpoints
 
-Los 5 endpoints que crean registros aceptan `client_uuid` y `ocurrido_en`:
+Los endpoints que crean registros aceptan `client_uuid` y `ocurrido_en`:
 
 | Endpoint | Tabla | Fecha del evento | Permiso |
 |---|---|---|---|
@@ -68,6 +79,21 @@ Los 5 endpoints que crean registros aceptan `client_uuid` y `ocurrido_en`:
 | `POST api/rondas_detalle_qrcode` | `ronda_detalle` | `rd_fecha_hora` | `rondas.scannear_qr` |
 | `POST api/acceso` | `acceso` | `ac_created_at` | `acceso.registrar` |
 | `POST api/novedad_create` | `novedad` | `nv_fecha_hora` | `novedades.crear` |
+| `POST api/inventario/listsave` | `inv_movimiento_cabecera` | `mc_fecha` | `inventario.registrar` |
+| `POST api/inventario/registrar-baja` | `inv_movimiento_cabecera` | `mc_fecha` | `inventario.registrar` |
+| `POST api/inventario/finishsave` | `inv_movimiento_cabecera` | `mc_fecha` | `inventario.finalizar` |
+
+**`finishsave` es el único que no usa `client_uuid`**: no crea filas, **muta** la
+recepción para convertirla en devolución, así que `code_mov` ya identifica el
+registro y el reintento es reconocible sin uuid. Si el movimiento ya es
+`devolucion`, responde `duplicado: true` y no toca la fila — antes reescribía
+`mc_fecha = now()` en cada envío y una devolución hecha a las 07:00 sin señal
+quedaba fechada a la hora en que llegó la red.
+
+⚠️ **En `listsave`, el chequeo del `client_uuid` va ANTES del de «recepción
+abierta».** Al revés, el reintento choca contra la recepción que dejó abierta su
+propio intento anterior, y el guardia recibe «Ya existe una recepción
+registrada» por reintentar, con el inventario a medias y sin salida.
 
 `biometria` y `acceso` no tienen columna de fecha propia, así que el evento se
 fecha en su `created_at`.
@@ -85,7 +111,7 @@ Content-Type: application/json
   "nv_lat": "-33.45",
   "nv_lng": "-70.66",
   "client_uuid": "bbbbbbbb-bbbb-4bbb-8bbb-000000000001",
-  "ocurrido_en": "2026-08-21 15:19:52"
+  "ocurrido_en": "2026-08-21T15:19:52-05:00"
 }
 ```
 
@@ -113,7 +139,9 @@ prefijo (`bio_`, `rd_`, `ac_`, `nv_`):
 | `<pref>_client_uuid` | `varchar(36)` nullable **unique** | En Postgres varios `NULL` no colisionan, así que las filas históricas y los clientes que no lo envían siguen siendo válidos. |
 | `<pref>_sincronizado_en` | `timestamp` nullable | Momento en que el servidor recibió el registro. |
 
-Tablas: `user_has_biometria`, `ronda_detalle`, `acceso`, `novedad`.
+Tablas: `user_has_biometria`, `ronda_detalle`, `acceso`, `novedad`. Inventario
+(`inv_movimiento_cabecera`, prefijo `mc_`) se sumó el 2026-09-08 en
+`2026_09_08_200001_offline_sync_en_inventario`.
 
 ---
 
@@ -150,7 +178,7 @@ El orden importa y no es intercambiable:
 ```
 Registro en campo
    │
-   ├─► genera client_uuid (v4) + ocurrido_en (hora local del dispositivo)
+   ├─► genera client_uuid (v4) + ocurrido_en (hora del dispositivo CON offset)
    ├─► guarda en SQLite local con estado = pendiente
    │
    └─► intenta enviar
@@ -195,11 +223,27 @@ sitio es de horas, es un problema de señal en ese sitio, no de la APK.
 
 | Punto del checklist | Estado |
 |---|---|
-| Endpoints idempotentes con `client_uuid` | ✅ 5 endpoints |
+| Endpoints idempotentes con `client_uuid` | ✅ **7** endpoints (5 de campo + recepción y baja de inventario) |
 | Duplicado devuelve 200 sin error visible | ✅ `duplicado: true` |
-| Columnas `client_uuid` + `sincronizado_en` | ✅ 4 tablas, con índice unique |
+| Columnas `client_uuid` + `sincronizado_en` | ✅ **5** tablas, con índice unique |
 | Documentación del flujo | ✅ este archivo |
-| Implementación de la cola en la APK | ⏳ fuera del alcance de la fase |
+| La app genera un uuid estable | ✅ `useIdempotencia()`, en inventario y vacantes |
+| La app manda la hora con offset | ✅ `ahoraDelDispositivo()` |
+| Cola local en SQLite con reintento en background | ⏳ no implementada |
+
+### Lo que todavía NO existe en la app
+
+El servidor está listo para una cola, pero **la app no tiene cola**: no hay
+SQLite local ni reintento en background. Lo que sí hay es que un reintento
+**manual** (el guardia vuelve a tocar «Guardar») ya no duplica, porque
+`useIdempotencia()` conserva el uuid hasta que el servidor confirma. El paso que
+falta es persistir esa cola para que sobreviva al cierre de la app.
+
+> El `client_uuid` de `VacantesScreen` era `` `${tv_id}-${Date.now()}` ``: no era
+> un UUID y **cambiaba en cada envío**, así que el servidor veía un evento nuevo
+> cada vez y la deduplicación no hacía nada. Un uuid que no sobrevive al
+> reintento no sirve para nada: es la regla 1 de la lista de arriba, y estaba
+> incumplida en la única pantalla que lo usaba.
 
 Verificado con 16 tests en `tests/Unit/OfflineSyncTest.php` y pruebas en vivo de
 `novedad_create`, `acceso` y `rondas_detalle_qrcode` (incluido el caso del guard de
