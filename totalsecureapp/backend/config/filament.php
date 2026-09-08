@@ -248,7 +248,14 @@ return [
         'footer' => [
             'should_show_logo' => true,
         ],
-        'max_content_width' => null,
+        // 'full' = sin ancho maximo.
+        //
+        // Con null, Filament aplica su tope de 7xl (~1280 px) y en un monitor
+        // ancho el listado queda como un recuadro con espacio vacio a los lados.
+        // Estas tablas tienen muchas columnas -- cliente, local, guardia, fecha,
+        // ubicacion, distancia -- y con el tope hay que ir corriendo la barra
+        // horizontal para leer una fila completa.
+        'max_content_width' => 'full',
         'notifications' => [
             'vertical_alignment' => 'top',
             'alignment' => 'right',

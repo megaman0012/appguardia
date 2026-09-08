@@ -273,6 +273,25 @@ nueva con ese nombre, no la resurrección de `sede`.
   - `Stringable::toHtmlString()` — Filament la llama al renderizar `helperText` y `hint`: `Str::of($helperText)->markdown()->sanitizeHtml()->toHtmlString()`. **Sin el shim, cualquier formulario con `helperText` responde 500.** No hace falta shim para `sanitizeHtml()`: la registra el propio Filament.
   - `Model::resolveRouteBindingQuery()` — Filament 2.17 llama a `$model->resolveRouteBindingQuery(...)`, método que Eloquent recién trae desde Laravel 9; en 8.75 no existe y **todas** las páginas de edición del panel respondían 500. Se registra como macro del Builder (`Model::__call` reenvía ahí), lo que cubre los ~20 modelos sin tocarlos. El shim se autodesactiva si el método existe, así que al subir a Laravel 9+ se puede borrar.
 
+## Panel: ancho y barra de depuracion (2026-09-07)
+
+- **`max_content_width` = `'full'`** en `config/filament.php`. Con `null`
+  Filament aplica su tope de 7xl (~1280 px) y el listado queda como un recuadro
+  con espacio vacio a los lados. Estas tablas tienen muchas columnas -- cliente,
+  local, guardia, fecha, ubicacion, distancia -- y con el tope hay que ir
+  corriendo la barra horizontal para leer una fila completa.
+- **`DEBUGBAR_ENABLED=false`.** `barryvdh/laravel-debugbar` se enciende solo con
+  `APP_DEBUG=true` y pinta su barra al pie del navegador. Se apago porque
+  **recolecta todas las consultas y las incrusta en el HTML**: con tablas de
+  decenas de miles de filas se nota, y expone consultas y configuracion a quien
+  mire la pantalla. Ponerla en true solo para diagnosticar algo puntual.
+  - ⚠️ **Esta declarada en `require`, no en `require-dev`**, asi que viaja a
+    produccion. Con `APP_DEBUG=false` no se muestra, pero el lugar correcto es
+    `require-dev`.
+  - **El `APP_DEBUG` del `docker-compose.yml` gana sobre el del `.env`** (Docker
+    exporta la variable y phpdotenv no sobreescribe lo que ya esta en el
+    entorno). Por eso se apaga con `DEBUGBAR_ENABLED`, que compose no define.
+
 ## Roles y alcance de datos
 
 Cinco roles. **No escribir listas de perfiles a mano**: usar `App\Support\PerfilPanel`, que centraliza lo que antes vivía en 24 comprobaciones repartidas en 20 archivos.
