@@ -6,6 +6,16 @@ node_modules/
 vendor/
 **/build/
 
+# ⚠️ `vendor/` de arriba caza CUALQUIER carpeta con ese nombre a cualquier
+# profundidad, y eso incluye `resources/views/vendor` -- las vistas de paquetes
+# que sobrescribimos, que son codigo nuestro y no dependencias. Ya se colo una
+# vez: el override de la marca de Filament quedo sin versionar y en un clon
+# nuevo el panel volvia al texto sin logo, sin que nada avisara.
+#
+# La negacion tiene que ser de la CARPETA: git no puede re-incluir un archivo
+# si su directorio padre esta excluido.
+!totalsecureapp/backend/resources/views/vendor/
+
 # Credenciales sensibles - no versionar
 Credencial*todos.txt
 
