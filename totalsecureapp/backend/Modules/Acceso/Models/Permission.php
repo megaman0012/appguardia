@@ -118,9 +118,10 @@ class Permission extends Model implements PermissionContract
      * @throws \Spatie\Permission\Exceptions\PermissionDoesNotExist
      */
     /*
-     * ⚠️ Las firmas siguen al contrato de **spatie/laravel-permission 6**, que
-     * las endurecio: `?string $guardName` sin valor por defecto e `int|string
-     * $id`. Con las de la v5 (`$guardName = null`, `int $id`) PHP aborta con
+     * ⚠️ Las firmas siguen al contrato de **spatie/laravel-permission**, que las
+     * endurecio dos veces: la 6 pidio `?string $guardName` e `int|string $id`,
+     * y la 8 agrego `BackedEnum|string $name` (permite enums como nombre de rol
+     * o permiso). Con las de la v5 (`$guardName = null`, `int $id`) PHP aborta con
      * «Declaration must be compatible with Spatie\Permission\Contracts\...»
      * **antes de arrancar**: no es un aviso, es un error fatal que tumba
      * cualquier comando.
@@ -130,7 +131,7 @@ class Permission extends Model implements PermissionContract
      * `ru_code`, `role_has_permissions`, `permission_section`). El guardia no se
      * usa, asi que el parametro se acepta y se ignora.
      */
-    public static function findByName(string $name, ?string $guardName = null): PermissionContract
+    public static function findByName(\BackedEnum|string $name, ?string $guardName = null): PermissionContract
     {
         //$guardName = $guardName ?? Guard::getDefaultName(static::class);
         //$permission = static::getPermission(['name' => $name, 'guard_name' => $guardName]);
@@ -167,7 +168,7 @@ class Permission extends Model implements PermissionContract
      *
      * @param  string|null  $guardName
      */
-    public static function findOrCreate(string $name, ?string $guardName = null): PermissionContract
+    public static function findOrCreate(\BackedEnum|string $name, ?string $guardName = null): PermissionContract
     {
         $guardName = $guardName ?? Guard::getDefaultName(static::class);
         $permission = static::getPermission(['name' => $name, 'guard_name' => $guardName]);

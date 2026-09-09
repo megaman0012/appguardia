@@ -120,9 +120,10 @@ class Role extends Model implements RoleContract
      * @throws \Spatie\Permission\Exceptions\RoleDoesNotExist
      */
     /*
-     * ⚠️ Las firmas siguen al contrato de **spatie/laravel-permission 6**, que
-     * las endurecio: `?string $guardName` sin valor por defecto e `int|string
-     * $id`. Con las de la v5 (`$guardName = null`, `int $id`) PHP aborta con
+     * ⚠️ Las firmas siguen al contrato de **spatie/laravel-permission**, que las
+     * endurecio dos veces: la 6 pidio `?string $guardName` e `int|string $id`,
+     * y la 8 agrego `BackedEnum|string $name` (permite enums como nombre de rol
+     * o permiso). Con las de la v5 (`$guardName = null`, `int $id`) PHP aborta con
      * «Declaration must be compatible with Spatie\Permission\Contracts\...»
      * **antes de arrancar**: no es un aviso, es un error fatal que tumba
      * cualquier comando.
@@ -132,7 +133,7 @@ class Role extends Model implements RoleContract
      * `ru_code`, `role_has_permissions`, `permission_section`). El guardia no se
      * usa, asi que el parametro se acepta y se ignora.
      */
-    public static function findByName(string $name, ?string $guardName = null): RoleContract
+    public static function findByName(\BackedEnum|string $name, ?string $guardName = null): RoleContract
     {
         $guardName = $guardName ?? Guard::getDefaultName(static::class);
 
@@ -170,7 +171,7 @@ class Role extends Model implements RoleContract
      * @param  string|null  $guardName
      * @return \Spatie\Permission\Contracts\Role|\Spatie\Permission\Models\Role
      */
-    public static function findOrCreate(string $name, ?string $guardName = null): RoleContract
+    public static function findOrCreate(\BackedEnum|string $name, ?string $guardName = null): RoleContract
     {
         $guardName = $guardName ?? Guard::getDefaultName(static::class);
 
@@ -209,7 +210,7 @@ class Role extends Model implements RoleContract
      *
      * @throws \Spatie\Permission\Exceptions\GuardDoesNotMatch
      */
-    public function hasPermissionTo($permission, ?string $guardName = null): bool
+    public function hasPermissionTo(string|int|\Spatie\Permission\Contracts\Permission|\BackedEnum $permission, ?string $guardName = null): bool
     {
         if (config('permission.enable_wildcard_permission', false)) {
             return $this->hasWildcardPermission($permission, $this->getDefaultGuardName());

@@ -4,9 +4,12 @@ Rama: `migracion-laravel-filament`. Consultado contra Packagist el **2026-09-08*
 
 ## 1. Punto de partida
 
-> **Estado al cerrar la Etapa 4:** Laravel **12.69.2**, Filament **4.13.1**,
-> Livewire **3.8.8**, **389 tests en verde** y **cero avisos de seguridad**. La
-> tabla de abajo es el punto de partida, que se conserva para poder leer de
+> **✅ MIGRACIÓN COMPLETA.** Laravel **13.31.0**, Filament **5.8.1**, Livewire
+> **4.4.4**, PHP 8.3.33. **389 tests en verde**, **cero avisos de seguridad** y
+> **cero paquetes abandonados**. Todas las dependencias directas están en su
+> última versión salvo una, que la pinea Filament.
+>
+> La tabla de abajo es el punto de partida, que se conserva para poder leer de
 > dónde se venía.
 
 | | Al empezar | Última publicada | Majors de atraso |
@@ -647,6 +650,62 @@ cortos desde acá:
 Ninguno cierra vulnerabilidades —ya no hay— así que son mantenimiento, no
 urgencia.
 
+## 7 bis. Etapa 5 — Laravel 13 y Filament 5 ✅ HECHA (era opcional)
+
+| | Antes | Ahora |
+|---|---|---|
+| `laravel/framework` | 12.69.2 | **13.31.0** |
+| `filament/filament` | 4.13.1 | **5.8.1** |
+| `livewire/livewire` | 3.8.8 | **4.4.4** |
+| `nwidart/laravel-modules` | 12.0.5 | **13.0.0** |
+| `spatie/laravel-permission` | 6.25.0 | **8.3.0** |
+| `maatwebsite/excel` | 3.1.70 | **4.0.2** |
+| `phpoffice/phpspreadsheet` | 1.30.6 | **5.9.0** |
+| `phpunit/phpunit` | 11.5.56 | **12.5.34** |
+| `guzzlehttp/guzzle` | 7.15.5 | **8.2.0** |
+| `laravel/tinker` | 2.11.1 | **3.0.2** |
+
+**Y esta vez arrancó de primera.** Laravel 13 + Filament 5 + Livewire 4
+instalaron y la aplicación levantó sin un solo error fatal — la primera etapa en
+la que eso pasa. El único arreglo fue `spatie/laravel-permission` 6 → 8, que
+endureció las firmas **otra vez**: `findByName()` y `findOrCreate()` ahora piden
+`BackedEnum|string $name`.
+
+Que fuera tan barata no es casualidad: **las cuatro etapas anteriores ya habían
+pagado el precio**. Los cambios de Filament 4 → 5 y Livewire 3 → 4 no tocaron
+nada de lo que este proyecto usa.
+
+### Se quitó `barryvdh/laravel-debugbar`
+
+Era **lo único que bloqueaba Laravel 13**: su última versión llega hasta la 12.
+Y era fácil de decidir: cero usos en el código, apagada por configuración
+(`DEBUGBAR_ENABLED=false`), y es la barra que se pidió sacar del navegador. Con
+ella se fueron `config/debugbar.php` y `storage/debugbar`.
+
+### Verificado a mano lo que los tests no cubren
+
+- **`maatwebsite/excel` 3 → 4 con `phpspreadsheet` 1 → 5** es un salto grande y
+  es lo que mueve toda la reportería: `Excel::store()` genera archivo, y los
+  cinco botones de Usuarios («Cargar usuarios», «Modelo de carga», «Revisar
+  archivo», «Descargar», «Nuevo Usuario») renderizan en el panel.
+- **El cifrado de los QR da idéntico.** `aesCypher()` ida y vuelta devuelve el
+  mismo texto, así que los **118 marcadores ya impresos y pegados en las garitas
+  siguen validando**. Era el riesgo marcado como intocable en el plan.
+- **El PDF de la hoja del QR** sigue saliendo con el logo incrustado.
+- Panel con sesión real y perfil seleccionado: tablero, Alertas (252 KB),
+  Accesos (410 KB) y Usuarios (356 KB), todos 200.
+
+### ¿Estamos al día? Sí, hasta donde el grafo permite
+
+`composer show --direct --outdated` deja **una sola** dependencia directa
+atrasada: `chillerlan/php-qrcode` 5.0.5, y **la pinea Filament 5** (`^5.0`). No
+es descuido: es un techo.
+
+De las transitivas quedan cuatro, todas pineadas por su padre:
+`brick/math` (Laravel 13 admite hasta ^0.19), `openspout/openspout`
+(`filament/actions` pide ^4.23), y `spatie/flare-client-php` y
+`spatie/error-solutions` (los pinea `spatie/ignition`).
+
 ## 8. Riesgos propios de este proyecto
 
 Esto no es una app de demostración, y hay cuatro cosas que hay que tener en la
@@ -679,10 +738,56 @@ cabeza en cada etapa:
 | **2** Laravel 8 → 10 ✅ | Framework, sanctum, permission, modules, **6 avisos de dompdf cerrados** | Medio | **Hecha** |
 | **3** Filament 2 → 3 + Livewire 3 ✅ | 27 recursos, 39 iconos, visibilidades y firmas, **0 abandonados** | **Alto** | **Hecha** |
 | **4** Laravel 12 + Filament 4 ✅ | Carbon 3, modules 12, acciones unificadas, **0 avisos** | Medio | **Hecha** |
+| **5** Laravel 13 + Filament 5 ✅ | Livewire 4, Excel 4, permission 8. **Arrancó de primera** | Bajo | **Hecha** |
 
 La etapa 3 es la que concentra el trabajo, y las etapas 0 a 2 son las que la
 hacen posible. Cada una deja el sistema funcionando y verificable: **ninguna
 obliga a seguir con la siguiente**.
+
+## 10. Mejoras pendientes, revisadas al cerrar
+
+Repaso de todo lo que quedó abierto, con los números de hoy. **Nada de esto es
+parte de la migración**, pero es lo que se ve desde acá.
+
+### 🔓 Seguridad (uno ya arreglado)
+
+| | Estado |
+|---|---|
+| **`APP_DEBUG=true` en producción** | ✅ **Arreglado.** Estaba en `local` con depuración encendida, expuesto en dos IP públicas: cualquier 500 devolvía la traza completa con rutas del servidor y la consulta SQL. Se comprobó en esta sesión. **Ojo: el valor venía de `docker-compose.yml`, que pisa al `.env`** |
+| **Puerto 3031 abierto a la LAN** | Pendiente. Docker publica con DNAT y **se salta firewalld**. El arreglo es `"127.0.0.1:3031:80"`, pero rompe las tablets que apuntan ahí: necesita el nginx del host por delante |
+| **`APP_KEY` cifra los QR** | El `aesCypher()` usa `APP_KEY`. Rotarla invalidaría los **118 QR pegados en las garitas**. Conviene una clave propia para eso, para poder rotar la de Laravel algún día |
+
+### Operación
+
+| | Números de hoy |
+|---|---|
+| **Sin worker de cola** (`QUEUE_CONNECTION=sync`) | Las descargas grandes corren dentro de la petición: 38.247 filas = 22 s y 263 MB. Es lo que falta para `->queue()` |
+| **Correo sin salida real** | `MAIL_HOST=mailhog`, `MAIL_FROM_ADDRESS=null`. El restablecimiento de contraseña no puede funcionar |
+| **APK 1.0.1 sin instalar** | Está compilado y firmado en `apk/`, con el logo, el botón de emergencia y el inventario arreglado. Las tablets siguen con la 1.0.0 |
+| **Sin integración continua** | Los 389 tests se corren a mano. Un `composer audit` + `phpunit` en cada push cerraría el círculo de las cinco etapas |
+
+### Datos
+
+| | Cantidad |
+|---|---:|
+| **Puestos de trabajo cargados** | **0** — y de ahí que Turnos, Cuadrantes y Vacantes no tengan nada que mostrar. El análisis está hecho: `php artisan puestos:analizar` propone 16 sitios sobre 66 locales |
+| **Turnos programados** | **0** — depende de lo anterior |
+| Locales activos sin marcador QR | **20**, y **8 de ellos ya tienen marcajes**: esa asistencia quedó sin verificar |
+| Marcador con coordenada imposible | **1** (el relleno «CCO» en 46/78, inactivo) |
+| Usuarios activos sin rol | **6** — no ven ningún módulo |
+| Usuarios sin correo | **505** — no pueden restablecer contraseña |
+
+### Deuda técnica de bajo riesgo
+
+- **`BooleanColumn` y `BadgeColumn`** siguen usándose en 73 lugares y siguen
+  marcadas `@deprecated` en Filament 5. Un día desaparecerán; migrarlas a
+  `IconColumn->boolean()` y `TextColumn->badge()` es mecánico.
+- **`->colors([...])`** también está en camino de salida en favor de `->color()`.
+- **El esqueleto delgado de Laravel 11+** no se adoptó (sigue con
+  `app/Http/Kernel.php`). Es opcional y no aporta nada funcional.
+- **La cobertura de la API es de humo, no de comportamiento**: las 55 rutas se
+  verifican contra 5xx, pero solo 12 tienen tests que comprueben *qué*
+  devuelven.
 
 ## 10. Lo que NO entra en esta migración
 

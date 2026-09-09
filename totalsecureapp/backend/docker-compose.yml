@@ -28,9 +28,23 @@ services:
     volumes:
       - ./:/var/www
     environment:
-      APP_ENV: local
-      APP_DEBUG: "true"
-      APP_URL: http://localhost:3031
+      # ⚠️ Estaba en `local` con `APP_DEBUG: "true"`, y esto es produccion
+      # expuesta en dos IP publicas. Con el modo depuracion encendido,
+      # **cualquier error 500 devuelve la traza completa** con rutas del
+      # servidor, la consulta SQL que fallo y, en la pagina HTML de Ignition,
+      # las variables de entorno -- incluida la contraseña de la base.
+      #
+      # Se comprobo en esta misma sesion: cuando `/admin` fallaba, la respuesta
+      # traia `"file": "/var/www/vendor/laravel/..."` y el `trace` entero.
+      #
+      # Ojo: estos valores **pisan al .env**, asi que cambiar solo el archivo no
+      # alcanza. Es aca donde hay que ponerlos.
+      APP_ENV: production
+      APP_DEBUG: "false"
+      # Con localhost, cualquier URL que el backend genere apunta a la maquina
+      # de quien la abre. Ya rompio el logo de la hoja del QR (se resolvia por
+      # `asset()` y dompdf no podia bajarlo).
+      APP_URL: http://181.198.245.50:3031
       DB_CONNECTION: postgres
       DB_HOST: db
       DB_PORT: "5432"
