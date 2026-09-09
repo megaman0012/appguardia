@@ -6,7 +6,7 @@ use App\Filament\Tables\Etiqueta;
 use App\Filament\Resources\InvMovimientoDetalleResource\Pages;
 use App\Support\PerfilPanel;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
@@ -62,10 +62,10 @@ class InvMovimientoDetalleResource extends Resource
     protected static ?string $modelLabel = 'detalle';
     protected static ?string $pluralModelLabel = 'detalles';
     protected static ?string $navigationLabel = 'Detalle de movimiento';
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static bool $shouldRegisterNavigation = false;
 
-    public static function form(Form $form): Form { return $form->schema([]); }
+    public static function form(Schema $schema): Schema { return $schema->schema([]); }
 
     public static function table(Table $table): Table
     {

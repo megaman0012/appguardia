@@ -4,7 +4,12 @@ Rama: `migracion-laravel-filament`. Consultado contra Packagist el **2026-09-08*
 
 ## 1. Punto de partida
 
-| | Hoy | Última publicada | Majors de atraso |
+> **Estado al cerrar la Etapa 4:** Laravel **12.69.2**, Filament **4.13.1**,
+> Livewire **3.8.8**, **389 tests en verde** y **cero avisos de seguridad**. La
+> tabla de abajo es el punto de partida, que se conserva para poder leer de
+> dónde se venía.
+
+| | Al empezar | Última publicada | Majors de atraso |
 |---|---|---|---:|
 | `laravel/framework` | **8.75.0** | 13.31.0 | **5** |
 | `filament/filament` | **2.17.59** | 5.8.1 | **3** |
@@ -516,15 +521,131 @@ fue el fallo de `AppServiceProvider`, que sí tumbó todo hasta que se movieron 
 tres registros al panel provider — y es la razón por la que ese arreglo fue lo
 primero.
 
-## 7. Etapa 4 — Laravel 10 → 12 y Filament 3 → 4
+## 7. Etapa 4 — Laravel 12 y Filament 4 ✅ HECHA
 
-Ya sobre stack moderno, y por eso barata:
+| | Antes | Ahora |
+|---|---|---|
+| `laravel/framework` | 10.50.3 | **12.69.2** |
+| `filament/filament` | 3.3.55 | **4.13.1** |
+| `laravel/sanctum` | 3.3.3 | **4.3.3** |
+| `nesbot/carbon` | 2.73.0 | **3.13.2** |
+| `nwidart/laravel-modules` | 10.0.6 | **12.0.5** |
+| `pxlrbt/filament-excel` | 2.5.0 | **3.6.1** |
+| `phpunit/phpunit` | 10.5.64 | **11.5.56** |
+| `livewire/livewire` | 3.8.8 | 3.8.8 (Filament 4 pide ^3.7) |
 
-- Laravel 10 → 11 → 12. Aquí sí entra `nesbot/carbon` ^3 y `sanctum` ^4.
-- `nwidart/laravel-modules` → 12 (o 13, que pide PHP ^8.3 y ya lo tenemos).
-- Filament 3 → 4: los cambios de esta versión son bastante menores que 2 → 3;
-  Livewire se queda en 3.
-- `pxlrbt/filament-excel` → 3 o 4.
+**389 tests pasan, sin deprecaciones.** Panel verificado en vivo con sesión real
+y la API respondiendo por las dos IP públicas.
+
+### 🔓 Cero avisos de seguridad
+
+```
+composer audit
+No security vulnerability advisories found.
+```
+
+De **9 avisos en 2 paquetes** al empezar la Etapa 1 a **ninguno**. Y con eso se
+pudo hacer lo que importa de verdad: **quitar la lista de silenciados y volver a
+activar `policy.advisories.block`**. Ahora Composer se niega a instalar una
+versión con avisos conocidos, en vez de solo informarlo. Ese guardia estuvo
+apagado desde la Etapa 2 por la limitación de Composer 2.10, y era deuda: ahora
+está pago.
+
+Cero paquetes abandonados, también.
+
+### ⚠️ Carbon 2 → 3: tres cosas rotas, dos de ellas en silencio
+
+Es el cambio que más daño hizo, y ninguno de los síntomas apuntaba a Carbon.
+`diffIn*()` cambió **dos** cosas a la vez: devuelve **float** en vez de int, y es
+**con signo** en vez de valor absoluto.
+
+| Dónde | Qué pasaba |
+|---|---|
+| `AlertaDetalle::marcarResuelta()` | Postgres rechazaba `600.899393` en una columna integer. **El único que fallaba a la vista.** |
+| `generalTrait::calculoEdad()` | La fecha de nacimiento está en el pasado → `diffInYears()` daba **−36.3** → el `if ($anos >= 1)` daba falso y la edad se informaba **en horas** |
+| `RondaController` (antirrebote de 5 min) | `$ahora->diffInMinutes($registro)` daba negativo → `< 5` **siempre verdadero** → «Ya registró este marcador, espere 5 minutos» en **cada** escaneo: el guardia no podía volver a marcar un punto nunca |
+| `PostulacionesRelationManager` | El aviso de «llegó con retraso» no se mostraba nunca |
+| 4 sitios con `intdiv($minutos, 60)` | `intdiv()` con float lanza **TypeError** |
+
+Los 12 usos se revisaron uno por uno —ninguno quería el signo— y quedaron como
+`(int) $a->diffInX($b, absolute: true)`. **Lo de las rondas es lo más grave: es
+la función principal de la aplicación, y habría llegado a las tablets sin que
+ningún test lo tocara** si no se hubiera revisado el listado completo de
+`diffIn`.
+
+### `nwidart/laravel-modules` 10 → 12
+
+Dos cosas:
+
+- **`config/modules.php` había que reemplazarlo.** El del proyecto era el de la
+  versión 8 y listaba las clases de comando una por una; en la 12 esas clases se
+  movieron y la clave `commands` apunta a un `ConsoleServiceProvider`. Con el
+  viejo, **cualquier comando de artisan moría**. El config del proyecto no
+  personalizaba nada, así que se tomó el nuevo y solo se le devolvieron las
+  rutas del *generador*, para que un `module:make` futuro salga con la
+  nomenclatura de los cuatro módulos que existen (`Routes/`, `Resources/`,
+  `Config/`). Los módulos ya creados no dependen de eso: cada uno trae sus rutas
+  en su propio `RouteServiceProvider`.
+- **Arrastra `wikimedia/composer-merge-plugin`**, que Composer no instala sin
+  permiso explícito. Se declaró en `allow-plugins` **como `false`**: el paquete
+  se instala porque es dependencia, pero no ejecuta código en cada `install`. No
+  hace falta — los cuatro módulos declaran `require: {}`, o sea que no tiene nada
+  que fusionar.
+
+### Filament 3 → 4: más barato de lo estimado, y por dos razones
+
+El roadmap daba por hecho que había que migrar los **73 usos de `BooleanColumn` y
+`BadgeColumn`** porque Filament 4 los eliminaba. **No los elimina**: siguen
+ahí, todavía marcados como `@deprecated`. Cero trabajo.
+
+Lo que sí cambió, y otra vez fue **tipos y ubicaciones**, no lógica:
+
+| Cambio | Ocurrencias |
+|---|---:|
+| `Filament\Tables\Actions\*` → **`Filament\Actions\*`** (acciones unificadas) | 48 en 29 archivos |
+| `Filament\Forms\Form` → **`Filament\Schemas\Schema`** | 32 archivos, 31 firmas |
+| `$navigationIcon` → tipo `string\|BackedEnum\|null` | 27 |
+| `$navigationGroup` → tipo `string\|UnitEnum\|null` | 3 |
+| `StatsOverviewWidget\Card` → **`Stat`** | 4 widgets |
+| `Page::$view` y `Widget::$view` → **dejan de ser `static`** | 2 |
+| `Support\Enums\MaxWidth` → **`Width`** | 1 |
+
+`Schema` conserva el método `schema()`, así que **los cuerpos de los 32
+formularios no se tocaron**: solo el tipo del parámetro.
+
+⚠️ **Un tropiezo propio que conviene anotar.** Al renombrar
+`Tables\Actions\` → `Actions\` con un reemplazo de texto, en los archivos que
+importaban `Filament\Tables` quedaron referencias **relativas**
+(`Actions\EditAction`), que PHP resuelve contra el namespace actual:
+`App\Filament\Resources\Actions\EditAction`. 18 listados fallaron con «Class
+not found» hasta agregar el `use Filament\Actions;` en los 23 archivos que les
+faltaba. Un reemplazo de namespace **no** es un reemplazo de texto.
+
+### PHPUnit 10 → 11: 57 deprecaciones, a cero
+
+PHPUnit 11 deprecó los metadatos en comentarios: **56 `@test` y 1
+`@dataProvider`** pasaron a atributos (`#[Test]`, `#[DataProvider]`), con sus
+imports. No es cosmético: dejar 57 avisos fijos hace que el siguiente aviso real
+pase inadvertido. Los 389 tests siguen siendo 389.
+
+### El único fallo que tumbó la API
+
+Como en la Etapa 3, el panel y la API son independientes… salvo cuando falla el
+`boot()` de un proveedor. `AdminPanelProvider` referenciaba
+`Support\Enums\MaxWidth`, que en Filament 4 se llama `Width`, y eso dejó la
+API en 500 hasta corregirlo. **Es siempre el mismo patrón: un error en el
+proveedor del panel no es un problema del panel, es un problema de todo.**
+
+### Lo que queda, y ya es opcional
+
+Laravel **13.31.0** y Filament **5.8.1** son las últimas. Los dos saltos son
+cortos desde acá:
+
+- Laravel 12 → 13: cambio **solo de framework**; Filament 4 ya corre sobre 13.
+- Filament 4 → 5: exige además **Livewire 4**, que es la pieza nueva.
+
+Ninguno cierra vulnerabilidades —ya no hay— así que son mantenimiento, no
+urgencia.
 
 ## 8. Riesgos propios de este proyecto
 
@@ -557,7 +678,7 @@ cabeza en cada etapa:
 | **1** Desatascar Composer ✅ | 9 pins, 8 paquetes fuera, 8.75→8.83.29, **1 CVE alto cerrado** | Bajo | **Hecha** |
 | **2** Laravel 8 → 10 ✅ | Framework, sanctum, permission, modules, **6 avisos de dompdf cerrados** | Medio | **Hecha** |
 | **3** Filament 2 → 3 + Livewire 3 ✅ | 27 recursos, 39 iconos, visibilidades y firmas, **0 abandonados** | **Alto** | **Hecha** |
-| **4** Laravel 12 + Filament 4 | Saltos cortos sobre stack moderno | Bajo | — |
+| **4** Laravel 12 + Filament 4 ✅ | Carbon 3, modules 12, acciones unificadas, **0 avisos** | Medio | **Hecha** |
 
 La etapa 3 es la que concentra el trabajo, y las etapas 0 a 2 son las que la
 hacen posible. Cada una deja el sistema funcionando y verificable: **ninguna

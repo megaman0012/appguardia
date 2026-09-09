@@ -437,9 +437,10 @@ class VacanteService
                 return 'Ya tiene un turno a esa hora.';
             }
 
-            $descanso = $otroFin->lte($inicio)
-                ? $otroFin->diffInMinutes($inicio)
-                : $fin->diffInMinutes($otroInicio);
+            // Carbon 3 devuelve float y `intdiv()` mas abajo lo rechaza.
+            $descanso = (int) ($otroFin->lte($inicio)
+                ? $otroFin->diffInMinutes($inicio, absolute: true)
+                : $fin->diffInMinutes($otroInicio, absolute: true));
 
             if ($descanso < self::DESCANSO_MINIMO_MINUTOS) {
                 return sprintf('Descansaría solo %dh entre turnos.', intdiv($descanso, 60));
@@ -664,7 +665,7 @@ class VacanteService
         $minutos = 0;
         foreach ($turnos as $turno) {
             $inicio = $this->momento($turno->tu_fecha, $turno->tu_hora_inicio_prevista);
-            $minutos += $inicio->diffInMinutes($this->fin($inicio, $turno->tu_hora_fin_prevista));
+            $minutos += (int) $inicio->diffInMinutes($this->fin($inicio, $turno->tu_hora_fin_prevista), absolute: true);
         }
 
         return round($minutos / 60, 1);

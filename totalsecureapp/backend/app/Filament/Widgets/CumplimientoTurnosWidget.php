@@ -6,7 +6,7 @@ use App\Services\DashboardStatsService;
 use App\Filament\Widgets\Concerns\AcotaPorAlcance;
 use Filament\Widgets\StatsOverviewWidget;
 use Illuminate\Support\Facades\DB;
-use Filament\Widgets\StatsOverviewWidget\Card;
+use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Facades\Session;
 use Modules\Administracion\Models\UserHasInstitucion;
 
@@ -65,17 +65,17 @@ class CumplimientoTurnosWidget extends StatsOverviewWidget
         $porcentaje = $total > 0 ? round($conEntrada * 100 / $total, 1) : null;
 
         return [
-            Card::make('Turnos de hoy', $total)
+            Stat::make('Turnos de hoy', $total)
                 ->description($total > 0 ? $conEntrada . ' con entrada marcada' : 'Sin turnos programados')
                 ->color($total > 0 ? 'primary' : 'secondary')
                 ->icon('heroicon-o-calendar'),
 
-            Card::make('Cumplimiento', $porcentaje === null ? '—' : $porcentaje . '%')
+            Stat::make('Cumplimiento', $porcentaje === null ? '—' : $porcentaje . '%')
                 ->description($sinMarcar > 0 ? $sinMarcar . ' sin marcar' : 'Todos marcaron')
                 ->color($this->colorCumplimiento($porcentaje))
                 ->icon('heroicon-o-check-circle'),
 
-            Card::make('Con tardanza', $conTardanza)
+            Stat::make('Con tardanza', $conTardanza)
                 ->description($minutosTardanza > 0 ? $minutosTardanza . ' min acumulados' : 'Sin tardanzas')
                 ->color($conTardanza > 0 ? 'warning' : 'success')
                 ->icon('heroicon-o-clock'),

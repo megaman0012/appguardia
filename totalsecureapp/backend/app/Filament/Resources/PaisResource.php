@@ -2,11 +2,12 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Actions;
 use App\Filament\Resources\PaisResource\Pages;
 use App\Support\PerfilPanel;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
@@ -28,7 +29,7 @@ class PaisResource extends Resource
     protected static ?string $modelLabel = 'país';
     protected static ?string $pluralModelLabel = 'países';
     protected static ?string $navigationLabel = 'Países';
-    protected static ?string $navigationIcon = 'heroicon-o-globe-alt';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-globe-alt';
     protected static ?int $navigationSort = 1;
 
     public static function getNavigationGroup(): ?string
@@ -36,9 +37,9 @@ class PaisResource extends Resource
         return 'Ubicación geográfica';
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             TextInput::make('pa_iso2')
                 ->label('Código ISO (2 letras)')
                 ->required()
@@ -67,7 +68,7 @@ class PaisResource extends Resource
                 BooleanColumn::make('pa_estado')->label('Activo')->toggleable(),
             ])
             ->defaultSort('pa_nombre')
-            ->actions([Tables\Actions\EditAction::make()])
+            ->actions([Actions\EditAction::make()])
             ->bulkActions([
                 Descarga::enLote('pais'),
             ]);

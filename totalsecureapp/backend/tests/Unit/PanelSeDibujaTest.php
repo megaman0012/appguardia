@@ -2,6 +2,8 @@
 
 namespace Tests\Unit;
 
+use PHPUnit\Framework\Attributes\DataProvider;
+
 use App\Filament\Pages\ListadoBase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -112,8 +114,8 @@ class PanelSeDibujaTest extends TestCase
     }
 
     /**
-     * @dataProvider listados
      */
+    #[DataProvider('listados')]
     public function test_el_listado_se_dibuja(string $pagina, string $recurso): void
     {
         Livewire::test($pagina)->assertSuccessful();

@@ -8,11 +8,11 @@ use App\Filament\Resources\NovedadResource\Pages;
 use App\Filament\Resources\NovedadResource\RelationManagers;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
 use Filament\Tables;
-use Filament\Tables\Actions\Action;
+use Filament\Actions\Action;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -43,9 +43,9 @@ class NovedadResource extends Resource
      * 126 consultas en vez de 6.
      */
     protected const RELACIONES_TABLA = ['institucion.cliente', 'users'];
-    protected static ?string $navigationIcon = 'heroicon-o-question-mark-circle';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-question-mark-circle';
 
-    public static function form(Form $form): Form { return $form->schema([ ]); }
+    public static function form(Schema $schema): Schema { return $schema->schema([ ]); }
 
     public static function table(Table $table): Table
     {

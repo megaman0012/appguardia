@@ -2,6 +2,8 @@
 
 namespace Tests\Unit;
 
+use PHPUnit\Framework\Attributes\Test;
+
 use App\Services\TurnoService;
 use Carbon\Carbon;
 use Modules\Administracion\Models\Turno;
@@ -20,49 +22,49 @@ class TurnoServiceTest extends TestCase
         $this->service = new TurnoService();
     }
 
-    /** @test */
+    #[Test]
     public function calcular_tardanza_cuando_llega_tarde()
     {
         $tardanza = $this->service->calcularTardanza('08:00:00', Carbon::parse('2026-08-20 08:15:00'));
         $this->assertEquals(15, $tardanza);
     }
 
-    /** @test */
+    #[Test]
     public function calcular_tardanza_cuando_llega_a_tiempo()
     {
         $tardanza = $this->service->calcularTardanza('08:00:00', Carbon::parse('2026-08-20 08:00:00'));
         $this->assertEquals(0, $tardanza);
     }
 
-    /** @test */
+    #[Test]
     public function calcular_tardanza_cuando_llega_antes()
     {
         $tardanza = $this->service->calcularTardanza('08:00:00', Carbon::parse('2026-08-20 07:55:00'));
         $this->assertEquals(0, $tardanza);
     }
 
-    /** @test */
+    #[Test]
     public function calcular_minutos_extras_cuando_sale_tarde()
     {
         $extras = $this->service->calcularMinutosExtras('20:00:00', Carbon::parse('2026-08-20 20:30:00'));
         $this->assertEquals(30, $extras);
     }
 
-    /** @test */
+    #[Test]
     public function calcular_minutos_extras_cuando_sale_a_tiempo()
     {
         $extras = $this->service->calcularMinutosExtras('20:00:00', Carbon::parse('2026-08-20 20:00:00'));
         $this->assertEquals(0, $extras);
     }
 
-    /** @test */
+    #[Test]
     public function calcular_minutos_extras_cuando_sale_antes()
     {
         $extras = $this->service->calcularMinutosExtras('20:00:00', Carbon::parse('2026-08-20 19:50:00'));
         $this->assertEquals(0, $extras);
     }
 
-    /** @test */
+    #[Test]
     public function cerrar_turnos_sin_marcacion_cambia_estado_a_ausente()
     {
         $turno = Turno::create([
@@ -81,7 +83,7 @@ class TurnoServiceTest extends TestCase
         $this->assertEquals('ausente', $turno->tu_estado);
     }
 
-    /** @test */
+    #[Test]
     public function buscar_turno_programado_encuentra_turno()
     {
         $turno = Turno::create([

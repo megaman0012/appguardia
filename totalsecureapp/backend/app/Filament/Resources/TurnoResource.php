@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Actions;
 use App\Filament\Forms\SelectorDeUsuario;
 
 use App\Filament\Resources\TurnoResource\Pages;
@@ -10,7 +11,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TimePicker;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
@@ -43,7 +44,7 @@ class TurnoResource extends Resource
     protected static ?string $modelLabel = 'turno';
     protected static ?string $pluralModelLabel = 'turnos';
     protected static ?string $navigationLabel = 'Turnos';
-    protected static ?string $navigationIcon = 'heroicon-o-clock';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-clock';
     protected static ?int $navigationSort = 1;
 
     protected const RELACIONES_TABLA = ['usuario', 'institucion', 'puesto'];
@@ -53,9 +54,9 @@ class TurnoResource extends Resource
         return 'Operación';
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             // Busca por nombre Y por cedula. Ver App\Filament\Forms\SelectorDeUsuario:
             // antes filtraba el texto de la etiqueta en el navegador, asi que
             // buscar por cedula solo funcionaba donde la etiqueta la incluia.
@@ -162,7 +163,7 @@ class TurnoResource extends Resource
                     ->label('Tardanza')->toggleable()->default('—'),
             ])
             ->defaultSort('tu_fecha', 'desc')
-            ->actions([Tables\Actions\EditAction::make()])
+            ->actions([Actions\EditAction::make()])
             ->bulkActions([
                 Descarga::enLote('turno'),
             ]);

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Actions;
 use App\Filament\Resources\PlantillaResource\Pages;
 use App\Filament\Resources\PlantillaResource\RelationManagers\FranjasRelationManager;
 use App\Support\PerfilPanel;
@@ -9,7 +10,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
@@ -36,7 +37,7 @@ class PlantillaResource extends Resource
     protected static ?string $modelLabel = 'cuadrante';
     protected static ?string $pluralModelLabel = 'cuadrantes';
     protected static ?string $navigationLabel = 'Cuadrantes';
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-group';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-rectangle-group';
     protected static ?int $navigationSort = 2;
 
     protected const RELACIONES_TABLA = ['institucion'];
@@ -46,9 +47,9 @@ class PlantillaResource extends Resource
         return 'Operación';
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Select::make('pl_ins_code')
                 ->label('Local')
                 ->options(
@@ -104,12 +105,12 @@ class PlantillaResource extends Resource
             ->actions([
                 // Es la única forma que tiene el Supervisor de ver el detalle:
                 // la pantalla de edición la tiene cerrada.
-                Tables\Actions\Action::make('grilla')
+                Actions\Action::make('grilla')
                     ->label('Ver grilla')
                     ->icon('heroicon-o-squares-2x2')
                     ->color('secondary')
                     ->url(fn (Plantilla $record) => static::getUrl('grilla', ['record' => $record])),
-                Tables\Actions\EditAction::make(),
+                Actions\EditAction::make(),
             ])
             ->bulkActions([
                 Descarga::enLote('plantilla'),

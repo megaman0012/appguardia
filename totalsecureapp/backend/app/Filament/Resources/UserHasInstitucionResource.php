@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Actions;
 use App\Filament\Tables\FiltroDeEstado;
 
 use App\Filament\Forms\SelectorDeUsuario;
@@ -12,7 +13,7 @@ use App\Filament\Resources\UserHasInstitucionResource\Pages;
 use App\Filament\Resources\UserHasInstitucionResource\RelationManagers;
 
 use App\helpers;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
@@ -58,11 +59,11 @@ class UserHasInstitucionResource extends Resource
      * 126 consultas en vez de 6.
      */
     protected const RELACIONES_TABLA = ['institucion.cliente', 'usuario'];
-    protected static ?string $navigationIcon = 'heroicon-o-identification';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-identification';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 // Busca por nombre Y por cedula. Ver App\Filament\Forms\SelectorDeUsuario:
                 // antes filtraba el texto de la etiqueta en el navegador, asi que
@@ -143,7 +144,7 @@ class UserHasInstitucionResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\DeleteAction::make()
+                Actions\DeleteAction::make()
                     ->before(function ($record) {
                         helpers::control_log_filament($record->toArray(), 'UserHasInstitucionResource', 'Delete','NOTICE', 'Eliminar User Has Institucion');
                     }),

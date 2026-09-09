@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Actions;
 use App\Filament\Tables\FiltroDeEstado;
 
 use App\Support\PerfilPanel;
@@ -12,7 +13,7 @@ use App\Filament\Resources\UsersResource\Pages;
 use App\Filament\Resources\UsersResource\RelationManagers;
 use Modules\Acceso\Models\users;
 
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
@@ -45,10 +46,10 @@ class UsersResource extends Resource
     protected static ?string $pluralModelLabel = 'usuarios';
     protected static ?string $navigationLabel = 'Usuarios';
     protected static ?string $model = users::class;
-    protected static ?string $navigationIcon = 'heroicon-o-user';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-user';
 
-    public static function form(Form $form): Form {
-        return $form
+    public static function form(Schema $schema): Schema {
+        return $schema
             ->schema([
                 TextInput::make('usu_cedula')
                     ->label('Cédula')
@@ -174,7 +175,7 @@ class UsersResource extends Resource
                 FiltroDeEstado::make('usu_state', 1, 'Estado'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Actions\EditAction::make(),
 
                 /*
                  * Una renuncia no es la falta de un día.
@@ -196,7 +197,7 @@ class UsersResource extends Resource
                  * `users.usu_password`, asi que la clave nueva sirve en la
                  * tablet sin recompilar nada.
                  */
-                Tables\Actions\Action::make('cambiarPassword')
+                Actions\Action::make('cambiarPassword')
                     ->label('Cambiar contraseña')
                     ->icon('heroicon-o-key')
                     ->color('warning')
@@ -255,7 +256,7 @@ class UsersResource extends Resource
                             ->send();
                     }),
 
-                Tables\Actions\Action::make('darDeBaja')
+                Actions\Action::make('darDeBaja')
                     ->label('Registrar baja')
                     ->icon('heroicon-o-user-minus')
                     ->color('danger')

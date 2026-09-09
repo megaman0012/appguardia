@@ -2,6 +2,8 @@
 
 namespace Tests\Unit;
 
+use PHPUnit\Framework\Attributes\Test;
+
 use App\Services\PresenceValidationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -81,9 +83,8 @@ class VerificacionUbicacionTest extends TestCase
 
     /**
      * El caso que dejo 61 locales sin poder marcar.
-     *
-     * @test
-     */
+     *     */
+    #[Test]
     public function un_marcador_con_el_signo_invertido_no_bloquea_el_marcaje()
     {
         // Guayaquil guardado como positivo: es lo que traian 64 marcadores de
@@ -101,7 +102,7 @@ class VerificacionUbicacionTest extends TestCase
         $this->assertStringContainsString('coordenada inválida', $r['motivo']);
     }
 
-    /** @test */
+    #[Test]
     public function un_marcador_en_cero_cero_tampoco_bloquea()
     {
         // '0','0' no es el golfo de Guinea, es «no se cargo».
@@ -113,7 +114,7 @@ class VerificacionUbicacionTest extends TestCase
         $this->assertFalse($r['verificado']);
     }
 
-    /** @test */
+    #[Test]
     public function una_latitud_positiva_del_norte_del_pais_si_se_valida()
     {
         // Ibarra esta a +0.34 de latitud y su marcador es correcto: la
@@ -127,7 +128,7 @@ class VerificacionUbicacionTest extends TestCase
         $this->assertLessThan(100, $r['distancia_m']);
     }
 
-    /** @test */
+    #[Test]
     public function dentro_del_radio_queda_verificado()
     {
         $this->crearMarcador();
@@ -140,7 +141,7 @@ class VerificacionUbicacionTest extends TestCase
         $this->assertGreaterThan(0, $r['distancia_m']);
     }
 
-    /** @test */
+    #[Test]
     public function fuera_del_radio_se_rechaza_pero_la_medicion_ocurrio()
     {
         $this->crearMarcador();
@@ -158,7 +159,7 @@ class VerificacionUbicacionTest extends TestCase
         $this->assertStringNotContainsString('geocerca', $r['motivo']);
     }
 
-    /** @test */
+    #[Test]
     public function sin_marcador_activo_se_acepta_pero_sin_verificar()
     {
         $this->crearMarcador(activo: false);
@@ -172,7 +173,7 @@ class VerificacionUbicacionTest extends TestCase
         $this->assertStringContainsString('no tiene marcador activo', $r['motivo']);
     }
 
-    /** @test */
+    #[Test]
     public function sin_ningun_marcador_tampoco_se_verifica()
     {
         $r = $this->service->validarUbicacion(-0.1807, -78.4678, $this->insCode);
@@ -181,7 +182,7 @@ class VerificacionUbicacionTest extends TestCase
         $this->assertFalse($r['verificado']);
     }
 
-    /** @test */
+    #[Test]
     public function medir_no_bloquea_y_distingue_los_tres_estados()
     {
         $this->crearMarcador();
@@ -197,7 +198,7 @@ class VerificacionUbicacionTest extends TestCase
         $this->assertGreaterThan(300, $fuera['distancia_m']);
     }
 
-    /** @test */
+    #[Test]
     public function sin_gps_no_se_inventa_una_distancia()
     {
         $this->crearMarcador();
@@ -215,7 +216,7 @@ class VerificacionUbicacionTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function medir_sin_marcador_no_verifica_nada()
     {
         $r = $this->service->medirUbicacion(-2.18986, -79.8890, $this->insCode);

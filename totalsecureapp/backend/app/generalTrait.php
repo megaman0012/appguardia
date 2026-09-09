@@ -57,10 +57,20 @@ trait generalTrait{
     function calculoEdad($fch_nac){
         $fch_nac = Carbon::parse($fch_nac, 'America/Guayaquil');
         $fechaActual = Carbon::now('America/Guayaquil');
-        $anos = $fechaActual->diffInYears($fch_nac);
-        $meses = $fechaActual->diffInMonths($fch_nac);
-        $dias = $fechaActual->diffInDays($fch_nac);
-        $horas = $fechaActual->diffInHours($fch_nac);
+        /*
+         * ⚠️ `absolute: true` y el casteo a int son de **Carbon 3**, y sin
+         * ellos esto devolvia mal la edad.
+         *
+         * Carbon 2 devolvia un entero positivo; Carbon 3 devuelve un **float
+         * con signo**. Como la fecha de nacimiento esta en el pasado,
+         * `$fechaActual->diffInYears($fch_nac)` pasaba a valer **-36.3**: el
+         * `if ($anos >= 1)` daba falso, seguia con meses y dias (tambien
+         * negativos) y terminaba informando la edad **en horas**.
+         */
+        $anos  = (int) $fechaActual->diffInYears($fch_nac, absolute: true);
+        $meses = (int) $fechaActual->diffInMonths($fch_nac, absolute: true);
+        $dias  = (int) $fechaActual->diffInDays($fch_nac, absolute: true);
+        $horas = (int) $fechaActual->diffInHours($fch_nac, absolute: true);
         if ($anos >= 1) {
             return [ $anos , 'A'];
         } elseif ($meses >= 1) {

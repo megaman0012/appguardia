@@ -248,7 +248,7 @@ class PlantillaTurnoService
                     continue;
                 }
 
-                $descanso = $previo['fin']->diffInMinutes($actual['inicio']);
+                $descanso = (int) $previo['fin']->diffInMinutes($actual['inicio'], absolute: true);
                 if ($descanso < self::DESCANSO_MINIMO_MINUTOS) {
                     $avisos[] = sprintf(
                         '%s descansaría %dh entre %s y %s.',

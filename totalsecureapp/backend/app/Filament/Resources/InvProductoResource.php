@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Actions;
 use App\Filament\Tables\FiltroDeEstado;
 
 use App\Support\PerfilPanel;
@@ -15,7 +16,7 @@ use Modules\Administracion\Models\ProductoCatalogo;
 use Modules\Administracion\Models\UserHasInstitucion;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BooleanColumn;
@@ -56,7 +57,7 @@ class InvProductoResource extends Resource
      */
     protected const RELACIONES_TABLA = ['institucion.cliente'];
 
-    protected static ?string $navigationGroup = 'Inventario';
+    protected static string | \UnitEnum | null $navigationGroup = 'Inventario';
     protected static ?int $navigationSort = 1;
     // Filament arma con esto las migas, el boton «Crear …» y el aviso de
     // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
@@ -64,11 +65,11 @@ class InvProductoResource extends Resource
     protected static ?string $modelLabel = 'producto';
     protected static ?string $pluralModelLabel = 'productos';
     protected static ?string $navigationLabel = 'Productos';
-    protected static ?string $navigationIcon = 'heroicon-o-cube';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cube';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Select::make('ipc_ins_code')
                 ->label('Local')
                 ->relationship(
@@ -159,7 +160,7 @@ class InvProductoResource extends Resource
                 FiltroDeEstado::make('ipc_activo', true, 'Estado'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Actions\EditAction::make(),
             ])
             ->bulkActions([
                 Descarga::enLote('inv-producto'),

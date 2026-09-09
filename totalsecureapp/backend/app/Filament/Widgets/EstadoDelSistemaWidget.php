@@ -7,7 +7,7 @@ use App\Filament\Resources\OrganizacionInstitucionResource;
 use App\Filament\Resources\UserHasRolesResource;
 use App\Filament\Widgets\Concerns\AcotaPorAlcance;
 use Filament\Widgets\StatsOverviewWidget;
-use Filament\Widgets\StatsOverviewWidget\Card;
+use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -76,7 +76,7 @@ class EstadoDelSistemaWidget extends StatsOverviewWidget
      * es una tarea pendiente, pero uno que ya esta marcando esta acumulando
      * asistencia que despues nadie va a poder auditar.
      */
-    private function sinPuntoQr(): Card
+    private function sinPuntoQr(): Stat
     {
         $sinQr = $this->localesEnAlcanceQuery()
             ->whereNotExists(function ($q) {
@@ -96,7 +96,7 @@ class EstadoDelSistemaWidget extends StatsOverviewWidget
             })
             ->count();
 
-        return Card::make('Locales sin punto QR', $total)
+        return Stat::make('Locales sin punto QR', $total)
             ->description($conMarcajes > 0
                 ? "{$conMarcajes} ya reciben marcajes sin poder verificarse"
                 : 'Ninguno con marcajes todavía')
@@ -106,7 +106,7 @@ class EstadoDelSistemaWidget extends StatsOverviewWidget
             ->url(InstitucionMarcadoresResource::getUrl());
     }
 
-    private function sinActividad(): Card
+    private function sinActividad(): Stat
     {
         $desde = now()->subDays(self::DIAS_SIN_ACTIVIDAD);
 
@@ -123,7 +123,7 @@ class EstadoDelSistemaWidget extends StatsOverviewWidget
                 ->where('ac_created_at', '>=', $desde))
             ->count();
 
-        return Card::make('Locales activos sin actividad', $total)
+        return Stat::make('Locales activos sin actividad', $total)
             ->description('Sin marcajes, rondas ni accesos en ' . self::DIAS_SIN_ACTIVIDAD . ' días')
             ->color($total > 0 ? 'warning' : 'success')
             ->icon('heroicon-o-building-office')
@@ -137,7 +137,7 @@ class EstadoDelSistemaWidget extends StatsOverviewWidget
      * local, asi que filtrarlo por alcance lo esconderia justamente de quien
      * puede arreglarlo. Solo lo ve quien tiene alcance global.
      */
-    private function sinPerfil(): Card
+    private function sinPerfil(): Stat
     {
         $visible = $this->localesEnAlcance() === null;
 
@@ -149,7 +149,7 @@ class EstadoDelSistemaWidget extends StatsOverviewWidget
                 ->count()
             : 0;
 
-        return Card::make('Usuarios activos sin perfil', $visible ? $total : '—')
+        return Stat::make('Usuarios activos sin perfil', $visible ? $total : '—')
             ->description($visible
                 ? ($total > 0 ? 'No pueden entrar a ninguna parte' : 'Todos tienen perfil')
                 : 'Solo visible con alcance global')
@@ -166,7 +166,7 @@ class EstadoDelSistemaWidget extends StatsOverviewWidget
      * que contar sus 12.664 marcajes aqui llenaria la tarjeta de un problema que
      * ya no se puede arreglar.
      */
-    private function sinUbicacionVerificada(): Card
+    private function sinUbicacionVerificada(): Stat
     {
         $q = DB::table('user_has_biometria')
             ->where('bio_ubicacion_verificada', false)
@@ -179,7 +179,7 @@ class EstadoDelSistemaWidget extends StatsOverviewWidget
 
         $total = $q->count();
 
-        return Card::make('Marcajes sin verificar (30 días)', $total)
+        return Stat::make('Marcajes sin verificar (30 días)', $total)
             ->description($total > 0
                 ? 'El local no tenía punto QR al momento de marcar'
                 : 'Todos los marcajes recientes se pudieron comprobar')

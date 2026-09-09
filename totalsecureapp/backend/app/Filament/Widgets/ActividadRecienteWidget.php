@@ -4,7 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Widgets\Concerns\AcotaPorAlcance;
 use Filament\Widgets\StatsOverviewWidget;
-use Filament\Widgets\StatsOverviewWidget\Card;
+use Filament\Widgets\StatsOverviewWidget\Stat;
 use Modules\Administracion\Models\Acceso;
 use Modules\Administracion\Models\Novedad;
 use Modules\Administracion\Models\ronda_cabecera;
@@ -97,11 +97,11 @@ class ActividadRecienteWidget extends StatsOverviewWidget
         string $columnaLocal,
         string $columnaFecha,
         string $icono
-    ): Card {
+    ): Stat {
         $semana = $this->contar($modelo, $columnaLocal, $columnaFecha, 7, 0);
         $anterior = $this->contar($modelo, $columnaLocal, $columnaFecha, 14, 7);
 
-        return Card::make($titulo, number_format($semana, 0, ',', '.'))
+        return Stat::make($titulo, number_format($semana, 0, ',', '.'))
             ->description($this->variacion($semana, $anterior))
             ->descriptionIcon($this->iconoVariacion($semana, $anterior))
             ->color($this->colorVariacion($semana, $anterior))

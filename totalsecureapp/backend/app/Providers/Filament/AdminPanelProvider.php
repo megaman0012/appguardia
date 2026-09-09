@@ -8,7 +8,7 @@ use Filament\Navigation\MenuItem;
 use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
-use Filament\Support\Enums\MaxWidth;
+use Filament\Support\Enums\Width;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -86,7 +86,7 @@ class AdminPanelProvider extends PanelProvider
             // 'full' = sin ancho maximo. Con el tope de 7xl que trae Filament,
             // en un monitor ancho el listado queda como un recuadro con espacio
             // vacio a los lados, y estas tablas tienen muchas columnas.
-            ->maxContentWidth(MaxWidth::Full)
+            ->maxContentWidth(Width::Full) // Filament 4: el enum `MaxWidth` se llama `Width`
 
             ->sidebarCollapsibleOnDesktop(false)
             ->collapsibleNavigationGroups(true)

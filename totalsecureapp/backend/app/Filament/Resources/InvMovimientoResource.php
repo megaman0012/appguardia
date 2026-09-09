@@ -7,7 +7,7 @@ use App\Support\PerfilPanel;
 
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
-use Filament\Tables\Actions\Action;
+use Filament\Actions\Action;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -18,7 +18,7 @@ use Session;
 use App\Filament\Resources\InvMovimientoResource\Pages;
 use Modules\Administracion\Models\MovimientoCabecera;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
 use Filament\Tables;
@@ -61,7 +61,7 @@ class InvMovimientoResource extends Resource
      */
     protected const RELACIONES_TABLA = ['institucion.cliente', 'lista', 'usuario'];
 
-    protected static ?string $navigationGroup = 'Inventario';
+    protected static string | \UnitEnum | null $navigationGroup = 'Inventario';
     protected static ?int $navigationSort = 3;
     // Filament arma con esto las migas, el boton «Crear …» y el aviso de
     // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
@@ -69,10 +69,10 @@ class InvMovimientoResource extends Resource
     protected static ?string $modelLabel = 'movimiento';
     protected static ?string $pluralModelLabel = 'movimientos';
     protected static ?string $navigationLabel = 'Movimientos';
-    protected static ?string $navigationIcon = 'heroicon-o-arrows-right-left';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-arrows-right-left';
 
-    public static function form(Form $form): Form {
-        return $form->schema([]);
+    public static function form(Schema $schema): Schema {
+        return $schema->schema([]);
     }
 
     public static function table(Table $table): Table

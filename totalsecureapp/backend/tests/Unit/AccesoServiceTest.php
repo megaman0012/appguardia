@@ -2,6 +2,8 @@
 
 namespace Tests\Unit;
 
+use PHPUnit\Framework\Attributes\Test;
+
 use App\Services\AccesoService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -68,7 +70,7 @@ class AccesoServiceTest extends TestCase
 
     // ── Validacion ──
 
-    /** @test */
+    #[Test]
     public function tipo_de_acceso_invalido_lanza_validacion(): void
     {
         try {
@@ -79,7 +81,7 @@ class AccesoServiceTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function acceso_vehicular_requiere_patente(): void
     {
         try {
@@ -90,7 +92,7 @@ class AccesoServiceTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function acceso_visitante_requiere_motivo(): void
     {
         try {
@@ -101,7 +103,7 @@ class AccesoServiceTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function acceso_proveedor_requiere_motivo(): void
     {
         try {
@@ -114,7 +116,7 @@ class AccesoServiceTest extends TestCase
 
     // ── Registro de accesos ──
 
-    /** @test */
+    #[Test]
     public function registrar_acceso_peatonal_crea_persona_acceso_e_historial(): void
     {
         $acc = $this->service->registrar($this->datosBase(), 1);
@@ -134,7 +136,7 @@ class AccesoServiceTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function reutiliza_persona_existente_por_documento(): void
     {
         $this->service->registrar($this->datosBase(), 1);
@@ -143,7 +145,7 @@ class AccesoServiceTest extends TestCase
         $this->assertEquals(1, AccesoPersona::where('ap_documento', '1712345678')->count());
     }
 
-    /** @test */
+    #[Test]
     public function registrar_salida_directa_completa_el_acceso(): void
     {
         $acc = $this->service->registrar($this->datosBase(['isEntrada' => false]), 1);
@@ -157,7 +159,7 @@ class AccesoServiceTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function registrar_acceso_vehicular_crea_detalle_vehiculo(): void
     {
         $acc = $this->service->registrar($this->datosBase([
@@ -175,7 +177,7 @@ class AccesoServiceTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function registrar_acceso_visitante_crea_detalle_visita(): void
     {
         $acc = $this->service->registrar($this->datosBase([
@@ -195,7 +197,7 @@ class AccesoServiceTest extends TestCase
         $this->assertDatabaseMissing('acceso_vehiculo', ['av_ac_code' => $acc->ac_code]);
     }
 
-    /** @test */
+    #[Test]
     public function proveedor_con_patente_genera_detalle_visita_y_vehiculo(): void
     {
         $acc = $this->service->registrar($this->datosBase([
@@ -218,7 +220,7 @@ class AccesoServiceTest extends TestCase
 
     // ── Salidas ──
 
-    /** @test */
+    #[Test]
     public function salida_actualiza_estado_y_registra_historial(): void
     {
         $acc = $this->service->registrar($this->datosBase(), 1);
@@ -237,7 +239,7 @@ class AccesoServiceTest extends TestCase
         $this->assertEquals(['entrada', 'salida'], $marcas);
     }
 
-    /** @test */
+    #[Test]
     public function no_permite_doble_salida(): void
     {
         $acc = $this->service->registrar($this->datosBase(), 1);
@@ -249,7 +251,7 @@ class AccesoServiceTest extends TestCase
         $this->service->registrarSalida($acc->ac_code);
     }
 
-    /** @test */
+    #[Test]
     public function salida_de_codigo_inexistente_falla(): void
     {
         $this->expectException(\RuntimeException::class);
@@ -260,7 +262,7 @@ class AccesoServiceTest extends TestCase
 
     // ── Accessors ──
 
-    /** @test */
+    #[Test]
     public function tiempo_de_permanencia_se_calcula_tras_salida(): void
     {
         $acc = $this->service->registrar($this->datosBase(), 1);
@@ -277,7 +279,7 @@ class AccesoServiceTest extends TestCase
 
     // ── Pre-registro ──
 
-    /** @test */
+    #[Test]
     public function crear_preregistro_genera_token_y_queda_pendiente(): void
     {
         $preregistro = $this->service->crearPreregistro([
@@ -300,7 +302,7 @@ class AccesoServiceTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function listar_preregistros_filtra_por_fecha(): void
     {
         $this->service->crearPreregistro([
@@ -326,7 +328,7 @@ class AccesoServiceTest extends TestCase
         $this->assertCount(2, $todos);
     }
 
-    /** @test */
+    #[Test]
     public function cancelar_preregistro_pendiente(): void
     {
         $preregistro = $this->service->crearPreregistro([
@@ -342,7 +344,7 @@ class AccesoServiceTest extends TestCase
         $this->assertEquals(AccesoPreregistro::ESTADO_CANCELADO, $cancelado->apr_estado);
     }
 
-    /** @test */
+    #[Test]
     public function no_cancela_preregistro_ya_procesado(): void
     {
         $preregistro = $this->service->crearPreregistro([
@@ -361,7 +363,7 @@ class AccesoServiceTest extends TestCase
         $this->service->cancelarPreregistro($preregistro->apr_code);
     }
 
-    /** @test */
+    #[Test]
     public function entrada_confirma_preregistro_pendiente_de_hoy(): void
     {
         $preregistro = $this->service->crearPreregistro([
@@ -380,7 +382,7 @@ class AccesoServiceTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function entrada_no_confirma_preregistro_de_otra_institucion(): void
     {
         $otraIns = DB::table('organizacion_institucion')->insertGetId([
@@ -408,7 +410,7 @@ class AccesoServiceTest extends TestCase
 
     // ── Relaciones ──
 
-    /** @test */
+    #[Test]
     public function relacion_persona_accesos_devuelve_sus_accesos(): void
     {
         $this->service->registrar($this->datosBase(), 1);

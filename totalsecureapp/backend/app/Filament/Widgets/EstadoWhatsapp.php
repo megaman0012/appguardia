@@ -15,7 +15,7 @@ use Modules\Administracion\Models\AvisoEnvio;
  */
 class EstadoWhatsapp extends Widget
 {
-    protected static string $view = 'filament.widgets.estado-whatsapp';
+    protected string $view = 'filament.widgets.estado-whatsapp';
     protected int | string | array $columnSpan = 'full';
 
     protected static ?int $sort = 3;

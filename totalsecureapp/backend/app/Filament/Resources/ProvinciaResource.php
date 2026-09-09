@@ -2,12 +2,13 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Actions;
 use App\Filament\Resources\ProvinciaResource\Pages;
 use App\Support\PerfilPanel;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
@@ -26,7 +27,7 @@ class ProvinciaResource extends Resource
     protected static ?string $modelLabel = 'provincia';
     protected static ?string $pluralModelLabel = 'provincias';
     protected static ?string $navigationLabel = 'Provincias';
-    protected static ?string $navigationIcon = 'heroicon-o-map';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-map';
     protected static ?int $navigationSort = 2;
 
     /** Relacion que usa la columna de pais: sin esto, una consulta por fila. */
@@ -37,9 +38,9 @@ class ProvinciaResource extends Resource
         return 'Ubicación geográfica';
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Select::make('pr_pa_id')
                 ->label('País')
                 ->relationship('pais', 'pa_nombre')
@@ -63,7 +64,7 @@ class ProvinciaResource extends Resource
                 BooleanColumn::make('pr_estado')->label('Activa')->toggleable(),
             ])
             ->defaultSort('pr_nombre')
-            ->actions([Tables\Actions\EditAction::make()])
+            ->actions([Actions\EditAction::make()])
             ->bulkActions([
                 Descarga::enLote('provincia'),
             ]);

@@ -378,7 +378,15 @@ class RondaController extends Controller {
         if($ronDet){
             $fechaRegistro = Carbon::parse($ronDet->rd_fecha_hora);
             $ahora = Carbon::now();
-            $diferencia = $ahora->diffInMinutes($fechaRegistro);
+            /*
+             * ⚠️ `absolute: true` es de **Carbon 3** y aca no era cosmetico.
+             * El registro esta en el pasado, asi que
+             * `$ahora->diffInMinutes($fechaRegistro)` devolvia un **negativo**
+             * y `$diferencia < 5` daba **siempre verdadero**: el guardia
+             * recibia «espere 5 minutos» en cada escaneo y no podia volver a
+             * marcar un punto nunca.
+             */
+            $diferencia = (int) $ahora->diffInMinutes($fechaRegistro, absolute: true);
             if ($diferencia < 5) {
                 return $this->message_json('errors', 'Ya registro este marcador espere 5 minutos');
             }

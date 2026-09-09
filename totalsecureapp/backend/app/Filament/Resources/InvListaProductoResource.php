@@ -15,7 +15,7 @@ use App\Filament\Resources\InvListaProductoResource\RelationManagers\ProductosRe
 use Modules\Administracion\Models\Lista;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
@@ -50,7 +50,7 @@ class InvListaProductoResource extends Resource
      * 126 consultas en vez de 6.
      */
     protected const RELACIONES_TABLA = ['institucion.cliente'];
-    protected static ?string $navigationGroup = 'Inventario';
+    protected static string | \UnitEnum | null $navigationGroup = 'Inventario';
     protected static ?int $navigationSort = 2;
     // Filament arma con esto las migas, el boton «Crear …» y el aviso de
     // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
@@ -58,11 +58,11 @@ class InvListaProductoResource extends Resource
     protected static ?string $modelLabel = 'lista';
     protected static ?string $pluralModelLabel = 'listas';
     protected static ?string $navigationLabel = 'Listas';
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-rectangle-stack';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Select::make('li_ins_code')
                 ->relationship(
                     'institucion',

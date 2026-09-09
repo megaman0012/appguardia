@@ -4,7 +4,7 @@ namespace App\Filament\Resources\VacanteResource\RelationManagers;
 
 use App\Services\VacanteService;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -23,9 +23,9 @@ class PostulacionesRelationManager extends RelationManager
     protected static ?string $recordTitleAttribute = 'tp_id';
     protected static ?string $title = 'Postulaciones';
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form->schema([]);
+        return $schema->schema([]);
     }
 
     public function table(Table $table): Table
@@ -43,7 +43,7 @@ class PostulacionesRelationManager extends RelationManager
                     ->dateTime('d/m/Y H:i')
                     ->description(fn (TurnoPostulacion $record) => $record->tp_sincronizado_en
                         && $record->tp_ocurrido_en
-                        && $record->tp_sincronizado_en->diffInMinutes($record->tp_ocurrido_en) > 5
+                        && (int) $record->tp_sincronizado_en->diffInMinutes($record->tp_ocurrido_en, absolute: true) > 5
                         ? 'Sincronizado después'
                         : null),
                 BadgeColumn::make('tp_estado')

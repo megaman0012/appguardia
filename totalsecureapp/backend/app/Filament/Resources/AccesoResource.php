@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Actions;
 use App\Support\PerfilPanel;
 
 use App\Filament\Resources\AccesoResource\Pages;
@@ -10,7 +11,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Filters\Filter;
 use Modules\Administracion\Models\Acceso;
 
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
 
@@ -53,8 +54,8 @@ class AccesoResource extends Resource
      * 126 consultas en vez de 6.
      */
     protected const RELACIONES_TABLA = ['accesoPersona', 'institucion.cliente', 'vehiculo', 'visitante'];
-    protected static ?string $navigationIcon = 'heroicon-o-shield-check';
-    public static function form(Form $form): Form{ return $form->schema([]); }
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-shield-check';
+    public static function form(Schema $schema): Schema{ return $schema->schema([]); }
     public static function table(Table $table): Table
     {
         return $table
@@ -209,13 +210,13 @@ class AccesoResource extends Resource
                     }),
             ])
             ->actions([
-                Tables\Actions\Action::make('gmaping')
+                Actions\Action::make('gmaping')
                     ->label('Ingreso')
                     ->url(fn($record) => "https://www.google.com/maps?q={$record->ac_lat},{$record->ac_lng}")
                     ->openUrlInNewTab()
                     ->icon('heroicon-o-map')
                     ->color('primary'),
-                Tables\Actions\Action::make('gmapegr')
+                Actions\Action::make('gmapegr')
                     ->label('Salida')
                     ->url(fn($record) => "https://www.google.com/maps?q={$record->ac_lat_sal},{$record->ac_lng_sal}")
                     ->openUrlInNewTab()

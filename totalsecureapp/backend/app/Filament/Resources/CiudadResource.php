@@ -2,12 +2,13 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Actions;
 use App\Filament\Resources\CiudadResource\Pages;
 use App\Support\PerfilPanel;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
@@ -32,7 +33,7 @@ class CiudadResource extends Resource
     protected static ?string $modelLabel = 'ciudad';
     protected static ?string $pluralModelLabel = 'ciudades';
     protected static ?string $navigationLabel = 'Ciudades';
-    protected static ?string $navigationIcon = 'heroicon-o-building-office';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-building-office';
     protected static ?int $navigationSort = 3;
 
     protected const RELACIONES_TABLA = ['provincia.pais'];
@@ -42,9 +43,9 @@ class CiudadResource extends Resource
         return 'Ubicación geográfica';
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Select::make('cd_pr_id')
                 ->label('Provincia')
                 ->relationship('provincia', 'pr_nombre')
@@ -66,7 +67,7 @@ class CiudadResource extends Resource
                 BooleanColumn::make('cd_estado')->label('Activa')->toggleable(),
             ])
             ->defaultSort('cd_nombre')
-            ->actions([Tables\Actions\EditAction::make()])
+            ->actions([Actions\EditAction::make()])
             ->bulkActions([
                 Descarga::enLote('ciudad'),
             ]);

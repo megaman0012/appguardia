@@ -2,6 +2,8 @@
 
 namespace Tests\Unit;
 
+use PHPUnit\Framework\Attributes\Test;
+
 use App\Services\PresenceValidationService;
 use Modules\Administracion\Models\InstitucionMarcadores;
 use Modules\Administracion\Models\OrganizacionInstitucion;
@@ -20,7 +22,7 @@ class PresenceValidationServiceTest extends TestCase
         $this->service = new PresenceValidationService();
     }
 
-    /** @test */
+    #[Test]
     public function calcula_distancia_entre_dos_puntos_correctamente()
     {
         $distancia = $this->service->calcularDistancia(
@@ -32,7 +34,7 @@ class PresenceValidationServiceTest extends TestCase
         $this->assertLessThan(110, $distancia);
     }
 
-    /** @test */
+    #[Test]
     public function punto_dentro_de_geocerca_retorna_true()
     {
         $resultado = $this->service->dentroDeGeocerca(
@@ -44,7 +46,7 @@ class PresenceValidationServiceTest extends TestCase
         $this->assertTrue($resultado);
     }
 
-    /** @test */
+    #[Test]
     public function punto_fuera_de_geocerca_retorna_false()
     {
         $resultado = $this->service->dentroDeGeocerca(
@@ -56,7 +58,7 @@ class PresenceValidationServiceTest extends TestCase
         $this->assertFalse($resultado);
     }
 
-    /** @test */
+    #[Test]
     public function qr_invalido_retorna_error()
     {
         $marcador = $this->service->descifrarQR('codigo_invalido', 1);

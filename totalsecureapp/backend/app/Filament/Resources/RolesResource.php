@@ -2,12 +2,13 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Actions;
 use App\Filament\Resources\RolesResource\Pages;
 use App\Filament\Resources\RolesResource\RelationManagers;
 use Modules\Acceso\Models\roles;
 use Modules\Acceso\Models\users;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
@@ -31,11 +32,11 @@ class RolesResource extends Resource
     protected static ?string $model = roles::class;
     protected static bool $shouldRegisterNavigation = true;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-rectangle-stack';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 //
             ]);
@@ -58,11 +59,11 @@ class RolesResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Actions\EditAction::make(),
             ])
             ->bulkActions([
                 Descarga::enLote('roles'),
-                Tables\Actions\DeleteBulkAction::make(),
+                Actions\DeleteBulkAction::make(),
             ]);
     }
 

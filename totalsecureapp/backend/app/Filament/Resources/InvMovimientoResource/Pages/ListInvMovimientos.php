@@ -5,7 +5,7 @@ namespace App\Filament\Resources\InvMovimientoResource\Pages;
 use App\Filament\Resources\InvMovimientoResource;
 use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
-use Filament\Tables\Actions\Action;
+use Filament\Actions\Action;
 use Filament\Forms\Components\Toggle;
 
 class ListInvMovimientos extends ListadoBase

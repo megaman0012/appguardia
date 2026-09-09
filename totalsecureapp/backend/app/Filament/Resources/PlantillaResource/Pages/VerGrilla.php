@@ -22,7 +22,12 @@ class VerGrilla extends Page
     use InteractsWithRecord;
 
     protected static string $resource = PlantillaResource::class;
-    protected static string $view = 'filament.pages.cuadrante-grilla';
+    /*
+     * ⚠️ En Filament 4 `Page::$view` **dejo de ser estatica**. Declararla
+     * `static` es un error fatal de PHP al cargar la clase («Cannot redeclare
+     * non static Page::$view as static»), o sea aplicacion caida.
+     */
+    protected string $view = 'filament.pages.cuadrante-grilla';
 
     public array $grilla = [];
 

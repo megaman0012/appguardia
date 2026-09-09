@@ -110,7 +110,7 @@ class Alertas extends Model
             return null;
         }
 
-        return $this->al_fecha->diffInSeconds($detalle->ad_fecha_atencion);
+        return (int) $this->al_fecha->diffInSeconds($detalle->ad_fecha_atencion, absolute: true);
     }
 
     public function getEstaRetrasadaAttribute(): bool
@@ -127,12 +127,12 @@ class Alertas extends Model
             default => 30,
         };
 
-        return $this->al_fecha->diffInMinutes(now()) > $minutosEspera;
+        return (int) $this->al_fecha->diffInMinutes(now(), absolute: true) > $minutosEspera;
     }
 
     public function getNivelEscalamientoAttribute(): int
     {
-        $minutosTranscurridos = $this->al_fecha->diffInMinutes(now());
+        $minutosTranscurridos = (int) $this->al_fecha->diffInMinutes(now(), absolute: true);
 
         return match(true) {
             $minutosTranscurridos >= 60 => 3,

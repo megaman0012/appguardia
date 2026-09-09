@@ -11,7 +11,7 @@ use Filament\Tables\Filters\Filter;
 use Modules\Administracion\Models\ronda_cabecera;
 use Modules\Administracion\Models\OrganizacionInstitucion;
 
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
 
@@ -28,7 +28,7 @@ use Filament\Tables\Columns\BadgeColumn;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Filament\Tables\Actions\Action;
+use Filament\Actions\Action;
 use Modules\Administracion\Models\UserHasInstitucion;
 use App\Filament\Tables\Descarga;
 use Session;
@@ -54,9 +54,9 @@ class RondaCabeceraResource extends Resource
      */
     protected const RELACIONES_TABLA = ['institucion.cliente', 'users'];
 
-    protected static ?string $navigationIcon = 'heroicon-o-share';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-share';
 
-    public static function form(Form $form): Form{ return $form->schema([]); }
+    public static function form(Schema $schema): Schema{ return $schema->schema([]); }
 
     public static function table(Table $table): Table
     {

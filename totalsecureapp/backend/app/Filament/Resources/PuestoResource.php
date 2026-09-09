@@ -2,12 +2,13 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Actions;
 use App\Filament\Resources\PuestoResource\Pages;
 use App\Support\PerfilPanel;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
@@ -34,7 +35,7 @@ class PuestoResource extends Resource
     protected static ?string $modelLabel = 'puesto';
     protected static ?string $pluralModelLabel = 'puestos';
     protected static ?string $navigationLabel = 'Puestos de trabajo';
-    protected static ?string $navigationIcon = 'heroicon-o-map-pin';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-map-pin';
     protected static ?int $navigationSort = 3;
 
     /** Relaciones que usan las columnas de la tabla (evita el N+1). */
@@ -45,9 +46,9 @@ class PuestoResource extends Resource
         return 'Centros de operación';
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Select::make('pu_ins_code')
                 ->label('Local')
                 ->options(
@@ -104,7 +105,7 @@ class PuestoResource extends Resource
                 BooleanColumn::make('pu_estado')->label('Activo')->toggleable(),
             ])
             ->defaultSort('pu_nombre')
-            ->actions([Tables\Actions\EditAction::make()])
+            ->actions([Actions\EditAction::make()])
             ->bulkActions([
                 Descarga::enLote('puesto'),
             ]);

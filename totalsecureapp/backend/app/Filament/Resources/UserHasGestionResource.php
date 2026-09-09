@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Actions;
 use App\Filament\Tables\FiltroDeEstado;
 
 use App\Filament\Forms\SelectorDeUsuario;
@@ -10,11 +11,11 @@ use App\Support\PerfilPanel;
 use Closure;
 use App\Filament\Resources\UserHasGestionResource\Pages;
 use App\Filament\Resources\UserHasGestionResource\RelationManagers;
-use Filament\Tables\Actions\Action;
+use Filament\Actions\Action;
 use Modules\Acceso\Models\user_has_gestions;
 use Modules\Acceso\Models\users;
 
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
@@ -55,10 +56,10 @@ class UserHasGestionResource extends Resource{
      * 126 consultas en vez de 6.
      */
     protected const RELACIONES_TABLA = ['usuario'];
-    protected static ?string $navigationIcon = 'heroicon-o-user-circle';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-user-circle';
 
-    public static function form(Form $form): Form {
-        return $form->schema([
+    public static function form(Schema $schema): Schema {
+        return $schema->schema([
             // Busca por nombre Y por cedula. Ver App\Filament\Forms\SelectorDeUsuario:
             // antes filtraba el texto de la etiqueta en el navegador, asi que
             // buscar por cedula solo funcionaba donde la etiqueta la incluia.
@@ -115,7 +116,7 @@ class UserHasGestionResource extends Resource{
                 FiltroDeEstado::make('ug_finish', false, 'Gestión'),
             ])
             ->actions([
-                /*Tables\Actions\EditAction::make()
+                /*Actions\EditAction::make()
                 ->disabled(fn ($record) => $record->ug_egreso !== null),*/
                 Action::make('Editar')
                     ->label('Editar')

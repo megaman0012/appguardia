@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\OrganizacionInstitucionResource\RelationManagers;
 
+use Filament\Actions;
 use App\Filament\Resources\InstitucionMarcadoresResource;
 use App\helpers;
 use Filament\Forms;
@@ -10,16 +11,16 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Resources\RelationManagers\Concerns\CanCreate;
 use Filament\Tables\Table;
 use Filament\Tables;
-use Filament\Tables\Actions\Action;
+use Filament\Actions\Action;
 use Filament\Support\Actions\Modal\Actions\Action as ModalAction;
 use Filament\Tables\Columns\BooleanColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Actions\CreateAction;
+use Filament\Actions\CreateAction;
 use Filament\Forms\Components\Actions\Action as FormAction;
 class InstitucionMarcadoresRelationManager extends RelationManager
 {
@@ -29,9 +30,9 @@ class InstitucionMarcadoresRelationManager extends RelationManager
     protected static ?string $recordTitleAttribute = 'InstitucionMarcadores';
 
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Hidden::make('im_ins_code')
                     ->default(fn ($livewire) => $livewire->ownerRecord->ins_code ?? null),
@@ -193,7 +194,7 @@ class InstitucionMarcadoresRelationManager extends RelationManager
                     ->openUrlInNewTab()
                     ->icon('heroicon-o-qr-code')
                     ->color('primary'),
-                Tables\Actions\EditAction::make()
+                Actions\EditAction::make()
                     ->mutateFormDataUsing(function (array $data): array {
                         $data['im_updated_user'] = auth()->id();
                         return $data;

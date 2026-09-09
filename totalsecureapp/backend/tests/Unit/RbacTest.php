@@ -2,6 +2,8 @@
 
 namespace Tests\Unit;
 
+use PHPUnit\Framework\Attributes\Test;
+
 use Illuminate\Support\Facades\DB;
 use Modules\MobileApp\Models\users;
 use Tests\TestCase;
@@ -82,9 +84,8 @@ class RbacTest extends TestCase
      *  - `alertas.crear` (2026_09_08_230001). Es el boton de panico: podia ver
      *    y cerrar alertas, no generarlas. En una app para guardias, avisar de
      *    una emergencia es la funcion mas importante que hay.
-     *
-     * @test
-     */
+     *     */
+    #[Test]
     public function seed_asigna_23_permisos_a_vigilante_y_31_a_supervisor()
     {
         $vigilanteId = DB::table('roles')->where('name', 'Vigilante')->value('id');
@@ -105,7 +106,7 @@ class RbacTest extends TestCase
         $this->assertEquals(31, $sup);
     }
 
-    /** @test */
+    #[Test]
     public function can_verifica_permiso_por_rol()
     {
         $vigilante = $this->userConRol('Vigilante');
@@ -123,14 +124,14 @@ class RbacTest extends TestCase
 
     // ── Middleware en rutas ──
 
-    /** @test */
+    #[Test]
     public function sin_token_responde_401()
     {
         $response = $this->postJson('/api/alert/crear', $this->crearAlertaPayload());
         $response->assertStatus(401);
     }
 
-    /** @test */
+    #[Test]
     public function consola_no_puede_crear_alerta_responde_403()
     {
         // Antes este test comprobaba que el **Vigilante** recibia 403 al crear
@@ -148,7 +149,7 @@ class RbacTest extends TestCase
         $response->assertJsonPath('required_permission', 'alertas.crear');
     }
 
-    /** @test */
+    #[Test]
     public function vigilante_si_puede_crear_alerta_no_recibe_403()
     {
         $user = $this->userConRol('Vigilante');
@@ -160,7 +161,7 @@ class RbacTest extends TestCase
         $this->assertNotSame(403, $response->status());
     }
 
-    /** @test */
+    #[Test]
     public function supervisor_puede_crear_alerta_no_recibe_403()
     {
         $user = $this->userConRol('Supervisor');
@@ -173,7 +174,7 @@ class RbacTest extends TestCase
         $this->assertNotEquals(401, $response->status());
     }
 
-    /** @test */
+    #[Test]
     public function vigilante_puede_listar_accesos()
     {
         $user = $this->userConRol('Vigilante');
@@ -191,7 +192,7 @@ class RbacTest extends TestCase
 
     // ── PerfilController ──
 
-    /** @test */
+    #[Test]
     public function seleccionar_perfil_retorna_roles_del_usuario()
     {
         $user = $this->userConRol('Vigilante');
@@ -215,7 +216,7 @@ class RbacTest extends TestCase
             ->count();
     }
 
-    /** @test */
+    #[Test]
     public function procesar_perfil_retorna_permisos_del_rol()
     {
         $user = $this->userConRol('Vigilante');
@@ -237,10 +238,10 @@ class RbacTest extends TestCase
     }
 
     /**
-     * @test
      * El permiso del panel web ('admin') no debe salir por la API movil: la app
      * no tiene esa pantalla.
      */
+    #[Test]
     public function procesar_perfil_no_devuelve_permisos_del_panel_web()
     {
         $user = $this->userConRol('Vigilante');
@@ -272,7 +273,7 @@ class RbacTest extends TestCase
         );
     }
 
-    /** @test */
+    #[Test]
     public function login_no_devuelve_abilities_del_panel_web()
     {
         $roleId = DB::table('roles')->where('name', 'Vigilante')->value('id');
@@ -290,14 +291,14 @@ class RbacTest extends TestCase
         $this->assertContains('rondas.ver', $abilities);
     }
 
-    /** @test */
+    #[Test]
     public function sin_roles_no_hay_permisos()
     {
         // Un arreglo vacio no debe interpretarse como "todos".
         $this->assertSame([], app(\App\Services\PermisosApiService::class)->paraRoles([]));
     }
 
-    /** @test */
+    #[Test]
     public function procesar_perfil_de_otro_usuario_responde_403()
     {
         $user = $this->userConRol('Vigilante');

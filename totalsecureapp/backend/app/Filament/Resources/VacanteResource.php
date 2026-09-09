@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Actions;
 use App\Filament\Tables\Etiqueta;
 use App\Filament\Resources\VacanteResource\Pages;
 use App\Services\VacanteService;
@@ -11,7 +12,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TimePicker;
 use Filament\Notifications\Notification;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
@@ -38,7 +39,7 @@ class VacanteResource extends Resource
     protected static ?string $navigationLabel = 'Cobertura de turnos';
     protected static ?string $modelLabel = 'vacante';
     protected static ?string $pluralModelLabel = 'vacantes';
-    protected static ?string $navigationIcon = 'heroicon-o-user-plus';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-user-plus';
     // Sin esto Filament derivaría la ruta del modelo: /admin/turno-vacantes.
     protected static ?string $slug = 'vacantes';
     protected static ?int $navigationSort = 3;
@@ -63,9 +64,9 @@ class VacanteResource extends Resource
         return 'danger';
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Select::make('tv_ins_code')
                 ->label('Local')
                 ->options(
@@ -173,7 +174,7 @@ class VacanteResource extends Resource
                     ->query(fn (Builder $query) => $query->vivas()),
             ])
             ->actions([
-                Tables\Actions\Action::make('abrir')
+                Actions\Action::make('abrir')
                     ->label('Confirmar y ofrecer')
                     ->icon('heroicon-o-megaphone')
                     ->color('warning')
@@ -197,7 +198,7 @@ class VacanteResource extends Resource
                 // espera a que despierte, y la Consola atiende 24/7. El
                 // Supervisor confirma la falta y ve a los postulados, pero no
                 // asigna.
-                Tables\Actions\Action::make('confirmarCobertura')
+                Actions\Action::make('confirmarCobertura')
                     ->label('Elegir quién cubre')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
@@ -232,7 +233,7 @@ class VacanteResource extends Resource
                             ->send();
                     }),
 
-                Tables\Actions\Action::make('cancelar')
+                Actions\Action::make('cancelar')
                     ->label('Ya no hace falta')
                     ->icon('heroicon-o-x-circle')
                     ->color('secondary')
@@ -245,7 +246,7 @@ class VacanteResource extends Resource
                         Notification::make()->title('Vacante cerrada')->success()->send();
                     }),
 
-                Tables\Actions\ViewAction::make(),
+                Actions\ViewAction::make(),
             ])
             ->bulkActions([
                 Descarga::enLote('vacante'),

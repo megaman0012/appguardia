@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Actions;
 use App\Filament\Tables\FiltroDeEstado;
 
 use App\Support\PerfilPanel;
@@ -11,7 +12,7 @@ use App\Filament\Resources\OrganizacionInstitucionResource\RelationManagers\Inst
 use Modules\Administracion\Models\OrganizacionInstitucion;
 use Modules\Administracion\Models\Organizacion;
 use Session;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
@@ -24,7 +25,7 @@ use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\Tabs\Tab;
 
 use Filament\Tables;
-use Filament\Tables\Actions\Action;
+use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BooleanColumn;
 use Filament\Tables\Columns\ToggleColumn;
@@ -53,10 +54,10 @@ class OrganizacionInstitucionResource extends Resource
     protected static ?string $modelLabel = 'local';
     protected static ?string $pluralModelLabel = 'locales';
     protected static ?string $navigationLabel = 'Locales';
-    protected static ?string $navigationIcon = 'heroicon-o-flag';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-flag';
 
-    public static function form(Form $form): Form {
-        return $form->schema([
+    public static function form(Schema $schema): Schema {
+        return $schema->schema([
 
             TextInput::make('ins_descripcion')
                 ->label('Descripción')
@@ -187,7 +188,7 @@ class OrganizacionInstitucionResource extends Resource
                 FiltroDeEstado::make('ins_estado', true, 'Estado'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
+                Actions\EditAction::make()
                     ->visible(fn () => PerfilPanel::puedeAdministrarLocales()),
                 Action::make('marcadores')
                 ->label('Marcadores')

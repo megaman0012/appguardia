@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Actions;
 use App\Filament\Forms\SelectorDeUsuario;
 
 use App\Support\PerfilPanel;
@@ -13,7 +14,7 @@ use Modules\Acceso\Models\user_has_roles;
 use Modules\Acceso\Models\users;
 use Modules\Acceso\Models\Role;
 
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
@@ -53,10 +54,10 @@ class UserHasRolesResource extends Resource
      * 126 consultas en vez de 6.
      */
     protected const RELACIONES_TABLA = ['roles', 'users'];
-    protected static ?string $navigationIcon = 'heroicon-o-user-plus';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-user-plus';
 
-    public static function form(Form $form): Form {
-        return $form
+    public static function form(Schema $schema): Schema {
+        return $schema
             ->schema([
                 // Busca por nombre Y por cedula. Ver App\Filament\Forms\SelectorDeUsuario:
                 // antes filtraba el texto de la etiqueta en el navegador, asi que
@@ -104,7 +105,7 @@ class UserHasRolesResource extends Resource
             ])
             ->filters([])
             ->actions([
-                Tables\Actions\DeleteAction::make()
+                Actions\DeleteAction::make()
                 ->before(function ($record) {
                     helpers::control_log_filament($record->toArray(), 'UserHasRolesResource', 'Delete','NOTICE', 'Eliminar User Has Roles');
                 }),

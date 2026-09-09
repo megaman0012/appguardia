@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Actions;
 use App\Filament\Tables\FiltroDeEstado;
 
 use App\Support\PerfilPanel;
@@ -9,7 +10,7 @@ use App\Support\PerfilPanel;
 use App\Filament\Resources\OrganizacionResource\Pages;
 use App\Filament\Resources\OrganizacionResource\RelationManagers;
 use Modules\Administracion\Models\Organizacion;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
@@ -40,11 +41,11 @@ class OrganizacionResource extends Resource {
     protected static ?string $modelLabel = 'cliente';
     protected static ?string $pluralModelLabel = 'clientes';
     protected static ?string $navigationLabel = 'Clientes';
-    protected static ?string $navigationIcon = 'heroicon-o-building-office';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-building-office';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 TextInput::make('org_descripcion')
                     ->label('Nombre de la Organización')
@@ -109,7 +110,7 @@ class OrganizacionResource extends Resource {
                 FiltroDeEstado::make('org_estado', true, 'Estado'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Actions\EditAction::make(),
             ])
             ->bulkActions([
                 Descarga::enLote('organizacion'),

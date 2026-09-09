@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\PlantillaResource\RelationManagers;
 
+use Filament\Actions;
 use App\Filament\Forms\SelectorDeUsuario;
 
 use App\Support\PerfilPanel;
@@ -9,7 +10,7 @@ use Filament\Forms;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TimePicker;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Table;
 use Filament\Tables;
@@ -31,9 +32,9 @@ class FranjasRelationManager extends RelationManager
     protected static ?string $recordTitleAttribute = 'pf_id';
     protected static ?string $title = 'Franjas de cobertura';
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Select::make('pf_puesto_id')
                 ->label('Puesto')
                 // Solo los puestos del local de esta plantilla: uno de otro local
@@ -100,14 +101,14 @@ class FranjasRelationManager extends RelationManager
             ])
             ->defaultSort('pf_dia_semana')
             ->headerActions([
-                Tables\Actions\CreateAction::make()
+                Actions\CreateAction::make()
                     ->label('Agregar franja')
                     ->visible(fn () => PerfilPanel::puedeAdministrarLocales()),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
+                Actions\EditAction::make()
                     ->visible(fn () => PerfilPanel::puedeAdministrarLocales()),
-                Tables\Actions\DeleteAction::make()
+                Actions\DeleteAction::make()
                     ->visible(fn () => PerfilPanel::puedeAdministrarLocales()),
             ]);
     }

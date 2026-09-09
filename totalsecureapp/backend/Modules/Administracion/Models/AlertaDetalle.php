@@ -62,7 +62,10 @@ class AlertaDetalle extends Model
         $this->update([
             'ad_estado' => 'resuelta',
             'ad_fecha_atencion' => now(),
-            'ad_tiempo_respuesta_seg' => $this->alerta->al_fecha->diffInSeconds(now()),
+            // Carbon 3 devuelve float: la columna es integer y Postgres
+            // rechazaba «600.899393» con «invalid input syntax for type
+            // integer».
+            'ad_tiempo_respuesta_seg' => (int) $this->alerta->al_fecha->diffInSeconds(now(), absolute: true),
             'ad_observacion_atencion' => $observacion,
         ]);
 

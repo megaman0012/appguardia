@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Actions;
 use App\Filament\Tables\Etiqueta;
 use App\Support\PerfilPanel;
 
@@ -9,7 +10,7 @@ use App\Filament\Resources\UserHasBiometriaResource\Pages;
 use App\Filament\Resources\UserHasBiometriaResource\RelationManagers;
 
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
 
@@ -49,9 +50,9 @@ class UserHasBiometriaResource extends Resource
      * 126 consultas en vez de 6.
      */
     protected const RELACIONES_TABLA = ['institucion.cliente', 'usuario'];
-    protected static ?string $navigationIcon = 'heroicon-o-finger-print';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-finger-print';
 
-    public static function form(Form $form): Form{ return $form->schema([]); }
+    public static function form(Schema $schema): Schema{ return $schema->schema([]); }
 
     public static function table(Table $table): Table
     {
@@ -150,7 +151,7 @@ class UserHasBiometriaResource extends Resource
                     }),
             ])
             ->actions([
-                Tables\Actions\Action::make('gmap')
+                Actions\Action::make('gmap')
                     ->label('Mapa')
                     ->url(fn($record) => "https://www.google.com/maps?q={$record->bio_lat},{$record->bio_lng}")
                     ->openUrlInNewTab()

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Actions;
 use App\Filament\Tables\FiltroDeEstado;
 
 use App\Filament\Resources\InstitucionMarcadoresResource\Pages;
@@ -9,7 +10,7 @@ use App\Filament\Resources\InstitucionMarcadoresResource\RelationManagers;
 use Modules\Administracion\Models\InstitucionMarcadores;
 use Modules\Administracion\Models\OrganizacionInstitucion;
 
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
@@ -21,7 +22,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Hidden;
 
 use Filament\Tables;
-use Filament\Tables\Actions\Action;
+use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BooleanColumn;
 use Filament\Tables\Columns\ToggleColumn;
@@ -44,11 +45,11 @@ class InstitucionMarcadoresResource extends Resource
      * 126 consultas en vez de 6.
      */
     protected const RELACIONES_TABLA = ['institucion.cliente'];
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static bool $shouldRegisterNavigation = false;
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
 
                 Hidden::make('im_ins_code')
@@ -133,7 +134,7 @@ class InstitucionMarcadoresResource extends Resource
                     ->openUrlInNewTab()
                     ->icon('heroicon-o-map')
                     ->color('primary'),
-                Tables\Actions\EditAction::make()
+                Actions\EditAction::make()
                 ->url(fn($record)=>
                     InstitucionMarcadoresResource::getUrl(
                         'edit', [ 'record' => $record->im_code,'codigo' => $record->im_ins_code ]

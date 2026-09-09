@@ -5,7 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Tables\Etiqueta;
 use App\Filament\Resources\AvisoResource\Pages;
 use App\Support\PerfilPanel;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
@@ -29,7 +29,7 @@ class AvisoResource extends Resource
     protected static ?string $navigationLabel = 'Avisos enviados';
     protected static ?string $modelLabel = 'aviso';
     protected static ?string $pluralModelLabel = 'avisos';
-    protected static ?string $navigationIcon = 'heroicon-o-paper-airplane';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-paper-airplane';
     protected static ?int $navigationSort = 4;
     protected static ?string $slug = 'avisos';
 
@@ -40,9 +40,9 @@ class AvisoResource extends Resource
         return 'Operación';
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([]);
+        return $schema->schema([]);
     }
 
     public static function table(Table $table): Table

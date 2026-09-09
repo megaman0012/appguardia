@@ -6,7 +6,7 @@ use App\Services\DashboardStatsService;
 use App\Filament\Widgets\Concerns\AcotaPorAlcance;
 use Filament\Widgets\StatsOverviewWidget;
 use Illuminate\Support\Facades\DB;
-use Filament\Widgets\StatsOverviewWidget\Card;
+use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Session;
 use Modules\Administracion\Models\UserHasInstitucion;
@@ -70,17 +70,17 @@ class AlertasActivasWidget extends StatsOverviewWidget
         $urgentes = $totales['criticas'] + $totales['altas'];
 
         return [
-            Card::make('Alertas activas', $totales['activas'])
+            Stat::make('Alertas activas', $totales['activas'])
                 ->description($totales['pendientes'] . ' sin atender, ' . $totales['en_atencion'] . ' en atención')
                 ->color($totales['pendientes'] > 0 ? 'warning' : 'success')
                 ->icon('heroicon-o-exclamation-triangle'),
 
-            Card::make('Críticas y altas', $urgentes)
+            Stat::make('Críticas y altas', $urgentes)
                 ->description($urgentes > 0 ? 'Requieren atención inmediata' : 'Ninguna pendiente')
                 ->color($urgentes > 0 ? 'danger' : 'success')
                 ->icon('heroicon-o-fire'),
 
-            Card::make('Más antigua sin cerrar', $this->antiguedad($masAntigua))
+            Stat::make('Más antigua sin cerrar', $this->antiguedad($masAntigua))
                 ->description($masAntigua ? 'Desde ' . Carbon::parse($masAntigua)->format('d/m H:i') : 'Sin alertas abiertas')
                 ->color($this->colorAntiguedad($masAntigua))
                 ->icon('heroicon-o-clock'),
@@ -115,7 +115,8 @@ class AlertasActivasWidget extends StatsOverviewWidget
             return '—';
         }
 
-        $minutos = Carbon::parse($fecha)->diffInMinutes(now());
+        // Carbon 3 devuelve float, e `intdiv()` con float lanza TypeError.
+        $minutos = (int) Carbon::parse($fecha)->diffInMinutes(now(), absolute: true);
 
         if ($minutos < 60) {
             return $minutos . ' min';
@@ -133,7 +134,7 @@ class AlertasActivasWidget extends StatsOverviewWidget
             return 'success';
         }
 
-        $minutos = Carbon::parse($fecha)->diffInMinutes(now());
+        $minutos = (int) Carbon::parse($fecha)->diffInMinutes(now(), absolute: true);
 
         return $minutos > 120 ? 'danger' : ($minutos > 30 ? 'warning' : 'success');
     }

@@ -2,17 +2,18 @@
 
 namespace App\Filament\Resources\InvListaProductoResource\RelationManagers;
 
+use Filament\Actions;
 use App\helpers;
 use Filament\Forms;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Table;
 use Filament\Tables;
-use Filament\Tables\Actions\CreateAction;
+use Filament\Actions\CreateAction;
 use Filament\Tables\Columns\BooleanColumn;
 use Filament\Tables\Columns\TextColumn;
 use Modules\Administracion\Models\ProductoCatalogo;
@@ -36,9 +37,9 @@ class InvProductosRelationManager extends RelationManager
 
     protected static ?string $recordTitleAttribute = 'Listas';
 
-    public function form($form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Hidden::make('lia_lista_id')
                 ->default(fn ($livewire) => $livewire->ownerRecord->li_id),
             Select::make('lia_producto_id')
@@ -99,7 +100,7 @@ class InvProductosRelationManager extends RelationManager
                 ->toggleable(),
         ])
         ->actions([
-            Tables\Actions\EditAction::make()
+            Actions\EditAction::make()
             ->mutateFormDataUsing(function (array $data): array {
                 // Antes decia 'im_updated_user', que no es columna de esta tabla:
                 // la auditoria de quien editaba se perdia en silencio.
