@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import { CameraView, useCameraPermissions, CameraCapturedPicture } from 'expo-camera';
+import { COLORES } from '../utils/tema';
 
 interface Props {
   onCapture: (photo: CameraCapturedPicture) => void;
@@ -101,7 +102,7 @@ export const CameraCapture = ({ onCapture, onCancel, title = 'Tomar foto' }: Pro
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: COLORES.fondoCamara,
   },
   camera: {
     flex: 1,
@@ -116,13 +117,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   shutter: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORES.marca,
     borderRadius: 50,
     paddingVertical: 14,
     paddingHorizontal: 40,
   },
   shutterText: {
-    color: '#fff',
+    color: COLORES.textoSobreMarca,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -140,32 +141,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#000',
+    backgroundColor: COLORES.fondoCamara,
   },
   centerText: {
-    color: '#fff',
+    color: COLORES.textoSobreMarca,
     fontSize: 16,
     marginBottom: 20,
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORES.marca,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 24,
   },
   buttonText: {
-    color: '#fff',
+    color: COLORES.textoSobreMarca,
     fontSize: 16,
     fontWeight: '600',
   },
   cancelButton: {
-    backgroundColor: '#333',
+    backgroundColor: COLORES.marcaGris,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 24,
   },
   cancelText: {
-    color: '#fff',
+    color: COLORES.textoSobreMarca,
     fontSize: 16,
   },
 });

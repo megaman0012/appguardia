@@ -14,6 +14,7 @@ import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
 import { getCurrentLocation } from '../utils/location';
 import { formatDateTime } from '../utils/format';
+import { COLORES } from '../utils/tema';
 
 interface Ronda {
   rc_id: number;
@@ -214,7 +215,7 @@ export const RondaListScreen = ({ navigation }: { navigation: any }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORES.fondo,
   },
   center: {
     flex: 1,
@@ -227,40 +228,40 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 50,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: COLORES.borde,
   },
   backBtn: {
     marginRight: 12,
   },
   backText: {
     fontSize: 16,
-    color: '#007AFF',
+    color: COLORES.marca,
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORES.texto,
   },
   subtitle: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    color: '#666',
+    color: COLORES.textoSuave,
     fontSize: 14,
   },
   acciones: {
     padding: 20,
   },
   startButton: {
-    backgroundColor: '#28a745',
+    backgroundColor: COLORES.exito,
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
   },
   startButtonDisabled: {
-    backgroundColor: '#6c757d',
+    backgroundColor: COLORES.marcaGris,
   },
   startButtonText: {
-    color: '#fff',
+    color: COLORES.textoSobreMarca,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -269,7 +270,7 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
   item: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORES.fondoSuave,
     borderRadius: 10,
     padding: 16,
     marginBottom: 12,
@@ -282,7 +283,7 @@ const styles = StyleSheet.create({
   itemId: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: COLORES.texto,
   },
   badge: {
     borderRadius: 12,
@@ -290,22 +291,22 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   badgeActiva: {
-    backgroundColor: '#cfe8ff',
+    backgroundColor: COLORES.informacionSuave,
   },
   badgeFinalizada: {
-    backgroundColor: '#d4edda',
+    backgroundColor: COLORES.exitoSuave,
   },
   badgeCancelada: {
-    backgroundColor: '#f8d7da',
+    backgroundColor: COLORES.criticoSuave,
   },
   badgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#333',
+    color: COLORES.texto,
   },
   itemDate: {
     fontSize: 14,
-    color: '#666',
+    color: COLORES.textoSuave,
     marginTop: 4,
   },
   itemActions: {
@@ -313,31 +314,31 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   btnFinalizar: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORES.marca,
     borderRadius: 6,
     paddingVertical: 8,
     paddingHorizontal: 16,
     marginRight: 10,
   },
   btnFinalizarText: {
-    color: '#fff',
+    color: COLORES.textoSobreMarca,
     fontSize: 14,
     fontWeight: '600',
   },
   btnCancelar: {
-    backgroundColor: '#dc3545',
+    backgroundColor: COLORES.critico,
     borderRadius: 6,
     paddingVertical: 8,
     paddingHorizontal: 16,
   },
   btnCancelarText: {
-    color: '#fff',
+    color: COLORES.textoSobreMarca,
     fontSize: 14,
     fontWeight: '600',
   },
   emptyText: {
     textAlign: 'center',
-    color: '#999',
+    color: COLORES.textoTenue,
     marginTop: 40,
     fontSize: 16,
   },

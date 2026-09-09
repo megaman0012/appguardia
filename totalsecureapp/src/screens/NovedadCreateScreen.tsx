@@ -15,6 +15,7 @@ import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
 import { getCurrentLocation } from '../utils/location';
 import { CameraCapture } from '../components/CameraCapture';
+import { COLORES } from '../utils/tema';
 
 export const NovedadCreateScreen = ({ navigation }: { navigation: any }) => {
   const { institucion } = useAuth();
@@ -124,7 +125,7 @@ export const NovedadCreateScreen = ({ navigation }: { navigation: any }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: COLORES.fondo },
   content: { paddingBottom: 40 },
   header: {
     flexDirection: 'row',
@@ -132,14 +133,14 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 50,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: COLORES.borde,
   },
   backBtn: { marginRight: 12 },
-  backText: { fontSize: 16, color: '#007AFF' },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#333' },
+  backText: { fontSize: 16, color: COLORES.marca },
+  title: { fontSize: 20, fontWeight: 'bold', color: COLORES.texto },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: COLORES.borde,
     borderRadius: 8,
     padding: 12,
     margin: 20,
@@ -155,22 +156,22 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   photoButton: {
-    backgroundColor: '#6c757d',
+    backgroundColor: COLORES.marcaGris,
     marginHorizontal: 20,
     marginTop: 16,
     borderRadius: 8,
     paddingVertical: 13,
     alignItems: 'center',
   },
-  photoButtonText: { color: '#fff', fontWeight: '600' },
+  photoButtonText: { color: COLORES.textoSobreMarca, fontWeight: '600' },
   cameraWrap: { height: 340, marginHorizontal: 20, marginTop: 16, borderRadius: 8, overflow: 'hidden' },
   saveButton: {
-    backgroundColor: '#28a745',
+    backgroundColor: COLORES.exito,
     marginHorizontal: 20,
     marginTop: 20,
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
   },
-  saveButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  saveButtonText: { color: COLORES.textoSobreMarca, fontSize: 16, fontWeight: '600' },
 });

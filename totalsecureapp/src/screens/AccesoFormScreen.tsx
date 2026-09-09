@@ -15,6 +15,7 @@ import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
 import { getCurrentLocation } from '../utils/location';
 import { CameraCapture } from '../components/CameraCapture';
+import { COLORES } from '../utils/tema';
 
 const TIPOS = [
   { value: 'peatonal', label: 'Peatón' },
@@ -404,7 +405,7 @@ export const AccesoFormScreen = ({ navigation }: { navigation: any }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: COLORES.fondo },
   content: { paddingBottom: 40 },
   header: {
     flexDirection: 'row',
@@ -412,11 +413,11 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 50,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: COLORES.borde,
   },
   backBtn: { marginRight: 12 },
-  backText: { fontSize: 16, color: '#007AFF' },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#333' },
+  backText: { fontSize: 16, color: COLORES.marca },
+  title: { fontSize: 20, fontWeight: 'bold', color: COLORES.texto },
   toggleRow: {
     flexDirection: 'row',
     marginHorizontal: 20,
@@ -424,18 +425,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: COLORES.marca,
   },
-  toggle: { flex: 1, paddingVertical: 12, alignItems: 'center', backgroundColor: '#fff' },
-  toggleOn: { backgroundColor: '#007AFF' },
-  toggleText: { color: '#007AFF', fontWeight: '600' },
-  toggleTextOn: { color: '#fff', fontWeight: '600' },
+  toggle: { flex: 1, paddingVertical: 12, alignItems: 'center', backgroundColor: COLORES.fondo },
+  toggleOn: { backgroundColor: COLORES.marca },
+  toggleText: { color: COLORES.marca, fontWeight: '600' },
+  toggleTextOn: { color: COLORES.textoSobreMarca, fontWeight: '600' },
   label: {
     marginHorizontal: 20,
     marginTop: 16,
     marginBottom: 6,
     fontSize: 14,
-    color: '#666',
+    color: COLORES.textoSuave,
     fontWeight: '500',
   },
   sectionTitle: {
@@ -444,24 +445,24 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     fontSize: 15,
     fontWeight: '700',
-    color: '#007AFF',
+    color: COLORES.marca,
   },
   tiposRow: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20 },
   tipoChip: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: COLORES.borde,
     borderRadius: 16,
     paddingVertical: 7,
     paddingHorizontal: 14,
     marginRight: 8,
     marginBottom: 8,
   },
-  tipoChipOn: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
-  tipoChipText: { color: '#333' },
-  tipoChipTextOn: { color: '#fff', fontWeight: '600' },
+  tipoChipOn: { backgroundColor: COLORES.marca, borderColor: COLORES.marca },
+  tipoChipText: { color: COLORES.texto },
+  tipoChipTextOn: { color: COLORES.textoSobreMarca, fontWeight: '600' },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: COLORES.borde,
     borderRadius: 8,
     padding: 12,
     marginHorizontal: 20,
@@ -482,14 +483,14 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#bbb',
+    borderColor: COLORES.borde,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
   },
-  checkboxOn: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
-  checkMark: { color: '#fff', fontWeight: '700' },
-  checkLabel: { fontSize: 15, color: '#333' },
+  checkboxOn: { backgroundColor: COLORES.marca, borderColor: COLORES.marca },
+  checkMark: { color: COLORES.textoSobreMarca, fontWeight: '700' },
+  checkLabel: { fontSize: 15, color: COLORES.texto },
   photoPreview: {
     width: '90%',
     height: 170,
@@ -498,22 +499,22 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   photoButton: {
-    backgroundColor: '#6c757d',
+    backgroundColor: COLORES.marcaGris,
     marginHorizontal: 20,
     marginTop: 16,
     borderRadius: 8,
     paddingVertical: 13,
     alignItems: 'center',
   },
-  photoButtonText: { color: '#fff', fontWeight: '600' },
+  photoButtonText: { color: COLORES.textoSobreMarca, fontWeight: '600' },
   cameraWrap: { height: 340, marginHorizontal: 20, marginTop: 16, borderRadius: 8, overflow: 'hidden' },
   saveButton: {
-    backgroundColor: '#28a745',
+    backgroundColor: COLORES.exito,
     marginHorizontal: 20,
     marginTop: 20,
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
   },
-  saveButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  saveButtonText: { color: COLORES.textoSobreMarca, fontSize: 16, fontWeight: '600' },
 });

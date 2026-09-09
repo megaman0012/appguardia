@@ -345,11 +345,11 @@ const styles = StyleSheet.create({
   },
   saveButtonText: { color: COLORES.textoSobreMarca, fontSize: 16, fontWeight: '700' },
   finishButton: {
-    backgroundColor: '#28a745',
+    backgroundColor: COLORES.exito,
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 10,
   },
-  finishButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  finishButtonText: { color: COLORES.textoSobreMarca, fontSize: 16, fontWeight: '600' },
 });

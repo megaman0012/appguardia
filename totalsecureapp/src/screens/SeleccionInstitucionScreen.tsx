@@ -11,6 +11,7 @@ import {
 import { useAuth, Institucion } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { COLORES } from '../utils/tema';
 
 export const SeleccionInstitucionScreen = ({ navigation }: { navigation: any }) => {
   const { setInstitucion, logout } = useAuth();
@@ -100,7 +101,7 @@ export const SeleccionInstitucionScreen = ({ navigation }: { navigation: any }) 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORES.fondo,
   },
   center: {
     flex: 1,
@@ -110,11 +111,11 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    color: '#666',
+    color: COLORES.textoSuave,
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: COLORES.textoSuave,
     textAlign: 'center',
     marginBottom: 24,
   },
@@ -122,18 +123,18 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 60,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: COLORES.borde,
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORES.texto,
   },
   list: {
     padding: 20,
   },
   item: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORES.fondoSuave,
     borderRadius: 10,
     padding: 16,
     marginBottom: 12,
@@ -141,21 +142,21 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: COLORES.texto,
   },
   itemAddress: {
     fontSize: 14,
-    color: '#666',
+    color: COLORES.textoSuave,
     marginTop: 4,
   },
   logoutButton: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORES.fondoSuave,
     borderRadius: 8,
     padding: 14,
     alignItems: 'center',
   },
   logoutText: {
-    color: '#dc3545',
+    color: COLORES.critico,
     fontSize: 16,
     fontWeight: '600',
   },

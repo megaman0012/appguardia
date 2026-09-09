@@ -14,6 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
 import { formatDateTime } from '../utils/format';
+import { COLORES } from '../utils/tema';
 
 interface Novedad {
   nv_id: number;
@@ -106,7 +107,7 @@ export const NovedadListScreen = ({ navigation }: { navigation: any }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: COLORES.fondo },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
     flexDirection: 'row',
@@ -114,29 +115,29 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 50,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: COLORES.borde,
   },
   backBtn: { marginRight: 12 },
-  backText: { fontSize: 16, color: '#007AFF' },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#333' },
+  backText: { fontSize: 16, color: COLORES.marca },
+  title: { fontSize: 20, fontWeight: 'bold', color: COLORES.texto },
   newButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORES.marca,
     marginHorizontal: 20,
     marginTop: 16,
     borderRadius: 8,
     paddingVertical: 13,
     alignItems: 'center',
   },
-  newButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  newButtonText: { color: COLORES.textoSobreMarca, fontSize: 15, fontWeight: '600' },
   list: { paddingHorizontal: 20, paddingBottom: 30, paddingTop: 16 },
   item: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORES.fondoSuave,
     borderRadius: 10,
     padding: 14,
     marginBottom: 12,
   },
-  itemDate: { fontSize: 13, color: '#007AFF', fontWeight: '600' },
-  itemObs: { fontSize: 15, color: '#333', marginTop: 4 },
+  itemDate: { fontSize: 13, color: COLORES.marca, fontWeight: '600' },
+  itemObs: { fontSize: 15, color: COLORES.texto, marginTop: 4 },
   itemPhoto: { width: '100%', height: 150, borderRadius: 8, marginTop: 10 },
-  emptyText: { textAlign: 'center', color: '#999', marginTop: 40, fontSize: 16 },
+  emptyText: { textAlign: 'center', color: COLORES.textoTenue, marginTop: 40, fontSize: 16 },
 });

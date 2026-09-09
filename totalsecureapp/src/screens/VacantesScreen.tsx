@@ -13,6 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
 import { ahoraDelDispositivo, useIdempotencia } from '../utils/idempotencia';
+import { COLORES } from '../utils/tema';
 
 interface TurnoProximo {
   tu_id: number;
@@ -320,7 +321,7 @@ export const VacantesScreen = ({ navigation }: { navigation: any }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: COLORES.fondo },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 },
   header: {
     flexDirection: 'row',
@@ -328,39 +329,39 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 50,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: COLORES.borde,
   },
   backBtn: { marginRight: 12 },
-  backText: { fontSize: 16, color: '#007AFF' },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#333', flex: 1 },
-  tabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#eee' },
+  backText: { fontSize: 16, color: COLORES.marca },
+  title: { fontSize: 20, fontWeight: 'bold', color: COLORES.texto, flex: 1 },
+  tabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: COLORES.borde },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 3, borderBottomColor: 'transparent' },
-  tabActiva: { borderBottomColor: '#007AFF' },
-  tabText: { fontSize: 15, color: '#777', fontWeight: '600' },
-  tabTextActiva: { color: '#007AFF' },
-  itemAvisado: { fontSize: 13, color: '#b26a00', marginTop: 10, fontWeight: '600' },
-  btnAvisar: { backgroundColor: '#d9534f' },
+  tabActiva: { borderBottomColor: COLORES.marca },
+  tabText: { fontSize: 15, color: COLORES.textoSuave, fontWeight: '600' },
+  tabTextActiva: { color: COLORES.marca },
+  itemAvisado: { fontSize: 13, color: COLORES.advertencia, marginTop: 10, fontWeight: '600' },
+  btnAvisar: { backgroundColor: COLORES.critico },
   list: { padding: 20, paddingBottom: 30 },
   item: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORES.fondoSuave,
     borderRadius: 10,
     padding: 16,
     marginBottom: 12,
   },
-  itemPostulado: { backgroundColor: '#eaf7ee' },
+  itemPostulado: { backgroundColor: COLORES.exitoSuave },
   itemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  itemPuesto: { fontSize: 16, fontWeight: '700', color: '#333', flex: 1 },
-  itemLocal: { fontSize: 14, color: '#555', marginTop: 2 },
-  itemAviso: { fontSize: 12, color: '#b26a00', marginTop: 2, fontWeight: '600' },
-  itemHorario: { fontSize: 15, color: '#007AFF', marginTop: 8, fontWeight: '700' },
-  itemMotivo: { fontSize: 13, color: '#777', marginTop: 2 },
-  badgeOk: { backgroundColor: '#28a745', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
-  badgeOkText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+  itemPuesto: { fontSize: 16, fontWeight: '700', color: COLORES.texto, flex: 1 },
+  itemLocal: { fontSize: 14, color: COLORES.textoSuave, marginTop: 2 },
+  itemAviso: { fontSize: 12, color: COLORES.advertencia, marginTop: 2, fontWeight: '600' },
+  itemHorario: { fontSize: 15, color: COLORES.marca, marginTop: 8, fontWeight: '700' },
+  itemMotivo: { fontSize: 13, color: COLORES.textoSuave, marginTop: 2 },
+  badgeOk: { backgroundColor: COLORES.exito, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  badgeOkText: { fontSize: 11, fontWeight: '700', color: COLORES.textoSobreMarca },
   btn: { borderRadius: 8, paddingVertical: 12, alignItems: 'center', marginTop: 14 },
-  btnPostular: { backgroundColor: '#007AFF' },
-  btnRetirar: { backgroundColor: '#8e8e93' },
-  btnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  emptyText: { textAlign: 'center', color: '#999', marginTop: 40, fontSize: 16 },
+  btnPostular: { backgroundColor: COLORES.marca },
+  btnRetirar: { backgroundColor: COLORES.marcaGris },
+  btnText: { color: COLORES.textoSobreMarca, fontSize: 15, fontWeight: '700' },
+  emptyText: { textAlign: 'center', color: COLORES.textoTenue, marginTop: 40, fontSize: 16 },
   linkBtn: { marginTop: 16 },
-  linkText: { color: '#007AFF', fontSize: 16, fontWeight: '600' },
+  linkText: { color: COLORES.marca, fontSize: 16, fontWeight: '600' },
 });

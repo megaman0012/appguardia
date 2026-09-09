@@ -12,6 +12,7 @@ import { useAuth, Perfil } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS, APP_NAME } from '../utils/constants';
 import { RootStackScreenProps } from '../navigation/AppNavigator';
+import { COLORES } from '../utils/tema';
 
 interface SeleccionarPerfilResponse {
   perfiles?: Perfil[];
@@ -156,26 +157,26 @@ export const ProfileSelectionScreen = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORES.fondo,
     padding: 20,
   },
   appName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORES.texto,
     marginBottom: 30,
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORES.texto,
     marginBottom: 25,
   },
   listContent: {
     paddingBottom: 20,
   },
   perfilItem: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORES.fondoSuave,
     borderRadius: 10,
     padding: 15,
     marginBottom: 10,
@@ -192,16 +193,16 @@ const styles = StyleSheet.create({
   perfilNombre: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: COLORES.texto,
   },
   perfilDescripcion: {
     fontSize: 14,
-    color: '#666',
+    color: COLORES.textoSuave,
     marginTop: 4,
   },
   perfilArrow: {
     fontSize: 22,
-    color: '#999',
+    color: COLORES.textoTenue,
     paddingHorizontal: 4,
   },
   centered: {
@@ -211,7 +212,7 @@ const styles = StyleSheet.create({
   },
   mensaje: {
     marginTop: 15,
-    color: '#666',
+    color: COLORES.textoSuave,
     fontSize: 16,
     textAlign: 'center',
   },

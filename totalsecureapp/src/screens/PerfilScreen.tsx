@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView, Switch } f
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { COLORES } from '../utils/tema';
 
 export const PerfilScreen = ({ navigation }: { navigation: any }) => {
   const { user, institucion, perfil, permisos, logout } = useAuth();
@@ -129,7 +130,7 @@ export const PerfilScreen = ({ navigation }: { navigation: any }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: COLORES.fondo },
   content: { paddingBottom: 40 },
   header: {
     flexDirection: 'row',
@@ -137,36 +138,36 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 50,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: COLORES.borde,
   },
   backBtn: { marginRight: 12 },
-  backText: { fontSize: 16, color: '#007AFF' },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#333' },
+  backText: { fontSize: 16, color: COLORES.marca },
+  title: { fontSize: 20, fontWeight: 'bold', color: COLORES.texto },
   card: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORES.fondoSuave,
     borderRadius: 10,
     padding: 20,
     margin: 20,
   },
   switchRow: { flexDirection: 'row', alignItems: 'center' },
   switchTexto: { flex: 1, paddingRight: 12 },
-  switchTitulo: { fontSize: 16, fontWeight: '600', color: '#333' },
-  switchAyuda: { fontSize: 13, color: '#666', marginTop: 4, lineHeight: 18 },
+  switchTitulo: { fontSize: 16, fontWeight: '600', color: COLORES.texto },
+  switchAyuda: { fontSize: 13, color: COLORES.textoSuave, marginTop: 4, lineHeight: 18 },
   label: {
     fontSize: 13,
-    color: '#666',
+    color: COLORES.textoSuave,
     fontWeight: '500',
     marginTop: 12,
   },
   value: {
     fontSize: 16,
-    color: '#333',
+    color: COLORES.texto,
     fontWeight: '600',
     marginTop: 2,
   },
   subValue: {
     fontSize: 14,
-    color: '#666',
+    color: COLORES.textoSuave,
     marginTop: 2,
   },
   badges: {
@@ -175,20 +176,20 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   badge: {
-    backgroundColor: '#cfe8ff',
+    backgroundColor: COLORES.informacionSuave,
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 4,
     marginRight: 8,
     marginTop: 4,
   },
-  badgeText: { fontSize: 12, fontWeight: '700', color: '#333' },
+  badgeText: { fontSize: 12, fontWeight: '700', color: COLORES.texto },
   logoutButton: {
-    backgroundColor: '#dc3545',
+    backgroundColor: COLORES.critico,
     marginHorizontal: 20,
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
   },
-  logoutText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  logoutText: { color: COLORES.textoSobreMarca, fontSize: 16, fontWeight: '600' },
 });

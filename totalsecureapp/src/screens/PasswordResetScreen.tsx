@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, ScrollView } from 'react-native';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { COLORES } from '../utils/tema';
 
 export const PasswordResetScreen = ({ navigation, route }: { navigation: any; route: any }) => {
   const { user_id } = route.params || {};
@@ -117,7 +118,7 @@ export const PasswordResetScreen = ({ navigation, route }: { navigation: any; ro
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORES.fondo,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORES.texto,
   },
   formContainer: {
     width: '100%',
@@ -137,24 +138,24 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 12,
-    color: '#333',
+    color: COLORES.texto,
   },
   description: {
     textAlign: 'center',
     marginBottom: 25,
-    color: '#666',
+    color: COLORES.textoSuave,
     fontSize: 14,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: COLORES.borde,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
     fontSize: 16,
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORES.marca,
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -171,7 +172,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backButtonText: {
-    color: '#007AFF',
+    color: COLORES.marca,
     fontSize: 14,
   },
 });

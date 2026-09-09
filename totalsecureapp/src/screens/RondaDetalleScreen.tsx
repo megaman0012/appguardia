@@ -16,6 +16,7 @@ import { API_ENDPOINTS } from '../utils/constants';
 import { getCurrentLocation } from '../utils/location';
 import { formatDateTime } from '../utils/format';
 import { CameraCapture } from '../components/CameraCapture';
+import { COLORES } from '../utils/tema';
 
 interface Detalle {
   rd_id: number;
@@ -222,7 +223,7 @@ export const RondaDetalleScreen = ({ navigation, route }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORES.fondo,
   },
   center: {
     flex: 1,
@@ -235,22 +236,22 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 50,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: COLORES.borde,
   },
   backBtn: {
     marginRight: 12,
   },
   backText: {
     fontSize: 16,
-    color: '#007AFF',
+    color: COLORES.marca,
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORES.texto,
   },
   qrButton: {
-    backgroundColor: '#6f42c1',
+    backgroundColor: COLORES.informacion,
     marginHorizontal: 20,
     marginTop: 16,
     borderRadius: 8,
@@ -258,12 +259,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   qrButtonText: {
-    color: '#fff',
+    color: COLORES.textoSobreMarca,
     fontSize: 16,
     fontWeight: '600',
   },
   formCard: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORES.fondoSuave,
     margin: 20,
     borderRadius: 10,
     padding: 16,
@@ -271,15 +272,15 @@ const styles = StyleSheet.create({
   formTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: COLORES.texto,
     marginBottom: 10,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: COLORES.borde,
     borderRadius: 8,
     padding: 12,
-    backgroundColor: '#fff',
+    backgroundColor: COLORES.fondo,
     fontSize: 15,
     minHeight: 80,
     textAlignVertical: 'top',
@@ -293,7 +294,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   photoRemove: {
-    color: '#dc3545',
+    color: COLORES.critico,
     marginTop: 6,
     textAlign: 'center',
   },
@@ -302,18 +303,18 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   photoButton: {
-    backgroundColor: '#6c757d',
+    backgroundColor: COLORES.marcaGris,
     borderRadius: 6,
     paddingVertical: 10,
     paddingHorizontal: 16,
     marginRight: 10,
   },
   photoButtonText: {
-    color: '#fff',
+    color: COLORES.textoSobreMarca,
     fontWeight: '600',
   },
   saveButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORES.marca,
     borderRadius: 6,
     paddingVertical: 10,
     paddingHorizontal: 24,
@@ -321,7 +322,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   saveButtonText: {
-    color: '#fff',
+    color: COLORES.textoSobreMarca,
     fontWeight: '600',
   },
   cameraWrap: {
@@ -337,28 +338,28 @@ const styles = StyleSheet.create({
   listTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#333',
+    color: COLORES.texto,
     marginBottom: 10,
   },
   item: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORES.fondoSuave,
     borderRadius: 10,
     padding: 14,
     marginBottom: 10,
   },
   itemDate: {
     fontSize: 13,
-    color: '#007AFF',
+    color: COLORES.marca,
     fontWeight: '600',
   },
   itemObs: {
     fontSize: 15,
-    color: '#333',
+    color: COLORES.texto,
     marginTop: 4,
   },
   itemMarker: {
     fontSize: 13,
-    color: '#666',
+    color: COLORES.textoSuave,
     marginTop: 4,
   },
   itemPhoto: {
@@ -369,7 +370,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: 'center',
-    color: '#999',
+    color: COLORES.textoTenue,
     marginTop: 20,
     fontSize: 15,
   },

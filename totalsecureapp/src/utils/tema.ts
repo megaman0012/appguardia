@@ -36,6 +36,41 @@ export const COLORES = {
   advertencia: '#B26B00',
   exito: '#1B7F4B',
   informacion: '#1F5EA8',
+
+  /**
+   * Fondos suaves de los mismos estados, para los badges de las listas.
+   *
+   * Se agregaron al migrar las 14 pantallas que quedaban: los badges de
+   * Accesos, Rondas, Vacantes y Perfil usaban los colores de Bootstrap
+   * (`#d4edda`, `#f8d7da`, `#cce5ff`, `#fff3cd`) y no habia token para eso.
+   * Forzarlos al color pleno los volvia ilegibles -- son fondos con texto
+   * oscuro encima, no botones.
+   */
+  criticoSuave: '#FBE9E7',
+  advertenciaSuave: '#FDF3E0',
+  exitoSuave: '#E8F5EC',
+  informacionSuave: '#E7F0FB',
+  /** Estado neutro o ya cerrado: ni bueno ni malo, solo terminado. */
+  neutroSuave: '#EDEEF0',
+
+  /**
+   * Texto de marcador de posicion y de campos deshabilitados.
+   *
+   * ⚠️ Es a proposito MAS CLARO que `textoSuave` y mas oscuro que los `#999`,
+   * `#aaa` y `#ccc` que reemplaza: esos tres no llegaban al contraste minimo
+   * sobre blanco, y mandarlos a `textoSuave` habria borrado la diferencia entre
+   * un dato real y un marcador de posicion.
+   */
+  textoTenue: '#8A929E',
+
+  /**
+   * Negro de las pantallas de camara y del escaner QR.
+   *
+   * No es `fondo` ni un descuido: la vista previa de la camara sobre blanco se
+   * ve como un error de carga. Tiene su propio nombre para que quede claro que
+   * el negro ahi es deliberado.
+   */
+  fondoCamara: '#000000',
 } as const;
 
 /** Alto del encabezado, sin contar la barra de estado. */

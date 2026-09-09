@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
 import { getCurrentLocation } from '../utils/location';
+import { COLORES } from '../utils/tema';
 
 export const ScannerQRScreen = ({ navigation, route }: any) => {
   const { rc_id } = route.params;
@@ -123,29 +124,29 @@ export const ScannerQRScreen = ({ navigation, route }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: COLORES.fondoCamara,
   },
   center: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#000',
+    backgroundColor: COLORES.fondoCamara,
   },
   centerText: {
-    color: '#fff',
+    color: COLORES.textoSobreMarca,
     fontSize: 16,
     marginBottom: 20,
     textAlign: 'center',
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORES.marca,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 24,
   },
   buttonText: {
-    color: '#fff',
+    color: COLORES.textoSobreMarca,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -153,7 +154,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   cancelText: {
-    color: '#ccc',
+    color: COLORES.textoTenue,
     fontSize: 15,
   },
   header: {
@@ -167,12 +168,12 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: 16,
-    color: '#007AFF',
+    color: COLORES.marca,
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
+    color: COLORES.textoSobreMarca,
   },
   cameraWrap: {
     flex: 1,
@@ -192,14 +193,14 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderWidth: 3,
-    borderColor: '#fff',
+    borderColor: COLORES.textoSobreMarca,
     borderRadius: 12,
   },
   spinner: {
     marginTop: 20,
   },
   hint: {
-    color: '#aaa',
+    color: COLORES.textoTenue,
     textAlign: 'center',
     paddingHorizontal: 30,
     fontSize: 14,
@@ -210,7 +211,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   rescanText: {
-    color: '#007AFF',
+    color: COLORES.marca,
     fontSize: 16,
   },
 });

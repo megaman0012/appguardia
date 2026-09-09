@@ -1149,6 +1149,84 @@ ANDROID_HOME=/home/server-dt/android-sdk \
 `android/local.properties` (con `sdk.dir`) esta en `.gitignore`: es propio de
 esta maquina.
 
+### ⚠️ Correr los tests del backend rompe la compilacion del APK
+
+Costo una compilacion, y el mensaje no menciona ni los tests ni los permisos:
+
+```
+Cannot access input property 'sources' of task ':app:createBundleReleaseJsAndAssets'
+  > java.nio.file.AccessDeniedException:
+    .../backend/storage/framework/testing/disks/tmp-for-tests/livewire-tmp
+```
+
+La cadena completa: `BundleHermesCTask` declara como entrada un `fileTree` de la
+raiz del proyecto —que aca es `totalsecureapp/`, o sea **la app movil y el
+backend juntos**— con los excludes **fijos en el plugin**: `android`, `ios`,
+`build` y `node_modules`. El backend no esta en esa lista, asi que Gradle camina
+sus 1,3 GB de fotos subidas, `vendor/` y `storage/` buscando archivos `.ts`. Y la
+suite corre **dentro del contenedor, o sea como root**, y deja
+`storage/framework/testing` en modo 700.
+
+Arreglado de raiz en `android/app/build.gradle`:
+
+```gradle
+tasks.withType(com.facebook.react.tasks.BundleHermesCTask).configureEach {
+    sources.exclude("backend/**")
+}
+```
+
+**Y lo peor de ese fallo:** el APK que quedaba en `app/build/outputs/` era el de
+la compilacion anterior. Si no se mira la FECHA del archivo, parece que compilo.
+Ver la seccion siguiente.
+
+### ⚠️ Verificar el bundle del APK, no el `git log`
+
+La 1.0.1 se repartio creyendo que traia seis arreglos visuales que **no estaban
+en el archivo**: el APK se compilo a las 11:52 y el commit entro a las 13:45.
+Estaban en el codigo y no en el binario.
+
+Como se comprueba de verdad:
+
+```bash
+unzip -o -q app-release.apk 'assets/index.android.bundle' -d /tmp/v
+python3 -c "
+d=open('/tmp/v/assets/index.android.bundle','rb').read()
+for s in ['EMERGENCIA','Foto de la marcacion']:
+    print(s, d.count(s.encode()), d.count(s.encode('utf-16-le')))"
+```
+
+**Las dos codificaciones importan.** Hermes guarda las cadenas ASCII tal cual
+pero las que llevan acentos o eñes en **UTF-16LE**, asi que un `strings | grep`
+de «Foto de la marcación» no encuentra nada aunque este ahi. Me dio un falso
+negativo. Para verificar, elegir cadenas **ASCII** o buscar en las dos
+codificaciones.
+
+### Arquitecturas: sin `x86` ni `x86_64`
+
+`gradle.properties` traia las cuatro y el APK pesaba 98,8 MB. Las de x86 son
+para **emuladores** —ninguna tablet las ejecuta— y eran **46,4 MB**: quitarlas
+dejo el APK en **52,5 MB, un 47% menos**, sin ningun riesgo, porque ese codigo
+nunca corria.
+
+Para probar en un emulador de escritorio, solo para esa compilacion y sin tocar
+el archivo:
+
+```bash
+./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64
+```
+
+### `minifyEnabled` sigue apagado, a proposito
+
+Bajaria el APK otros 10-15 MB de los 28 MB de `classes*.dex`, pero
+`app/proguard-rules.pro` tiene **dos reglas** (reanimated y turbomodule). R8
+borra codigo que cree no usado, y los modulos nativos que se resuelven por
+**reflexion** —camara, escaner de codigos, almacenamiento— dependen de que cada
+libreria aporte las suyas. Si falta una, la app **no falla al compilar: falla al
+abrir la camara**, en la garita.
+
+Antes de encenderlo hay que probar en una tablet de repuesto: iniciar sesion,
+marcar biometrico, escanear un QR, cargar un inventario y tocar EMERGENCIA.
+
 Primera compilacion **30 min** (baja Gradle y las dependencias); las siguientes
 **5 min**.
 
