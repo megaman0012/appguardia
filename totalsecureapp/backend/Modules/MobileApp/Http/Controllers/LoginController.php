@@ -99,13 +99,16 @@ class LoginController extends Controller {
         $user->tokens()->where('id', $spTknId)->update([
             'tokenable_gs'  => $usges->ug_code,
             'refresh_token' => $refreshToken,
-            'expires_at'    => Carbon::now()->addSeconds(env('TOKEN_EXPIRE_IN'))
+            // Ver config/sanctum.php: `env()` devuelve texto y Carbon 3 exige
+            // int|float. Con env() directo esto respondia 500 y la app movil no
+            // podia iniciar sesion.
+            'expires_at'    => Carbon::now()->addSeconds(config('sanctum.expiracion_token_movil'))
         ]);
 
         return response()->json([
             'access_token'  => $token,
             'refresh_token' => $refreshToken,
-            'expires_in'    => env('TOKEN_EXPIRE_IN'),
+            'expires_in'    => config('sanctum.expiracion_token_movil'),
             'usuario'       => array(
                 'usu_nombres' => $user->usu_nmbcom,
                 'usu_email' => $user->usu_email,

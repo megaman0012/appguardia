@@ -14,6 +14,13 @@
     <server name="QUEUE_CONNECTION" value="sync"/>
     <server name="SESSION_DRIVER" value="array"/>
     <server name="TELESCOPE_ENABLED" value="false"/>
+    <!-- Se declara COMO TEXTO, igual que en un .env de verdad. Faltaba, y por
+         eso `env('TOKEN_EXPIRE_IN')` devolvia null en las pruebas: PHP convierte
+         null a 0 sin chistar para un parametro int|float, asi que el login de la
+         API pasaba los tests mientras en produccion respondia 500 con Carbon 3.
+         Un entorno de pruebas que no se parece al de produccion no prueba
+         produccion. -->
+    <server name="TOKEN_EXPIRE_IN" value="3600"/>
   </php>
   <source>
     <include>

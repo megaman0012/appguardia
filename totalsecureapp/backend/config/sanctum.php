@@ -62,4 +62,28 @@ return [
         'encrypt_cookies' => App\Http\Middleware\EncryptCookies::class,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Vida del token de la app movil (en SEGUNDOS)
+    |--------------------------------------------------------------------------
+    |
+    | ⚠️ El `(int)` NO es cosmetico. Esto vivia como `env('TOKEN_EXPIRE_IN')`
+    | dentro del controlador, y `env()` devuelve **texto**: en produccion valia
+    | la cadena '3600'. Carbon 2 la aceptaba; Carbon 3 exige `int|float` y lanza
+    | TypeError, asi que despues de subir a Laravel 13 **el login de la app movil
+    | devolvia 500 y ningun guardia podia entrar**.
+    |
+    | Los 391 tests pasaban igual, y por una razon que vale recordar: la variable
+    | NO estaba declarada en el entorno de pruebas, asi que ahi `env()` devolvia
+    | `null`, y PHP convierte `null` a 0 para un parametro `int|float` sin error.
+    | El test pasaba *porque* al entorno de pruebas le faltaba la variable. Ya
+    | esta declarada en phpunit.xml para que no se repita.
+    |
+    | El otro motivo para traerlo aca: `env()` fuera de `config/` devuelve `null`
+    | en cuanto alguien corra `config:cache`. Hoy nadie lo corre en este
+    | proyecto, pero es una bomba con temporizador.
+    |
+    */
+    'expiracion_token_movil' => (int) env('TOKEN_EXPIRE_IN', 3600),
+
 ];
