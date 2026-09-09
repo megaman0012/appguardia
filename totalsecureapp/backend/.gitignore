@@ -17,6 +17,8 @@
 .env
 .env.backup
 .phpunit.result.cache
+# PHPUnit 10 usa un directorio, no un archivo
+.phpunit.cache
 docker-compose.override.yml
 Homestead.json
 Homestead.yaml

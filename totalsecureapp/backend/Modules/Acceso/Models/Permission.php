@@ -55,6 +55,31 @@ class Permission extends Model implements PermissionContract
     }
 
     /**
+     * Nombre de la columna pivote del rol.
+     *
+     * ⚠️ Antes se leia `PermissionRegistrar::$pivotRole`, que en
+     * **spatie/laravel-permission 6 dejo de ser estatica** y paso a propiedad
+     * de instancia. Usarla asi lanza «Access to undeclared static property» en
+     * tiempo de ejecucion: **44 rutas de la API devolvian 500** por esto, y el
+     * unico sintoma era el 500.
+     *
+     * Se resuelve del mismo config del que la libreria la resolvia en la v5
+     * (`PermissionRegistrar::initializeCache()`), con el mismo valor por
+     * defecto. En este proyecto los dos estan en `null`, o sea `role_id` y
+     * `permission_id`.
+     */
+    protected static function columnaPivoteRol(): string
+    {
+        return config('permission.column_names.role_pivot_key') ?: 'role_id';
+    }
+
+    /** Nombre de la columna pivote del permiso. Ver columnaPivoteRol(). */
+    protected static function columnaPivotePermiso(): string
+    {
+        return config('permission.column_names.permission_pivot_key') ?: 'permission_id';
+    }
+
+    /**
      * A permission can be applied to roles.
      */
     public function roles(): BelongsToMany
@@ -62,8 +87,8 @@ class Permission extends Model implements PermissionContract
         return $this->belongsToMany(
             config('permission.models.role'),
             config('permission.table_names.role_has_permissions'),
-            PermissionRegistrar::$pivotPermission,
-            PermissionRegistrar::$pivotRole
+            static::columnaPivotePermiso(),
+            static::columnaPivoteRol()
         );
     }
 
@@ -76,7 +101,7 @@ class Permission extends Model implements PermissionContract
             getModelForGuard($this->attributes['guard_name'] ?? config('auth.defaults.guard')),
             'model',
             config('permission.table_names.model_has_permissions'),
-            PermissionRegistrar::$pivotPermission,
+            static::columnaPivotePermiso(),
             config('permission.column_names.model_morph_key')
         );
     }
@@ -92,7 +117,20 @@ class Permission extends Model implements PermissionContract
      *
      * @throws \Spatie\Permission\Exceptions\PermissionDoesNotExist
      */
-    public static function findByName(string $name, $guardName = null): PermissionContract
+    /*
+     * ⚠️ Las firmas siguen al contrato de **spatie/laravel-permission 6**, que
+     * las endurecio: `?string $guardName` sin valor por defecto e `int|string
+     * $id`. Con las de la v5 (`$guardName = null`, `int $id`) PHP aborta con
+     * «Declaration must be compatible with Spatie\Permission\Contracts\...»
+     * **antes de arrancar**: no es un aviso, es un error fatal que tumba
+     * cualquier comando.
+     *
+     * Este proyecto usa de Spatie solo los contratos: los modelos extienden
+     * `Model` a secas y las tablas reales son propias (`user_has_roles` con
+     * `ru_code`, `role_has_permissions`, `permission_section`). El guardia no se
+     * usa, asi que el parametro se acepta y se ignora.
+     */
+    public static function findByName(string $name, ?string $guardName = null): PermissionContract
     {
         //$guardName = $guardName ?? Guard::getDefaultName(static::class);
         //$permission = static::getPermission(['name' => $name, 'guard_name' => $guardName]);
@@ -111,7 +149,7 @@ class Permission extends Model implements PermissionContract
      *
      * @throws \Spatie\Permission\Exceptions\PermissionDoesNotExist
      */
-    public static function findById(int $id, $guardName = null): PermissionContract
+    public static function findById(int|string $id, ?string $guardName = null): PermissionContract
     {
         //$guardName = $guardName ?? Guard::getDefaultName(static::class);
         //$permission = static::getPermission([(new static())->getKeyName() => $id, 'guard_name' => $guardName]);
@@ -129,7 +167,7 @@ class Permission extends Model implements PermissionContract
      *
      * @param  string|null  $guardName
      */
-    public static function findOrCreate(string $name, $guardName = null): PermissionContract
+    public static function findOrCreate(string $name, ?string $guardName = null): PermissionContract
     {
         $guardName = $guardName ?? Guard::getDefaultName(static::class);
         $permission = static::getPermission(['name' => $name, 'guard_name' => $guardName]);

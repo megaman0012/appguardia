@@ -231,38 +231,135 @@ líneas, las 56 migraciones corren completas.
 actualizaciones **dentro de su propio major** y no se pueden tomar: las dos
 exigen Laravel ≥ 9. Es el techo de esta etapa.
 
-## 5. Etapa 2 — Laravel 8 → 10
+## 5. Etapa 2 — Laravel 8 → 10 ✅ HECHA
 
-Se pasa por la 9 (`composer.json` → `^9.0`, correr, verificar) y de ahí a la 10.
-Saltar directo suele funcionar, pero cuando falla no se sabe qué major lo
-rompió.
+**Laravel 8.83.29 → 10.50.3.** Los 389 tests pasan, el panel dibuja sus 27
+listados, las 55 rutas de la API responden y la app entra por las dos IP
+públicas. Filament 2.17.59 y Livewire 2.12.8 **no se tocaron**.
 
-Lo que hay que tocar, con las cuentas de este proyecto:
+### Se saltó la parada en Laravel 9, y por una razón
 
-- **Dependencias de desarrollo**: `nunomaduro/collision` ^5 → ^7,
-  `phpunit/phpunit` ^9.5 → ^10, `fakerphp/faker` sigue.
-- **`laravel/sanctum` 2 → 3**. La tabla `personal_access_tokens` no cambia (13
-  filas hoy, y el APK usa esos tokens), pero hay que revisar
-  `config/sanctum.php`. **Ojo: si los tokens se invalidan, las tablets tienen
-  que volver a iniciar sesión.** Es la primera cosa a verificar en cada paso.
-- **`spatie/laravel-permission` 5 → 6**. Acoplamiento **superficial**:
-  `Modules\Acceso\Models\Role` y `Permission` implementan sus *contratos* pero
-  extienden `Model` a secas, y el sistema de permisos real son las tablas
-  propias (`user_has_roles` con `ru_code`, `role_has_permissions`,
-  `permission_section`). No se usan los traits ni el middleware de Spatie. Riesgo
-  bajo.
-- **`nwidart/laravel-modules` 8 → 10**. Buena noticia: los módulos se autocargan
-  con `psr-4` normal (`"Modules\\": "Modules/"`), **sin** el
-  `wikimedia/composer-merge-plugin` que hace difícil esta subida en otros
-  proyectos. Son 4 módulos y 106 archivos PHP.
-- **El esqueleto NO hay que reorganizarlo.** Laravel 11 introdujo el esqueleto
-  delgado (`bootstrap/app.php` en vez de `app/Http/Kernel.php`), pero **es
-  opcional**: una app que viene de la 8 puede seguir con `Kernel.php`,
-  `Handler.php` y `RouteServiceProvider` tal como están. Aquí son 4 archivos y
-  213 líneas en total; convertirlos es una decisión aparte, no un requisito.
+El plan decía pasar por la 9 para poder atribuir fallos. Medido contra los
+avisos de seguridad reales, esa parada es **peor** que el destino:
 
-**Verificación de la etapa:** 358 tests + las dos pruebas de humo + login real
-desde el APK contra las dos IP públicas.
+| Versión | Avisos que la afectan |
+|---|---:|
+| Laravel 9.52.22 | **4** |
+| Laravel 10.50.3 | **3** |
+| Laravel 12.69.2 | **0** |
+| Laravel 13.31.0 | **0** |
+
+Laravel 9 arrastra un aviso **más** que la 10 —`CVE-2025-27515`, bypass de
+validación de archivos, arreglado en 10.48.29— y su soporte de seguridad
+terminó en febrero de 2024. Desplegar ahí, aunque fuera un rato, es desplegar
+algo estrictamente peor. Y el dato que importa: **solo Laravel 12 y 13 tienen
+cero avisos conocidos.**
+
+El framework quedó en `^10.48.29`, no en `^10.0`, justamente para no poder caer
+por debajo del parche de ese CVE.
+
+### 🔓 Los seis avisos de dompdf, cerrados
+
+`barryvdh/laravel-dompdf` 2.2.0 → **3.1.2**, y con él `dompdf/dompdf` 2.0.8 →
+**3.1.6**. Los seis avisos que en la Etapa 1 hubo que tolerar **ya no existen**.
+La auditoría pasó de **9 avisos en 2 paquetes a 3 en 1**.
+
+Los 3 que quedan son los de Laravel que no tienen arreglo por debajo de la 12, y
+la propia auditoría lo confirma: `CVE-2026-48019` afecta a `<12.60.0` y a
+`<13.10.0`.
+
+`enable_remote` de dompdf **se queda apagado**: ya no hace falta para cerrar
+nada, pero ninguna vista de PDF carga nada remoto, así que dejarlo encendido
+solo agrega superficie.
+
+### ⚠️ El bloqueo por avisos de Composer no se puede afinar
+
+En Composer 2.10, `policy.advisories.ignore-id` y `policy.advisories.ignore`
+**solo afectan al informe de `composer audit`, no al bloqueo del resolutor**. Lo
+comprobé con las tres formas documentadas: por ID, por paquete como objeto y por
+paquete como arreglo. Ninguna desbloquea la instalación; `composer config
+policy.advisories.ignore-id` devuelve la lista correctamente, pero el resolutor
+la ignora.
+
+La única palanca que funciona es `policy.advisories.block: false`, que apaga el
+bloqueo **entero**. Es lo que quedó, con una compensación: `config.audit.ignore`
+tiene **solo los 3 avisos sin arreglo posible**, así que `composer audit` sigue
+siendo útil —está en verde salvo por esos tres— y grita si aparece algo nuevo.
+
+Con esto se pierde el truco de la Etapa 1 (dejar un aviso sin ignorar para
+*forzar* una versión mínima). Se reemplaza por el pin explícito `^10.48.29`.
+
+De paso se quitó `PKSA-ddwf-kgzy-ytq1` de la lista de silenciados: estaba ahí sin
+ninguna explicación, no figura en el historial de git y no corresponde a ningún
+paquete instalado. Si sigue aplicando, la auditoría lo dirá.
+
+### 🐛 Lo que se rompió, y era invisible
+
+**`spatie/laravel-permission` 5 → 6 convirtió en propiedades de instancia lo que
+antes eran estáticas** (`PermissionRegistrar::$pivotRole`, `$pivotPermission`,
+`$teams`, `$teamsKey`). Rompió en tres lugares distintos, cada uno con un
+síntoma diferente:
+
+1. **La migración `create_permission_tables`** moría con «Access to undeclared
+   static property», así que `migrate:fresh` fallaba en el quinto paso y **toda
+   la suite** con él.
+2. **Las firmas de `Role` y `Permission`** ya no cumplían el contrato: v6 pide
+   `?string $guardName` sin valor por defecto e `int|string $id`. Eso no es un
+   aviso, es un **error fatal de PHP antes de arrancar**: cualquier comando
+   moría.
+3. **Las relaciones `permissions()` y `roles()`** usaban las estáticas en
+   tiempo de ejecución. Síntoma: **44 de las 55 rutas de la API devolvían 500**,
+   y lo único visible era el 500.
+
+Los tres se resolvieron leyendo del mismo config del que la librería las leía en
+v5 (`config('permission.column_names.*')`, `config('permission.teams')`), con
+los mismos valores por defecto. En este proyecto son `role_id` y `permission_id`,
+que es lo que tiene `role_has_permissions` en producción.
+
+Vale subrayar por qué el acoplamiento es superficial y esto alcanzó: los modelos
+implementan los *contratos* de Spatie pero extienden `Model` a secas, y el
+sistema real de permisos son tablas propias (`user_has_roles` con `ru_code`,
+`role_has_permissions`, `permission_section`).
+
+### Lo que NO se rompió, contra lo esperado
+
+- **Flysystem 1 → 3 no afectó las fotos.** Era el riesgo marcado en el plan, por
+  las 45.319 imágenes. Resulta que `generalTrait::storeFiles()` usa
+  `$file->move()` —sistema de archivos plano— y la línea con
+  `Storage::disk('public')->put()` está comentada. Verificado igual: `Storage::put`,
+  `Storage::path` y `Excel::store` funcionan, y una foto de 2025 se sirve con
+  HTTP 200 y 4,4 MB.
+- **swiftmailer salió y entró `symfony/mailer`** sin tocar nada: `MAIL_MAILER`
+  apunta a mailhog y no hay envíos reales todavía.
+- **El esqueleto se dejó como está.** `app/Http/Kernel.php`, `Handler.php` y
+  `RouteServiceProvider` siguen en formato Laravel 8, que Laravel 10 acepta. El
+  middleware de CORS es propio (`App\Http\Middleware\HandleCors`), no el de
+  Fruitcake, así que la integración de CORS al framework no molestó: el preflight
+  del portal sigue devolviendo los tres encabezados.
+- **`nwidart/laravel-modules` 8.6 → 10.0.6** sin incidentes. Ayudó que los
+  módulos se autocarguen con `psr-4` normal, sin el `composer-merge-plugin`.
+
+### Un arreglo de regalo
+
+**`php artisan schedule:list` volvió a funcionar.** Estaba roto en 8.75 —así lo
+anotaba `AGENTS.md`— y ahora lista las tres tareas con su próxima ejecución.
+
+### PHPUnit 9.6 → 10.5
+
+Vino con el paquete de Laravel 10. `phpunit.xml` estaba en el esquema de la 9 y
+lo migró la propia herramienta (`--migrate-configuration`): `<coverage>` pasa a
+`<source>` y aparece `cacheDirectory`, que se agregó al `.gitignore` porque la
+10 usa un **directorio** y no el archivo `.phpunit.result.cache`.
+
+### Lo que se desbloqueó para las etapas siguientes
+
+- `laravel/sail` 1.25 → **1.67** y `spatie/laravel-html` 3.5 → **3.13**, que en
+  la Etapa 1 estaban en su techo.
+- Los 4 paquetes abandonados bajaron a **2**, y los dos que quedan
+  —`tgalopin/html-sanitizer` y `league/uri-parser`— los arrastra
+  **`filament/support`**: se van con Filament 3.
+- Y lo principal: **Filament 3 ya es instalable**, porque exige Laravel ≥ 10.45 y
+  estamos en 10.50.3.
 
 ## 6. Etapa 3 — Filament 2 → 3 y Livewire 2 → 3 (la etapa cara)
 
@@ -380,7 +477,7 @@ cabeza en cada etapa:
 |---|---|---|---|
 | **0** Red de seguridad ✅ | 2 tests guiados por datos (+86) | Ninguno | **Hecha** |
 | **1** Desatascar Composer ✅ | 9 pins, 8 paquetes fuera, 8.75→8.83.29, **1 CVE alto cerrado** | Bajo | **Hecha** |
-| **2** Laravel 8 → 10 | Framework, sanctum, permission, modules | Medio | Sí |
+| **2** Laravel 8 → 10 ✅ | Framework, sanctum, permission, modules, **6 avisos de dompdf cerrados** | Medio | **Hecha** |
 | **3** Filament 2 → 3 + Livewire 3 | 27 recursos, 81 páginas, 96 iconos, 4 vistas | **Alto** | Sí |
 | **4** Laravel 12 + Filament 4 | Saltos cortos sobre stack moderno | Bajo | — |
 

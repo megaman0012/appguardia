@@ -9,7 +9,6 @@ use Spatie\Permission\Exceptions\GuardDoesNotMatch;
 use Spatie\Permission\Exceptions\RoleAlreadyExists;
 use Spatie\Permission\Exceptions\RoleDoesNotExist;
 use Spatie\Permission\Guard;
-use Spatie\Permission\PermissionRegistrar;
 use Spatie\Permission\Traits\HasPermissions;
 use Spatie\Permission\Traits\RefreshesPermissionCache;
 
@@ -46,11 +45,11 @@ class Role extends Model implements RoleContract
         $attributes['guard_name'] = $attributes['guard_name'] ?? Guard::getDefaultName(static::class);
 
         $params = ['name' => $attributes['name'], 'guard_name' => $attributes['guard_name']];
-        if (PermissionRegistrar::$teams) {
-            if (array_key_exists(PermissionRegistrar::$teamsKey, $attributes)) {
-                $params[PermissionRegistrar::$teamsKey] = $attributes[PermissionRegistrar::$teamsKey];
+        if (config('permission.teams')) {
+            if (array_key_exists(config('permission.column_names.team_foreign_key'), $attributes)) {
+                $params[config('permission.column_names.team_foreign_key')] = $attributes[config('permission.column_names.team_foreign_key')];
             } else {
-                $attributes[PermissionRegistrar::$teamsKey] = getPermissionsTeamId();
+                $attributes[config('permission.column_names.team_foreign_key')] = getPermissionsTeamId();
             }
         }
         if (static::findByParam($params)) {
@@ -61,6 +60,31 @@ class Role extends Model implements RoleContract
     }
 
     /**
+     * Nombre de la columna pivote del rol.
+     *
+     * ⚠️ Antes se leia `PermissionRegistrar::$pivotRole`, que en
+     * **spatie/laravel-permission 6 dejo de ser estatica** y paso a propiedad
+     * de instancia. Usarla asi lanza «Access to undeclared static property» en
+     * tiempo de ejecucion: **44 rutas de la API devolvian 500** por esto, y el
+     * unico sintoma era el 500.
+     *
+     * Se resuelve del mismo config del que la libreria la resolvia en la v5
+     * (`PermissionRegistrar::initializeCache()`), con el mismo valor por
+     * defecto. En este proyecto los dos estan en `null`, o sea `role_id` y
+     * `permission_id`.
+     */
+    protected static function columnaPivoteRol(): string
+    {
+        return config('permission.column_names.role_pivot_key') ?: 'role_id';
+    }
+
+    /** Nombre de la columna pivote del permiso. Ver columnaPivoteRol(). */
+    protected static function columnaPivotePermiso(): string
+    {
+        return config('permission.column_names.permission_pivot_key') ?: 'permission_id';
+    }
+
+    /**
      * A role may be given various permissions.
      */
     public function permissions(): BelongsToMany
@@ -68,8 +92,8 @@ class Role extends Model implements RoleContract
         return $this->belongsToMany(
             config('permission.models.permission'),
             config('permission.table_names.role_has_permissions'),
-            PermissionRegistrar::$pivotRole,
-            PermissionRegistrar::$pivotPermission
+            static::columnaPivoteRol(),
+            static::columnaPivotePermiso()
         );
     }
 
@@ -82,7 +106,7 @@ class Role extends Model implements RoleContract
             getModelForGuard($this->attributes['guard_name'] ?? config('auth.defaults.guard')),
             'model',
             config('permission.table_names.model_has_roles'),
-            PermissionRegistrar::$pivotRole,
+            static::columnaPivoteRol(),
             config('permission.column_names.model_morph_key')
         );
     }
@@ -95,7 +119,20 @@ class Role extends Model implements RoleContract
      *
      * @throws \Spatie\Permission\Exceptions\RoleDoesNotExist
      */
-    public static function findByName(string $name, $guardName = null): RoleContract
+    /*
+     * ⚠️ Las firmas siguen al contrato de **spatie/laravel-permission 6**, que
+     * las endurecio: `?string $guardName` sin valor por defecto e `int|string
+     * $id`. Con las de la v5 (`$guardName = null`, `int $id`) PHP aborta con
+     * «Declaration must be compatible with Spatie\Permission\Contracts\...»
+     * **antes de arrancar**: no es un aviso, es un error fatal que tumba
+     * cualquier comando.
+     *
+     * Este proyecto usa de Spatie solo los contratos: los modelos extienden
+     * `Model` a secas y las tablas reales son propias (`user_has_roles` con
+     * `ru_code`, `role_has_permissions`, `permission_section`). El guardia no se
+     * usa, asi que el parametro se acepta y se ignora.
+     */
+    public static function findByName(string $name, ?string $guardName = null): RoleContract
     {
         $guardName = $guardName ?? Guard::getDefaultName(static::class);
 
@@ -114,7 +151,7 @@ class Role extends Model implements RoleContract
      * @param  string|null  $guardName
      * @return \Spatie\Permission\Contracts\Role|\Spatie\Permission\Models\Role
      */
-    public static function findById(int $id, $guardName = null): RoleContract
+    public static function findById(int|string $id, ?string $guardName = null): RoleContract
     {
         $guardName = $guardName ?? Guard::getDefaultName(static::class);
 
@@ -133,14 +170,14 @@ class Role extends Model implements RoleContract
      * @param  string|null  $guardName
      * @return \Spatie\Permission\Contracts\Role|\Spatie\Permission\Models\Role
      */
-    public static function findOrCreate(string $name, $guardName = null): RoleContract
+    public static function findOrCreate(string $name, ?string $guardName = null): RoleContract
     {
         $guardName = $guardName ?? Guard::getDefaultName(static::class);
 
         $role = static::findByParam(['name' => $name, 'guard_name' => $guardName]);
 
         if (! $role) {
-            return static::query()->create(['name' => $name, 'guard_name' => $guardName] + (PermissionRegistrar::$teams ? [PermissionRegistrar::$teamsKey => getPermissionsTeamId()] : []));
+            return static::query()->create(['name' => $name, 'guard_name' => $guardName] + (config('permission.teams') ? [config('permission.column_names.team_foreign_key') => getPermissionsTeamId()] : []));
         }
 
         return $role;
@@ -150,12 +187,12 @@ class Role extends Model implements RoleContract
     {
         $query = static::query();
 
-        if (PermissionRegistrar::$teams) {
+        if (config('permission.teams')) {
             $query->where(function ($q) use ($params) {
-                $q->whereNull(PermissionRegistrar::$teamsKey)
-                    ->orWhere(PermissionRegistrar::$teamsKey, $params[PermissionRegistrar::$teamsKey] ?? getPermissionsTeamId());
+                $q->whereNull(config('permission.column_names.team_foreign_key'))
+                    ->orWhere(config('permission.column_names.team_foreign_key'), $params[config('permission.column_names.team_foreign_key')] ?? getPermissionsTeamId());
             });
-            unset($params[PermissionRegistrar::$teamsKey]);
+            unset($params[config('permission.column_names.team_foreign_key')]);
         }
 
         foreach ($params as $key => $value) {
@@ -172,7 +209,7 @@ class Role extends Model implements RoleContract
      *
      * @throws \Spatie\Permission\Exceptions\GuardDoesNotMatch
      */
-    public function hasPermissionTo($permission): bool
+    public function hasPermissionTo($permission, ?string $guardName = null): bool
     {
         if (config('permission.enable_wildcard_permission', false)) {
             return $this->hasWildcardPermission($permission, $this->getDefaultGuardName());
