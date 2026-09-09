@@ -7,10 +7,10 @@ use App\Filament\Resources\RolesResource\RelationManagers;
 use Modules\Acceso\Models\roles;
 use Modules\Acceso\Models\users;
 use Filament\Forms;
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -31,7 +31,7 @@ class RolesResource extends Resource
     protected static ?string $model = roles::class;
     protected static bool $shouldRegisterNavigation = true;
 
-    protected static ?string $navigationIcon = 'heroicon-o-collection';
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form
     {

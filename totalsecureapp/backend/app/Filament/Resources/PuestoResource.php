@@ -7,10 +7,10 @@ use App\Support\PerfilPanel;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
 use Filament\Tables\Columns\BooleanColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -34,7 +34,7 @@ class PuestoResource extends Resource
     protected static ?string $modelLabel = 'puesto';
     protected static ?string $pluralModelLabel = 'puestos';
     protected static ?string $navigationLabel = 'Puestos de trabajo';
-    protected static ?string $navigationIcon = 'heroicon-o-location-marker';
+    protected static ?string $navigationIcon = 'heroicon-o-map-pin';
     protected static ?int $navigationSort = 3;
 
     /** Relaciones que usan las columnas de la tabla (evita el N+1). */
@@ -124,7 +124,7 @@ class PuestoResource extends Resource
         return false;
     }
 
-    protected static function shouldRegisterNavigation(): bool
+    public static function shouldRegisterNavigation(): bool
     {
         return PerfilPanel::puedeOperar();
     }

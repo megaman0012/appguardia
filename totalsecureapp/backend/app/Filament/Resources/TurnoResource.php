@@ -10,10 +10,10 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TimePicker;
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -182,7 +182,7 @@ class TurnoResource extends Resource
         return false;
     }
 
-    protected static function shouldRegisterNavigation(): bool
+    public static function shouldRegisterNavigation(): bool
     {
         return PerfilPanel::puedeOperar();
     }

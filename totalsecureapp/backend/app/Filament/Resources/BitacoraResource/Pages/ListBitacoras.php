@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\BitacoraResource\Pages;
 
 use App\Filament\Resources\BitacoraResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
 
 class ListBitacoras extends ListadoBase

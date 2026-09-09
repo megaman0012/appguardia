@@ -169,6 +169,11 @@ return [
          * Application Service Providers...
          */
         App\Providers\AppServiceProvider::class,
+        /*
+         * El panel de Filament 3 se declara como proveedor, no como
+         * `config/filament.php` (que ya no existe). Ver AdminPanelProvider.
+         */
+        App\Providers\Filament\AdminPanelProvider::class,
         App\Providers\AuthServiceProvider::class,
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,

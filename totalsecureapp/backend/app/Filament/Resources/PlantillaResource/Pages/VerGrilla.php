@@ -5,7 +5,7 @@ namespace App\Filament\Resources\PlantillaResource\Pages;
 use App\Filament\Resources\PlantillaResource;
 use App\Services\CuadranteGrilla;
 use App\Support\PerfilPanel;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use Filament\Resources\Pages\Page;
 
@@ -35,12 +35,12 @@ class VerGrilla extends Page
         $this->grilla = app(CuadranteGrilla::class)->armar($this->record);
     }
 
-    protected function getTitle(): string
+    public function getTitle(): string
     {
         return 'Cuadrante: ' . $this->record->pl_nombre;
     }
 
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
         return [
             Actions\Action::make('editar')

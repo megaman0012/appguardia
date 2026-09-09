@@ -3,14 +3,14 @@
 namespace App\Filament\Resources\RondaCabeceraResource\Pages;
 
 use App\Filament\Resources\RondaCabeceraResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
 class EditRondaCabecera extends EditRecord
 {
     protected static string $resource = RondaCabeceraResource::class;
 
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
         return [
             Actions\DeleteAction::make(),

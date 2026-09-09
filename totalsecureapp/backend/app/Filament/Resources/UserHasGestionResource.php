@@ -14,10 +14,10 @@ use Filament\Tables\Actions\Action;
 use Modules\Acceso\Models\user_has_gestions;
 use Modules\Acceso\Models\users;
 
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 
 use Filament\Forms;
 use Filament\Forms\Components\TextInput;
@@ -140,7 +140,7 @@ class UserHasGestionResource extends Resource{
         ];
     }
 
-    protected static function shouldRegisterNavigation(): bool {
+    public static function shouldRegisterNavigation(): bool {
         return PerfilPanel::puedeGestionarPersonal();
     }
 

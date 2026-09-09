@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\VacanteResource\Pages;
 
 use App\Filament\Resources\VacanteResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
 
 class ListVacantes extends ListadoBase
@@ -17,7 +17,7 @@ class ListVacantes extends ListadoBase
         ];
     }
 
-    protected function getTitle(): string
+    public function getTitle(): string
     {
         return 'Cobertura de turnos';
     }

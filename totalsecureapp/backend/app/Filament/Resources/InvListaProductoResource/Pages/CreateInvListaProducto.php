@@ -4,14 +4,14 @@ namespace App\Filament\Resources\InvListaProductoResource\Pages;
 
 use App\Filament\Resources\InvListaProductoResource;
 use App\helpers;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateInvListaProducto extends CreateRecord
 {
     protected static string $resource = InvListaProductoResource::class;
 
-    protected function getTitle(): string {
+    public function getTitle(): string {
         return 'Crear Listas';
     }
 
@@ -22,7 +22,7 @@ class CreateInvListaProducto extends CreateRecord
         ];
     }
 
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
         return [
             Actions\Action::make('Volver a Listas')

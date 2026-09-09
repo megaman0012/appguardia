@@ -4,7 +4,7 @@ namespace App\Filament\Resources\InvMovimientoDetalleResource\Pages;
 
 use App\Filament\Resources\InvMovimientoDetalleResource;
 use App\Filament\Resources\InvMovimientoResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
 use Modules\Administracion\Models\InvMovimiento;
 
@@ -22,7 +22,7 @@ class ListInvMovimientoDetalles extends ListadoBase
         ];
     }
 
-    protected function getTitle(): string {
+    public function getTitle(): string {
         $mov = request()->query('mov');
         return 'Movimiento '.$mov.' Detalle';
     }

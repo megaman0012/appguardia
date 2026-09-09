@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\AlertasResource\Pages;
 
 use App\Filament\Resources\AlertasResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateAlertas extends CreateRecord

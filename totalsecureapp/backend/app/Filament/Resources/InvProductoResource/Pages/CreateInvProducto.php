@@ -4,7 +4,7 @@ namespace App\Filament\Resources\InvProductoResource\Pages;
 
 use App\Filament\Resources\InvProductoResource;
 use App\helpers;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateInvProducto extends CreateRecord
@@ -17,7 +17,7 @@ class CreateInvProducto extends CreateRecord
         ];
     }
 
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
         return [
             Actions\Action::make('Volver a Productos')

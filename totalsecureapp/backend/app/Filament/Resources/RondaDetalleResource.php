@@ -6,10 +6,10 @@ use App\Filament\Resources\RondaDetalleResource\Pages;
 use App\Filament\Resources\RondaDetalleResource\RelationManagers;
 use Modules\Administracion\Models\ronda_detalle;
 
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 
 use Filament\Forms;
 use Filament\Forms\Components\TextInput;
@@ -47,7 +47,7 @@ class RondaDetalleResource extends Resource
      * 126 consultas en vez de 6.
      */
     protected const RELACIONES_TABLA = ['rondaCabecera.institucion.cliente', 'users'];
-    protected static ?string $navigationIcon = 'heroicon-o-collection';
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static bool $shouldRegisterNavigation = false;
 
     public static function form(Form $form): Form{ return $form->schema([]); }

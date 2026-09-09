@@ -8,8 +8,8 @@ use App\Filament\Resources\OrganizacionInstitucionResource;
 use App\helpers;
 use Filament\Forms\Components\Tabs\Tab;
 use Filament\Resources\Components\Tabs;
-use Filament\Pages\Actions;
-use Filament\Pages\Actions\DeleteAction;
+use Filament\Actions;
+use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 use Session;
 
@@ -18,14 +18,15 @@ class EditOrganizacionInstitucion extends EditRecord {
 
     protected static string $resource = OrganizacionInstitucionResource::class;
 
-    protected function getHeaderActions(): array
-    {
-        return [
-            Actions\Action::make('Volver')
-                ->url(OrganizacionInstitucionResource::getUrl('index')),
-            Actions\DeleteAction::make(),
-        ];
-    }
+    /*
+     * ⚠️ Aca habia un segundo `getHeaderActions()` con un «Volver» y un
+     * `DeleteAction`, y era **codigo muerto**: en Filament 2 las acciones de
+     * cabecera de una pagina salian de `getActions()`, que es el metodo de mas
+     * abajo, y `getHeaderActions()` no se llamaba nunca. Se borro en vez de
+     * fusionarlo: en Filament 3 `getHeaderActions()` **si** se llama, asi que
+     * conservarlo habria estrenado un boton de borrar que este panel nunca
+     * mostro.
+     */
 
     public function getTabs(): array
     {
@@ -48,7 +49,7 @@ class EditOrganizacionInstitucion extends EditRecord {
         ];
     }
 
-    protected function getActions(): array {
+    protected function getHeaderActions(): array {
         return [
             Actions\Action::make('Volver a Organizacion Institucion')
             ->label('Volver')

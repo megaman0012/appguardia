@@ -197,9 +197,7 @@ class VacantePanelTest extends TestCase
         $this->comoLider();
 
         $this->pantalla()
-            ->call('mountTableAction', 'confirmarCobertura', $vacante->tv_id)
-            ->set('mountedTableActionData.tp_id', $postulacion->tp_id)
-            ->call('callMountedTableAction');
+            ->callTableAction('confirmarCobertura', $vacante->tv_id, ['tp_id' => $postulacion->tp_id]);
 
         $this->assertSame(TurnoVacante::CUBIERTA, $vacante->fresh()->tv_estado);
         $this->assertSame(
@@ -222,9 +220,7 @@ class VacantePanelTest extends TestCase
         Session::put('usuPF', 'Consola');
 
         $this->pantalla()
-            ->call('mountTableAction', 'confirmarCobertura', $vacante->tv_id)
-            ->set('mountedTableActionData.tp_id', TurnoPostulacion::first()->tp_id)
-            ->call('callMountedTableAction');
+            ->callTableAction('confirmarCobertura', $vacante->tv_id, ['tp_id' => TurnoPostulacion::first()->tp_id]);
 
         $this->assertSame(TurnoVacante::CUBIERTA, $vacante->fresh()->tv_estado);
     }
@@ -247,10 +243,17 @@ class VacantePanelTest extends TestCase
         $servicio->abrir($vacante, $this->supervisor);
         $servicio->postular($vacante, $this->guardia);
 
+        /*
+         * ⚠️ Antes esto llamaba a la accion poniendo la propiedad de Livewire a
+         * mano, o sea **salteandose la comprobacion de visibilidad**, y despues
+         * verificaba que la vacante siguiera abierta. Era una prueba indirecta:
+         * pasaba igual si la accion se ejecutaba y fallaba por otro motivo.
+         *
+         * En Filament 3 hay una afirmacion directa, y es la que corresponde: la
+         * accion **no debe estar disponible** para un Supervisor.
+         */
         $this->pantalla()
-            ->call('mountTableAction', 'confirmarCobertura', $vacante->tv_id)
-            ->set('mountedTableActionData.tp_id', TurnoPostulacion::first()->tp_id)
-            ->call('callMountedTableAction');
+            ->assertTableActionHidden('confirmarCobertura', $vacante->tv_id);
 
         $this->assertSame(TurnoVacante::ABIERTA, $vacante->fresh()->tv_estado);
         $this->assertSame(0, Turno::where('tu_observaciones', 'like', 'Cobertura%')->count());

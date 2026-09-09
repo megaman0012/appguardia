@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Tables\Etiqueta;
 use App\Support\PerfilPanel;
 
 use Filament\Forms\Components\DatePicker;
@@ -17,9 +18,9 @@ use Session;
 use App\Filament\Resources\InvMovimientoResource\Pages;
 use Modules\Administracion\Models\MovimientoCabecera;
 use Filament\Forms;
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -68,7 +69,7 @@ class InvMovimientoResource extends Resource
     protected static ?string $modelLabel = 'movimiento';
     protected static ?string $pluralModelLabel = 'movimientos';
     protected static ?string $navigationLabel = 'Movimientos';
-    protected static ?string $navigationIcon = 'heroicon-o-switch-horizontal';
+    protected static ?string $navigationIcon = 'heroicon-o-arrows-right-left';
 
     public static function form(Form $form): Form {
         return $form->schema([]);
@@ -84,11 +85,11 @@ class InvMovimientoResource extends Resource
                     ->searchable(),
                 BadgeColumn::make('mc_tipo')->size('sm')
                     ->label('Tipo')
-                    ->enum([
+                    ->formatStateUsing(Etiqueta::de([
                         MovimientoCabecera::TIPO_RECEPCION  => 'Recepción',
                         MovimientoCabecera::TIPO_DEVOLUCION => 'Devolución',
                         MovimientoCabecera::TIPO_BAJA       => 'Baja',
-                    ])
+                    ]))
                     ->colors([
                         'warning'   => MovimientoCabecera::TIPO_RECEPCION,
                         'success'   => MovimientoCabecera::TIPO_DEVOLUCION,
@@ -122,11 +123,11 @@ class InvMovimientoResource extends Resource
                     ->tooltip(fn ($record) => $record->mc_observaciones),
                 BadgeColumn::make('mc_estado')->size('sm')
                     ->label('Estado')
-                    ->enum([
+                    ->formatStateUsing(Etiqueta::de([
                         MovimientoCabecera::ESTADO_PENDIENTE  => 'Pendiente',
                         MovimientoCabecera::ESTADO_COMPLETADO => 'Completado',
                         MovimientoCabecera::ESTADO_CANCELADO  => 'Cancelado',
-                    ])
+                    ]))
                     ->colors([
                         'warning'   => MovimientoCabecera::ESTADO_PENDIENTE,
                         'success'   => MovimientoCabecera::ESTADO_COMPLETADO,
@@ -174,7 +175,7 @@ class InvMovimientoResource extends Resource
             ])
             ->actions([
                 Action::make('verDetalle')->label('Detalles')
-                    ->icon('heroicon-o-clipboard-list')
+                    ->icon('heroicon-o-clipboard-document-list')
                     ->url(fn (MovimientoCabecera $record) =>
                         InvMovimientoDetalleResource::getUrl(
                             'index', ['mov' => $record->mc_id]
@@ -207,7 +208,7 @@ class InvMovimientoResource extends Resource
 
     public static function canDelete($record): bool { return false; }
 
-    protected static function shouldRegisterNavigation(): bool {
+    public static function shouldRegisterNavigation(): bool {
         return PerfilPanel::puedeOperar();
     }
 

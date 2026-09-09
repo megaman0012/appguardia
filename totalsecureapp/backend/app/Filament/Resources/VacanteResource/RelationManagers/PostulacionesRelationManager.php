@@ -4,8 +4,8 @@ namespace App\Filament\Resources\VacanteResource\RelationManagers;
 
 use App\Services\VacanteService;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Resources\Form;
-use Filament\Resources\Table;
+use Filament\Forms\Form;
+use Filament\Tables\Table;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
 use Modules\Administracion\Models\TurnoPostulacion;
@@ -23,12 +23,12 @@ class PostulacionesRelationManager extends RelationManager
     protected static ?string $recordTitleAttribute = 'tp_id';
     protected static ?string $title = 'Postulaciones';
 
-    public static function form(Form $form): Form
+    public function form(Form $form): Form
     {
         return $form->schema([]);
     }
 
-    public static function table(Table $table): Table
+    public function table(Table $table): Table
     {
         return $table
             ->columns([

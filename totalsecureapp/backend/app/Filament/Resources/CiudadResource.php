@@ -7,10 +7,10 @@ use App\Support\PerfilPanel;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
 use Filament\Tables\Columns\BooleanColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -32,7 +32,7 @@ class CiudadResource extends Resource
     protected static ?string $modelLabel = 'ciudad';
     protected static ?string $pluralModelLabel = 'ciudades';
     protected static ?string $navigationLabel = 'Ciudades';
-    protected static ?string $navigationIcon = 'heroicon-o-office-building';
+    protected static ?string $navigationIcon = 'heroicon-o-building-office';
     protected static ?int $navigationSort = 3;
 
     protected const RELACIONES_TABLA = ['provincia.pais'];
@@ -86,7 +86,7 @@ class CiudadResource extends Resource
         return false;
     }
 
-    protected static function shouldRegisterNavigation(): bool
+    public static function shouldRegisterNavigation(): bool
     {
         return PerfilPanel::puedeConfigurarSistema();
     }

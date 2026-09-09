@@ -9,9 +9,9 @@ use Filament\Forms;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TimePicker;
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Modules\Administracion\Models\PlantillaFranja;
@@ -31,7 +31,7 @@ class FranjasRelationManager extends RelationManager
     protected static ?string $recordTitleAttribute = 'pf_id';
     protected static ?string $title = 'Franjas de cobertura';
 
-    public static function form(Form $form): Form
+    public function form(Form $form): Form
     {
         return $form->schema([
             Select::make('pf_puesto_id')
@@ -82,7 +82,7 @@ class FranjasRelationManager extends RelationManager
         ]);
     }
 
-    public static function table(Table $table): Table
+    public function table(Table $table): Table
     {
         return $table
             ->columns([

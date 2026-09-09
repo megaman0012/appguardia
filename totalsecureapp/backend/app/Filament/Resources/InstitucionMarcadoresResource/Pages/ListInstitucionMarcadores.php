@@ -4,7 +4,7 @@ namespace App\Filament\Resources\InstitucionMarcadoresResource\Pages;
 
 use App\Filament\Resources\InstitucionMarcadoresResource;
 use App\Filament\Resources\OrganizacionInstitucionResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
 
 class ListInstitucionMarcadores extends ListadoBase
@@ -28,7 +28,7 @@ class ListInstitucionMarcadores extends ListadoBase
         ];
     }
 
-    protected function getTitle(): string {
+    public function getTitle(): string {
         $descripcion = urldecode(request()->query('descripcion'));
         return 'Marcadores de '.$descripcion;
     }

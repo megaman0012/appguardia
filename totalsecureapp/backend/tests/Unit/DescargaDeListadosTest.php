@@ -58,9 +58,11 @@ class DescargaDeListadosTest extends TestCase
                 continue;
             }
 
-            // En esta version de Filament, `getPages()` devuelve arreglos
-            // `['class' => ..., 'route' => ...]`.
-            $pagina = is_array($indice) ? ($indice['class'] ?? null) : null;
+            // Filament 2 devolvia arreglos `['class' => ...]`; Filament 3
+            // devuelve objetos `PageRegistration` con `getPage()`.
+            $pagina = is_array($indice)
+                ? ($indice['class'] ?? null)
+                : (is_object($indice) && method_exists($indice, 'getPage') ? $indice->getPage() : null);
 
             if ($pagina === null) {
                 continue;
@@ -84,9 +86,14 @@ class DescargaDeListadosTest extends TestCase
     }
 
     /** La hoja configurada en una accion, sin depender de metodos que el paquete no expone. */
+    /*
+     * ⚠️ `getCachedActions()` era el nombre en Filament 2; **la 3 lo renombro a
+     * `getCachedHeaderActions()`**, en linea con el cambio de `getActions()` a
+     * `getHeaderActions()` en las paginas.
+     */
     private function hojaDe($pagina, string $accion)
     {
-        $obj = collect($pagina->instance()->getCachedActions())
+        $obj = collect($pagina->instance()->getCachedHeaderActions())
             ->first(fn ($a) => $a->getName() === $accion);
 
         $this->assertNotNull($obj, "El listado no ofrece la accion «{$accion}»");

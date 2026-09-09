@@ -24,26 +24,30 @@ class AlertasActivasWidget extends StatsOverviewWidget
 
     protected static ?int $sort = 4;
 
-    /**
-     * Vista propia solo para poder poner un titulo.
+    /*
+     * ⚠️ Antes esto declaraba `$view = 'filament.widgets.stats-con-titulo'`, una
+     * vista propia que existia **solo para poder poner un titulo**: Filament 2
+     * no soportaba encabezado en `StatsOverviewWidget` y con dos filas de cuatro
+     * tarjetas quedaban ocho numeros seguidos sin distinguir cual mide operacion
+     * y cual mide configuracion.
      *
-     * Filament 2 no soporta encabezado en StatsOverviewWidget, y con dos filas
-     * de cuatro tarjetas quedaban ocho numeros seguidos sin distinguir cual mide
-     * operacion y cual mide configuracion.
+     * **Filament 3 lo trae de fabrica** con `getHeading()` y `getDescription()`,
+     * asi que la vista se borro y los metodos `getEncabezado()`/`getAyuda()`
+     * pasaron a los nombres de la libreria. Era uno de los arreglos que el
+     * roadmap anotaba como ganancia de esta subida.
      */
-    protected static string $view = 'filament.widgets.stats-con-titulo';
 
-    public function getEncabezado(): ?string
+    protected function getHeading(): ?string
     {
         return 'Alertas';
     }
 
-    public function getAyuda(): ?string
+    protected function getDescription(): ?string
     {
         return null;
     }
 
-    protected function getCards(): array
+    protected function getStats(): array
     {
         $totales = ['activas' => 0, 'pendientes' => 0, 'en_atencion' => 0, 'criticas' => 0, 'altas' => 0];
         $masAntigua = null;
@@ -69,7 +73,7 @@ class AlertasActivasWidget extends StatsOverviewWidget
             Card::make('Alertas activas', $totales['activas'])
                 ->description($totales['pendientes'] . ' sin atender, ' . $totales['en_atencion'] . ' en atención')
                 ->color($totales['pendientes'] > 0 ? 'warning' : 'success')
-                ->icon('heroicon-o-exclamation'),
+                ->icon('heroicon-o-exclamation-triangle'),
 
             Card::make('Críticas y altas', $urgentes)
                 ->description($urgentes > 0 ? 'Requieren atención inmediata' : 'Ninguna pendiente')

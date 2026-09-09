@@ -22,26 +22,30 @@ class CumplimientoTurnosWidget extends StatsOverviewWidget
 
     protected static ?int $sort = 5;
 
-    /**
-     * Vista propia solo para poder poner un titulo.
+    /*
+     * ⚠️ Antes esto declaraba `$view = 'filament.widgets.stats-con-titulo'`, una
+     * vista propia que existia **solo para poder poner un titulo**: Filament 2
+     * no soportaba encabezado en `StatsOverviewWidget` y con dos filas de cuatro
+     * tarjetas quedaban ocho numeros seguidos sin distinguir cual mide operacion
+     * y cual mide configuracion.
      *
-     * Filament 2 no soporta encabezado en StatsOverviewWidget, y con dos filas
-     * de cuatro tarjetas quedaban ocho numeros seguidos sin distinguir cual mide
-     * operacion y cual mide configuracion.
+     * **Filament 3 lo trae de fabrica** con `getHeading()` y `getDescription()`,
+     * asi que la vista se borro y los metodos `getEncabezado()`/`getAyuda()`
+     * pasaron a los nombres de la libreria. Era uno de los arreglos que el
+     * roadmap anotaba como ganancia de esta subida.
      */
-    protected static string $view = 'filament.widgets.stats-con-titulo';
 
-    public function getEncabezado(): ?string
+    protected function getHeading(): ?string
     {
         return 'Turnos de hoy';
     }
 
-    public function getAyuda(): ?string
+    protected function getDescription(): ?string
     {
         return 'Requiere cuadrantes cargados: sin turnos programados queda en cero.';
     }
 
-    protected function getCards(): array
+    protected function getStats(): array
     {
         $total = $conEntrada = $sinMarcar = $conTardanza = $minutosTardanza = 0;
 

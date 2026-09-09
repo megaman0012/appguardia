@@ -10,9 +10,9 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Filters\Filter;
 use Modules\Administracion\Models\Acceso;
 
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 
 use Filament\Forms;
 use Filament\Forms\Components\TextInput;

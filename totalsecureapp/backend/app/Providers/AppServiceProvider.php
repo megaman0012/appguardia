@@ -4,12 +4,7 @@ namespace App\Providers;
 
 use App\Responses\CustomLogoutResponse;
 use Filament\Http\Responses\Auth\Contracts\LogoutResponse as LogoutResponseContract;
-use Filament\Facades\Filament;
 use Filament\Http\Responses\Auth\LogoutResponse;
-use Filament\Navigation\UserMenuItem;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\HtmlString;
-use Illuminate\Support\Stringable;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -31,82 +26,29 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        $this->registrarShimsDeLaravel9();
+        /*
+         * `registrarShimsDeLaravel9()` se retiro: eran parches para Laravel
+         * 8.75 (`Model::resolveRouteBindingQuery` y `Stringable::toHtmlString`,
+         * que llegaron en Laravel 9). Estaban guardados con `method_exists`,
+         * asi que desde la subida a Laravel 10 no hacian nada.
+         */
 
         $this->app->singleton(LogoutResponseContract::class, CustomLogoutResponse::class);
 
-        Filament::serving(function () {
-            Filament::registerStyles([
-                asset('css/filament-styles.css'),
-            ]);
-        });
-
-        // Orden de los grupos del menu lateral.
-        //
-        // Sin esto, Filament los ordena por el `navigationSort` mas bajo de sus
-        // items, y como cada grupo empieza en 1 el orden queda arbitrario:
-        // «Inventario» aparecia arriba de «Centros de operacion».
-        //
-        // El criterio es frecuencia de uso, no jerarquia de datos: arriba lo que
-        // se mira todos los dias y abajo lo que se configura una vez.
-        Filament::registerNavigationGroups([
-            'Operación',            // turnos, cuadrantes, coberturas: el dia a dia
-            'Reportería',           // lo que el guardia registro en campo
-            'Inventario',
-            'Centros de operación', // clientes, locales y puestos: se cargan y se dejan
-            'Ubicación geográfica', // catalogo
-            'Configuración',        // usuarios y permisos
-        ]);
-
-        Filament::serving(function () {
-            Filament::registerUserMenuItems([
-                'mi-opcion' => UserMenuItem::make()
-                    ->label('Seleccionar Perfil')
-                    ->url(route('acceso.perfil'))
-                    ->icon('heroicon-o-link'),
-            ]);
-        });
-
-    }
-
-    /**
-     * Compatibilidad Filament 2.17 <-> Laravel 8.75.
-     *
-     * Filament resuelve el registro de cada pagina de edicion con
-     * Resource::resolveRecordRouteBinding(), que llama a
-     * \$model->resolveRouteBindingQuery(...). Ese metodo se agrego a Eloquent en
-     * Laravel 9: en 8.75 el Model solo tiene resolveRouteBinding(), asi que la
-     * llamada terminaba en Model::__call y reventaba con
-     * "Call to undefined method ...::resolveRouteBindingQuery()".
-     * Efecto: TODAS las paginas de edicion del panel respondian 500.
-     *
-     * Se registra como macro del Builder porque Model::__call reenvia los
-     * metodos desconocidos alli, lo que arregla los ~20 modelos de una vez sin
-     * tocarlos ni tocar vendor. La implementacion es la misma de Laravel 9.
-     *
-     * Al subir a Laravel 9+ este shim se puede borrar: el Model ya trae el
-     * metodo y el macro dejaria de usarse (Model::__call solo se dispara con
-     * metodos que no existen).
-     */
-    private function registrarShimsDeLaravel9(): void
-    {
-        if (!method_exists(\Illuminate\Database\Eloquent\Model::class, 'resolveRouteBindingQuery')) {
-            Builder::macro('resolveRouteBindingQuery', function ($query, $value, $field = null) {
-                return $query->where($field ?? $this->getModel()->getRouteKeyName(), $value);
-            });
-        }
-
-        // Stringable::toHtmlString() tambien llego en Laravel 9. Filament la usa al
-        // renderizar helperText y hint de los formularios:
-        //   Str::of($helperText)->markdown()->sanitizeHtml()->toHtmlString()
-        // Sin ella, cualquier formulario con helperText responde 500. Se noto al
-        // agregar los formularios de Pais, Provincia, Ciudad y Local, que fueron
-        // los primeros en usarla. sanitizeHtml() no hace falta: la registra el
-        // propio Filament en SupportServiceProvider.
-        if (!method_exists(Stringable::class, 'toHtmlString')) {
-            Stringable::macro('toHtmlString', function () {
-                return new HtmlString($this->value);
-            });
-        }
+        /*
+         * ⚠️ Aca vivian tres registros de Filament 2 y **los tres murieron con
+         * la subida a Filament 3**:
+         *
+         *   - `Filament::registerStyles()` dentro de `Filament::serving()`
+         *   - `Filament::registerNavigationGroups()`
+         *   - `Filament::registerUserMenuItems()`
+         *
+         * En Filament 3 todo eso se declara en el *panel provider*
+         * (`App\Providers\Filament\AdminPanelProvider`). Y no es un detalle
+         * cosmetico: `registerNavigationGroups()` no existe en la 3, y como
+         * fallaba dentro del `boot()` de un proveedor **se caia la aplicacion
+         * completa** -- el panel y tambien la API que usan las tablets, que no
+         * tiene nada que ver con Filament. El unico sintoma era un 500 en todo.
+         */
     }
 }

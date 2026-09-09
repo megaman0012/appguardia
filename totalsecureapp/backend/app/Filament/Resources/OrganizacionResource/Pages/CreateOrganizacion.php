@@ -5,7 +5,7 @@ namespace App\Filament\Resources\OrganizacionResource\Pages;
 use App\Filament\Resources\OrganizacionResource;
 use App\Filament\Resources\SedeResource;
 use App\helpers;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateOrganizacion extends CreateRecord
@@ -19,7 +19,7 @@ class CreateOrganizacion extends CreateRecord
         ];
     }
 
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
         return [
             Actions\Action::make('Volver a Organizaciones')

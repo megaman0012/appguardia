@@ -4,7 +4,7 @@ namespace App\Filament\Resources\OrganizacionInstitucionResource\Pages;
 
 use App\Filament\Resources\OrganizacionInstitucionResource;
 use App\helpers;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateOrganizacionInstitucion extends CreateRecord
@@ -17,7 +17,7 @@ class CreateOrganizacionInstitucion extends CreateRecord
         ];
     }
 
-    protected function getActions(): array {
+    protected function getHeaderActions(): array {
         return [
             Actions\Action::make('Volver a Organizacion Institucion')
                 ->label('Volver')

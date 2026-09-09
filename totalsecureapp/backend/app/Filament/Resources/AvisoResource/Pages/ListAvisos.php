@@ -9,14 +9,14 @@ use App\Services\Avisos\NumeroWhatsapp;
 use App\Support\PerfilPanel;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
 
 class ListAvisos extends ListadoBase
 {
     protected static string $resource = AvisoResource::class;
 
-    protected function getTitle(): string
+    public function getTitle(): string
     {
         return 'Avisos enviados';
     }
@@ -33,7 +33,7 @@ class ListAvisos extends ListadoBase
             // conviene enterarse ahora y no a las tres de la mañana.
             Actions\Action::make('probarWhatsapp')
                 ->label('Probar WhatsApp')
-                ->icon('heroicon-o-chat-alt')
+                ->icon('heroicon-o-chat-bubble-left-right')
                 ->color('secondary')
                 ->modalHeading('Enviar un mensaje de prueba')
                 ->form([

@@ -6,7 +6,7 @@ use App\Filament\Resources\UsersResource;
 use App\Services\UsuarioImportService;
 use App\helpers;
 use Filament\Notifications\Notification;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -25,7 +25,7 @@ class CreateUsers extends CreateRecord
         ];
     }
 
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
         return [
             Actions\Action::make('Volver a Usuarios')

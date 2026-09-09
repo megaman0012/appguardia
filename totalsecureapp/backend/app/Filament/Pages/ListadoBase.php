@@ -27,7 +27,13 @@ use Filament\Resources\Pages\ListRecords;
  */
 abstract class ListadoBase extends ListRecords
 {
-    protected function getBreadcrumbs(): array
+    /**
+     * ⚠️ **`public`, no `protected`.** En Filament 3 `Page::getBreadcrumbs()`
+     * es publico, y bajarle la visibilidad es un **error fatal de PHP** al
+     * cargar la clase: «Access level must be public». Tumbaba la aplicacion
+     * entera antes de servir nada.
+     */
+    public function getBreadcrumbs(): array
     {
         return [];
     }
@@ -40,7 +46,7 @@ abstract class ListadoBase extends ListRecords
      * agregar la descarga a cada una habria sido copiar la misma linea 27 veces
      * -- con la garantia de que el listado numero 28 se olvida.
      */
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
         $acciones = $this->accionesPropias();
 

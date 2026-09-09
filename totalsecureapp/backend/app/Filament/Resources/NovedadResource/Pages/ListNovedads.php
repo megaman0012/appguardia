@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\NovedadResource\Pages;
 
 use App\Filament\Resources\NovedadResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
 
 class ListNovedads extends ListadoBase

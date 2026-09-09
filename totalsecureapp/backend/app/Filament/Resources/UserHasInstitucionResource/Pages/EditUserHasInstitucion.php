@@ -4,7 +4,7 @@ namespace App\Filament\Resources\UserHasInstitucionResource\Pages;
 
 use App\Filament\Resources\UserHasInstitucionResource;
 use App\helpers;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
 class EditUserHasInstitucion extends EditRecord
@@ -15,7 +15,7 @@ class EditUserHasInstitucion extends EditRecord
         return [ $this->getSaveFormAction() ];
     }
 
-    protected function getActions(): array {
+    protected function getHeaderActions(): array {
         return [
             Actions\Action::make('Volver a UsInst')
                 ->label('Volver')
@@ -25,7 +25,7 @@ class EditUserHasInstitucion extends EditRecord
         ];
     }
 
-    protected function getTitle(): string {
+    public function getTitle(): string {
         return 'Editar Usuario > Institucion';
     }
 

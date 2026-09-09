@@ -15,8 +15,8 @@ use App\Filament\Resources\InvListaProductoResource\RelationManagers\ProductosRe
 use Modules\Administracion\Models\Lista;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Resources\Form;
-use Filament\Resources\Table;
+use Filament\Forms\Form;
+use Filament\Tables\Table;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
@@ -58,7 +58,7 @@ class InvListaProductoResource extends Resource
     protected static ?string $modelLabel = 'lista';
     protected static ?string $pluralModelLabel = 'listas';
     protected static ?string $navigationLabel = 'Listas';
-    protected static ?string $navigationIcon = 'heroicon-o-collection';
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form
     {
@@ -86,7 +86,10 @@ class InvListaProductoResource extends Resource
             TextInput::make('li_nombre')
                 ->label('Nombre')
                 ->required()
-                ->unique(table: static::$model, callback: function ($rule, $get) {
+                // ⚠️ En Filament 3 el argumento se llama `modifyRuleUsing`, no
+                // `callback`. Con el nombre viejo el formulario revienta al
+                // dibujarse con «Unknown named parameter $callback».
+                ->unique(table: static::$model, modifyRuleUsing: function ($rule, $get) {
                     return $rule->where('li_ins_code', $get('li_ins_code'));
                 }, ignoreRecord: true),
             Textarea::make('li_descripcion')
@@ -161,7 +164,7 @@ class InvListaProductoResource extends Resource
 
     public static function canDelete($record): bool { return false; }
 
-    protected static function shouldRegisterNavigation(): bool {
+    public static function shouldRegisterNavigation(): bool {
         return PerfilPanel::puedeOperar();
     }
 

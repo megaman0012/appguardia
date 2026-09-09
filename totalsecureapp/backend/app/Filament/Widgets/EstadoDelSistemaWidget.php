@@ -33,21 +33,25 @@ class EstadoDelSistemaWidget extends StatsOverviewWidget
 
     protected static ?int $sort = 2;
 
-    /**
-     * Vista propia solo para poder poner un titulo.
+    /*
+     * ⚠️ Antes esto declaraba `$view = 'filament.widgets.stats-con-titulo'`, una
+     * vista propia que existia **solo para poder poner un titulo**: Filament 2
+     * no soportaba encabezado en `StatsOverviewWidget` y con dos filas de cuatro
+     * tarjetas quedaban ocho numeros seguidos sin distinguir cual mide operacion
+     * y cual mide configuracion.
      *
-     * Filament 2 no soporta encabezado en StatsOverviewWidget, y con dos filas
-     * de cuatro tarjetas quedaban ocho numeros seguidos sin distinguir cual mide
-     * operacion y cual mide configuracion.
+     * **Filament 3 lo trae de fabrica** con `getHeading()` y `getDescription()`,
+     * asi que la vista se borro y los metodos `getEncabezado()`/`getAyuda()`
+     * pasaron a los nombres de la libreria. Era uno de los arreglos que el
+     * roadmap anotaba como ganancia de esta subida.
      */
-    protected static string $view = 'filament.widgets.stats-con-titulo';
 
-    public function getEncabezado(): ?string
+    protected function getHeading(): ?string
     {
         return 'Estado del sistema';
     }
 
-    public function getAyuda(): ?string
+    protected function getDescription(): ?string
     {
         return 'Huecos de configuración que no dan error pero dejan datos sin poder auditar.';
     }
@@ -55,7 +59,7 @@ class EstadoDelSistemaWidget extends StatsOverviewWidget
     /** Dias sin registrar nada para considerar un local sin actividad. */
     private const DIAS_SIN_ACTIVIDAD = 7;
 
-    protected function getCards(): array
+    protected function getStats(): array
     {
         return [
             $this->sinPuntoQr(),
@@ -96,9 +100,9 @@ class EstadoDelSistemaWidget extends StatsOverviewWidget
             ->description($conMarcajes > 0
                 ? "{$conMarcajes} ya reciben marcajes sin poder verificarse"
                 : 'Ninguno con marcajes todavía')
-            ->descriptionIcon($conMarcajes > 0 ? 'heroicon-s-exclamation' : null)
+            ->descriptionIcon($conMarcajes > 0 ? 'heroicon-s-exclamation-triangle' : null)
             ->color($conMarcajes > 0 ? 'danger' : ($total > 0 ? 'warning' : 'success'))
-            ->icon('heroicon-o-qrcode')
+            ->icon('heroicon-o-qr-code')
             ->url(InstitucionMarcadoresResource::getUrl());
     }
 
@@ -122,7 +126,7 @@ class EstadoDelSistemaWidget extends StatsOverviewWidget
         return Card::make('Locales activos sin actividad', $total)
             ->description('Sin marcajes, rondas ni accesos en ' . self::DIAS_SIN_ACTIVIDAD . ' días')
             ->color($total > 0 ? 'warning' : 'success')
-            ->icon('heroicon-o-office-building')
+            ->icon('heroicon-o-building-office')
             ->url(OrganizacionInstitucionResource::getUrl());
     }
 
@@ -150,7 +154,7 @@ class EstadoDelSistemaWidget extends StatsOverviewWidget
                 ? ($total > 0 ? 'No pueden entrar a ninguna parte' : 'Todos tienen perfil')
                 : 'Solo visible con alcance global')
             ->color($visible && $total > 0 ? 'danger' : 'success')
-            ->icon('heroicon-o-user-remove')
+            ->icon('heroicon-o-user-minus')
             ->url($visible ? UserHasRolesResource::getUrl() : null);
     }
 
@@ -180,7 +184,7 @@ class EstadoDelSistemaWidget extends StatsOverviewWidget
                 ? 'El local no tenía punto QR al momento de marcar'
                 : 'Todos los marcajes recientes se pudieron comprobar')
             ->color($total > 0 ? 'warning' : 'success')
-            ->icon('heroicon-o-location-marker');
+            ->icon('heroicon-o-map-pin');
     }
 
     /** Locales dentro del alcance del perfil, como consulta reutilizable. */

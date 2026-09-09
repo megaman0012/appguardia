@@ -15,8 +15,8 @@ use Modules\Administracion\Models\ProductoCatalogo;
 use Modules\Administracion\Models\UserHasInstitucion;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Resources\Form;
-use Filament\Resources\Table;
+use Filament\Forms\Form;
+use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BooleanColumn;
 use Filament\Forms\Components\TextInput;
@@ -94,7 +94,10 @@ class InvProductoResource extends Resource
                 ->required()
                 // El nombre es unico DENTRO del local, no en todo el sistema:
                 // dos locales pueden tener su propio "Extintor 10 lb".
-                ->unique(table: static::$model, callback: function ($rule, $get) {
+                // ⚠️ En Filament 3 el argumento se llama `modifyRuleUsing`, no
+                // `callback`. Con el nombre viejo el formulario revienta al
+                // dibujarse con «Unknown named parameter $callback».
+                ->unique(table: static::$model, modifyRuleUsing: function ($rule, $get) {
                     return $rule->where('ipc_ins_code', $get('ipc_ins_code'));
                 }, ignoreRecord: true),
             TextInput::make('ipc_especificacion')
@@ -176,7 +179,7 @@ class InvProductoResource extends Resource
 
     public static function canDelete($record): bool { return false; }
 
-    protected static function shouldRegisterNavigation(): bool {
+    public static function shouldRegisterNavigation(): bool {
         return PerfilPanel::puedeConfigurarSistema();
     }
 

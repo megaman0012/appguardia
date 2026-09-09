@@ -4,7 +4,7 @@ namespace App\Filament\Resources\UserHasGestionResource\Pages;
 
 use Closure;
 use App\Filament\Resources\UserHasGestionResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
 use Modules\Acceso\Models\user_has_gestions;
 
@@ -20,7 +20,7 @@ class ListUserHasGestions extends ListadoBase
         ];
     }
 
-    protected function getTitle(): string {
+    public function getTitle(): string {
         return 'Usuarios > Gestion';
     }
 

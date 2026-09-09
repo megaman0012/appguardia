@@ -10,7 +10,7 @@ use Carbon\Carbon;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -19,12 +19,12 @@ class EditPlantilla extends EditRecord
 {
     protected static string $resource = PlantillaResource::class;
 
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
         return [
             Actions\Action::make('grilla')
                 ->label('Ver grilla')
-                ->icon('heroicon-o-view-grid')
+                ->icon('heroicon-o-squares-2x2')
                 ->color('secondary')
                 ->url(fn () => PlantillaResource::getUrl('grilla', ['record' => $this->record])),
 
@@ -32,17 +32,17 @@ class EditPlantilla extends EditRecord
             // lider no tipee los nombres evita la mitad de los errores de carga.
             Actions\Action::make('descargarModelo')
                 ->label('Descargar modelo')
-                ->icon('heroicon-o-download')
+                ->icon('heroicon-o-arrow-down-tray')
                 ->color('secondary')
                 ->action(fn () => $this->descargarModelo())
                 ->visible(fn () => PerfilPanel::puedeAdministrarLocales()),
 
             Actions\Action::make('importar')
                 ->label('Importar cuadrante')
-                ->icon('heroicon-o-upload')
+                ->icon('heroicon-o-arrow-up-tray')
                 ->color('secondary')
                 ->modalHeading('Cargar el cuadrante desde un archivo')
-                ->modalSubheading('Reemplaza las franjas actuales por las del archivo. Los turnos ya generados no se tocan: se regeneran después.')
+                ->modalDescription('Reemplaza las franjas actuales por las del archivo. Los turnos ya generados no se tocan: se regeneran después.')
                 ->form([
                     FileUpload::make('archivo')
                         ->label('Archivo CSV')
@@ -65,7 +65,7 @@ class EditPlantilla extends EditRecord
             // cientos de turnos es la mitad del valor de la plantilla.
             Actions\Action::make('revisar')
                 ->label('Revisar')
-                ->icon('heroicon-o-search')
+                ->icon('heroicon-o-magnifying-glass')
                 ->color('secondary')
                 ->form($this->camposDePeriodo())
                 ->action(fn (array $data) => $this->revisar($data))
@@ -77,7 +77,7 @@ class EditPlantilla extends EditRecord
                 ->color('success')
                 ->requiresConfirmation()
                 ->modalHeading('Generar los turnos del período')
-                ->modalSubheading('Se reemplazan los turnos de este cuadrante que aún no tengan marcaje. Los ya marcados y los cargados a mano no se tocan.')
+                ->modalDescription('Se reemplazan los turnos de este cuadrante que aún no tengan marcaje. Los ya marcados y los cargados a mano no se tocan.')
                 ->form($this->camposDePeriodo())
                 ->action(fn (array $data) => $this->generar($data))
                 ->visible(fn () => PerfilPanel::puedeAdministrarLocales()),

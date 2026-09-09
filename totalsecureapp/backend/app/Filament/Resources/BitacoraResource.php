@@ -5,10 +5,10 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\BitacoraResource\Pages;
 use App\Filament\Resources\BitacoraResource\RelationManagers;
 use Filament\Forms;
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
 use Filament\Tables\Actions\Action;
 use Filament\Tables\Columns\ImageColumn;
@@ -39,7 +39,7 @@ class BitacoraResource extends Resource
      * 126 consultas en vez de 6.
      */
     protected const RELACIONES_TABLA = ['institucion.cliente', 'users'];
-    protected static ?string $navigationIcon = 'heroicon-o-collection';
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static bool $shouldRegisterNavigation = true;
     public static function form(Form $form): Form { return $form->schema([ ]); }
 

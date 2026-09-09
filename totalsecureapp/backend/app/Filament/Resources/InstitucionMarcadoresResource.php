@@ -9,10 +9,10 @@ use App\Filament\Resources\InstitucionMarcadoresResource\RelationManagers;
 use Modules\Administracion\Models\InstitucionMarcadores;
 use Modules\Administracion\Models\OrganizacionInstitucion;
 
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 
 use Filament\Forms;
 use Filament\Forms\Components\TextInput;
@@ -44,7 +44,7 @@ class InstitucionMarcadoresResource extends Resource
      * 126 consultas en vez de 6.
      */
     protected const RELACIONES_TABLA = ['institucion.cliente'];
-    protected static ?string $navigationIcon = 'heroicon-o-collection';
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static bool $shouldRegisterNavigation = false;
     public static function form(Form $form): Form
     {

@@ -29,26 +29,30 @@ class ActividadRecienteWidget extends StatsOverviewWidget
 
     protected static ?int $sort = 1;
 
-    /**
-     * Vista propia solo para poder poner un titulo.
+    /*
+     * ⚠️ Antes esto declaraba `$view = 'filament.widgets.stats-con-titulo'`, una
+     * vista propia que existia **solo para poder poner un titulo**: Filament 2
+     * no soportaba encabezado en `StatsOverviewWidget` y con dos filas de cuatro
+     * tarjetas quedaban ocho numeros seguidos sin distinguir cual mide operacion
+     * y cual mide configuracion.
      *
-     * Filament 2 no soporta encabezado en StatsOverviewWidget, y con dos filas
-     * de cuatro tarjetas quedaban ocho numeros seguidos sin distinguir cual mide
-     * operacion y cual mide configuracion.
+     * **Filament 3 lo trae de fabrica** con `getHeading()` y `getDescription()`,
+     * asi que la vista se borro y los metodos `getEncabezado()`/`getAyuda()`
+     * pasaron a los nombres de la libreria. Era uno de los arreglos que el
+     * roadmap anotaba como ganancia de esta subida.
      */
-    protected static string $view = 'filament.widgets.stats-con-titulo';
 
-    public function getEncabezado(): ?string
+    protected function getHeading(): ?string
     {
         return 'Actividad de los últimos 7 días';
     }
 
-    public function getAyuda(): ?string
+    protected function getDescription(): ?string
     {
         return 'Lo que los guardias registraron en campo, comparado con la semana anterior.';
     }
 
-    protected function getCards(): array
+    protected function getStats(): array
     {
         return [
             $this->tarjeta(
@@ -70,14 +74,14 @@ class ActividadRecienteWidget extends StatsOverviewWidget
                 Acceso::class,
                 'ac_ins_code',
                 'ac_created_at',
-                'heroicon-o-login'
+                'heroicon-o-arrow-right-on-rectangle'
             ),
             $this->tarjeta(
                 'Novedades',
                 Novedad::class,
                 'nv_ins_code',
                 'nv_fecha_hora',
-                'heroicon-o-annotation'
+                'heroicon-o-chat-bubble-bottom-center-text'
             ),
         ];
     }
@@ -148,7 +152,7 @@ class ActividadRecienteWidget extends StatsOverviewWidget
             return null;
         }
 
-        return $ahora > $antes ? 'heroicon-s-trending-up' : 'heroicon-s-trending-down';
+        return $ahora > $antes ? 'heroicon-s-arrow-trending-up' : 'heroicon-s-arrow-trending-down';
     }
 
     /**

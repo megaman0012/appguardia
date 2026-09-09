@@ -361,82 +361,160 @@ lo migró la propia herramienta (`--migrate-configuration`): `<coverage>` pasa a
 - Y lo principal: **Filament 3 ya es instalable**, porque exige Laravel ≥ 10.45 y
   estamos en 10.50.3.
 
-## 6. Etapa 3 — Filament 2 → 3 y Livewire 2 → 3 (la etapa cara)
+## 6. Etapa 3 — Filament 2 → 3 y Livewire 2 → 3 ✅ HECHA
 
-Es un solo movimiento porque Filament 3 exige Livewire 3.
+| | Antes | Ahora |
+|---|---|---|
+| `filament/filament` | 2.17.59 | **3.3.55** |
+| `livewire/livewire` | 2.12.8 | **3.8.8** |
+| `pxlrbt/filament-excel` | 1.1.14 | **2.5.0** |
+| `blade-ui-kit/blade-heroicons` | 1.7.0 | **2.7.0** |
 
-### La superficie a migrar, contada
+**389 tests pasan.** El panel dibuja sus 27 listados y sus widgets, y verificado
+en vivo con sesión real: tablero 72 KB, Alertas 327 KB, Accesos 523 KB, con los
+CSS de Filament 3.3.55 cargando. **Y los 2 paquetes abandonados que quedaban
+desaparecieron**: los arrastraba `filament/support` de la versión 2.
 
-| | |
+### El estimado del roadmap estaba mal en el punto más grande
+
+Se contaron **176 usos de `->size('sm')`** como el trabajo más pesado. No hubo
+que tocar ninguno: en Filament 3 la firma es
+`size(TextColumnSize | string | Closure | null)`, o sea que **el texto sigue
+siendo válido**. Lo mismo con dos clases que se daban por eliminadas:
+`BooleanColumn` y `BadgeColumn` **siguen existiendo** como envoltorios marcados
+como obsoletos (`@deprecated`), así que sus 73 usos funcionan tal cual. Se dejan
+para la Etapa 4, que es donde Filament 4 los quita de verdad.
+
+Lo que sí costó fue otra cosa: **la visibilidad de los métodos y las firmas de
+los contratos**. Nada de eso estaba en el plan.
+
+### ⚠️ Lo que rompió de verdad: visibilidad y firmas
+
+PHP aborta al **cargar la clase** cuando una firma no encaja con la del padre.
+No es un aviso ni un 500 en una pantalla: es la aplicación caída completa, API
+incluida. Aparecieron seis casos, uno detrás de otro:
+
+| Qué | Cambio en Filament 3 | Cuántos |
+|---|---|---|
+| `getBreadcrumbs()` | `protected` → **`public`** | 1 |
+| `getTitle()` | `protected` → **`public`** | 26 |
+| `shouldRegisterNavigation()` | `protected` → **`public`** | 17 |
+| `getNavigationBadge()`, `getNavigationBadgeColor()` | `protected` → **`public`** | 2 |
+| `EditRecord::save()` | gana `$shouldSendSavedNotification` | 3 |
+| `RelationManager::form()`/`table()` | `static` → **de instancia** | 5 |
+| `FilamentUser::canAccessFilament()` | → **`canAccessPanel(Panel $panel)`** | 1 |
+
+Los que sí eran renombres mecánicos, con sus cuentas reales:
+
+| Cambio | Ocurrencias |
 |---|---:|
-| Recursos | 27 |
-| Páginas de recurso | 81 |
-| Relation managers | 5 |
-| Widgets | 6 |
-| Páginas propias | 1 |
-| Vistas Blade propias del panel | 4 |
+| `use Filament\Pages\Actions` → `Filament\Actions` | 68 |
+| `Filament\Resources\Form` → `Filament\Forms\Form` | 32 |
+| `Filament\Resources\Table` → `Filament\Tables\Table` | 32 |
+| `getActions()` → `getHeaderActions()` en páginas | 31 |
+| `modalSubheading()` → `modalDescription()` | 8 |
+| `getCards()` → `getStats()` en widgets | 4 |
+| `->unique(callback:)` → `modifyRuleUsing:` | 5 |
+| `modalButton()` → `modalSubmitActionLabel()` | 1 |
+| `Forms\Components\Tab` → `Components\Tabs\Tab` | 1 |
 
-### Los cambios mecánicos, con ocurrencias reales
+### Los iconos: 21 de 42, y la prueba de humo los encontró sola
 
-| Cambio | Ocurrencias | Archivos |
-|---|---:|---:|
-| `Filament\Resources\Form` → `Filament\Forms\Form` | 32 | 32 |
-| `Filament\Resources\Table` → `Filament\Tables\Table` | 32 | 32 |
-| `Filament\Pages\Actions` → `Filament\Actions` | 70 | 69 |
-| `getActions()` → `getHeaderActions()` en páginas | 33 | 32 |
-| `BooleanColumn` → `IconColumn::make()->boolean()` | 41 | 22 |
-| `->bulkActions([...])` → envuelto en `BulkActionGroup` | 31 | 31 |
-| `BadgeColumn` → `TextColumn::make()->badge()` | 32 | 16 |
-| `ToggleColumn` (sigue, cambia el sitio) | 16 | 12 |
-| `->size('sm')` → enum `TextColumnSize` | 176 | 26 |
-| `modalSubheading()` → `modalDescription()` | 8 | 4 |
-| `modalButton()` → `modalSubmitActionLabel()` | 1 | 1 |
-| `getCards()` → `getStats()` en widgets | 4 | 4 |
-| `->relationship('x','y')` → argumentos con nombre | 8 | 7 |
+Heroicons v1 → v2 renombra **21 de los 42 iconos** que usa el proyecto, en 39
+lugares. Un icono inexistente **revienta al renderizar**, y ahí se vio para qué
+servía la Etapa 0: en vez de abrir 27 pantallas a mano, se listaron los 1.288
+iconos que trae el paquete, se cruzaron con los usados, y se verificó que cada
+destino existiera **antes** de tocar nada.
 
-Casi todo es sustitución de texto, pero **`->size(` con 176 usos es el que
-duele**: hay que distinguir `TextColumn->size()` de otras llamadas homónimas.
+Los renombres: `download`→`arrow-down-tray`, `search`→`magnifying-glass`,
+`collection`→`rectangle-stack`, `office-building`→`building-office`,
+`view-grid`→`squares-2x2`, `user-add`→`user-plus`, `user-remove`→`user-minus`,
+`exclamation`→`exclamation-triangle`, `location-marker`→`map-pin`,
+`qrcode`→`qr-code`, `login`→`arrow-right-on-rectangle`,
+`speakerphone`→`megaphone`, `template`→`rectangle-group`,
+`annotation`→`chat-bubble-bottom-center-text`, `chat-alt`→`chat-bubble-left-right`,
+`clipboard-list`→`clipboard-document-list`, `switch-horizontal`→`arrows-right-left`,
+`upload`→`arrow-up-tray`, y las tres de la variante sólida (`trending-up`,
+`trending-down`, `exclamation`).
 
-### Los tres cambios que NO son sustituir texto
+### `config/filament.php` → panel provider
 
-1. **`config/filament.php` deja de existir como configuración del panel.**
-   Filament 3 usa un *panel provider*
-   (`app/Providers/Filament/AdminPanelProvider.php`). Ahí se vuelven a declarar
-   la marca, el tema, el ancho de contenido (`'full'`, que este proyecto puso a
-   propósito), el modo oscuro y el registro de recursos. Es reescritura, no
-   renombre.
-2. **Los iconos cambian de nombre.** `blade-ui-kit/blade-heroicons` ^1 → ^2, que
-   es Heroicons v1 → v2: **96 usos, 42 iconos distintos**. Los renombrados
-   incluyen `download` → `arrow-down-tray`, `search` → `magnifying-glass`,
-   `collection` → `rectangle-stack`, `office-building` → `building-office`,
-   `view-grid` → `squares-2x2`, `user-add` → `user-plus`, `exclamation` →
-   `exclamation-triangle`, `location-marker` → `map-pin`, `qrcode` → `qr-code`.
-   Un icono inexistente **revienta al renderizar**, y por eso la prueba de humo
-   del panel de la Etapa 0 es la que convierte esto en un trabajo de diez
-   minutos en vez de una cacería.
-3. **Las 4 vistas Blade propias hay que rehacerlas**: la grilla del cuadrante,
-   los dos widgets con vista propia y el override de la marca
-   (`vendor/filament/components/brand.blade.php`). Las de `vendor/` dependen de
-   la estructura interna de Filament 2 y **no** van a existir igual.
+Se reescribió como `App\Providers\Filament\AdminPanelProvider`, que lleva la
+tabla de equivalencias documentada dentro. Y de paso salieron a la luz **tres
+cosas que estaban mal desde antes**:
 
-### Y `pxlrbt/filament-excel` 1 → 2
+1. **`AppServiceProvider` tumbaba la aplicación entera.** Tenía
+   `Filament::registerNavigationGroups()`, `registerUserMenuItems()` y
+   `registerStyles()` dentro de `Filament::serving()`. La primera no existe en
+   Filament 3, y como falla en el `boot()` de un proveedor **se cayó también la
+   API que usan las tablets**, que no tiene nada que ver con el panel. Fue el
+   primer 500 tras instalar.
+2. **La hoja de estilos propia está vacía.** `public/css/filament-styles.css`
+   son **0 bytes**, y el panel la venía pidiendo en cada carga desde la
+   versión 2. No se registró.
+3. **La pantalla de ingreso de Filament era inalcanzable.** Había una clase
+   `App\Http\Livewire\Auth\Login` que sobrescribía `authenticate()` entero
+   (límite de intentos, `attempt()`, regeneración de sesión, mensajes: 30
+   líneas), pero `routes/web.php` tenía una **ruta manual** en `/admin/login`
+   que redirige a `/acceso/login` —el login propio, con cédula y selección de
+   perfil— y esa ruta la tapaba. Era código muerto en la versión 2 también, y se
+   borró.
 
-Lo exige Filament 3 (`v2.5.0` pide `filament/filament: ^3.0`). Toca
-`App\Filament\Tables\Descarga`, que es **un solo archivo** porque la descarga se
-centralizó ahí: los 27 listados no se tocan.
+Y dos ajustes de arranque que costaron encontrar porque el síntoma era un 500 en
+todo el panel:
 
-### Lo que se gana, concreto
+- **El nombre de la ruta de ingreso.** Filament 2 lo leía del config y podía ser
+  `filament.auth.login`; la 3 lo construye del id del panel y espera
+  **`filament.admin.auth.login`**.
+- **El middleware de autenticación.** Hay que usar el propio del proyecto
+  (`App\Http\Middleware\Authenticate`, que redirige a `acceso.login`) y no el
+  de Filament, que intenta resolver una pantalla de ingreso que este panel no
+  declara. Con el de Filament, la excepción terminaba en el manejador de Laravel
+  pidiendo `route('login')`, que no existe.
 
-- **Pestañas de verdad en los listados.** `getTabs()` y la clase `Tab` son de
-  Filament 3. Hoy «Activos | Inactivos | Todos» está resuelto con un filtro con
-  valor por defecto (`App\Filament\Tables\FiltroDeEstado`, en 8 pantallas)
-  justamente porque en 2.17 no existen. Es el pendiente que ya está anotado en
-  el código.
-- `StatsOverviewWidget` acepta título, así que
-  `resources/views/filament/widgets/stats-con-titulo.blade.php` —que existe solo
-  para eso— desaparece.
-- Livewire 3 trae `wire:model` diferido por defecto: menos peticiones por
-  tecleo en los formularios largos.
+### Lo que se gana, ya cobrado
+
+- **`stats-con-titulo.blade.php` se borró.** Esa vista existía **solo** porque
+  Filament 2 no soportaba encabezado en `StatsOverviewWidget`; la 3 lo trae con
+  `getHeading()` y `getDescription()`. Cuatro widgets dejaron de depender de una
+  vista propia.
+- **`BadgeColumn::enum()` desapareció** y se reemplazó por
+  `App\Filament\Tables\Etiqueta::de()`, un solo lugar en vez de ocho cierres
+  repetidos. `colors()`, en cambio, **sí sobrevive** (está en un *concern*, no en
+  `TextColumn`).
+- **Fuera el widget promocional de Filament.** `FilamentInfoWidget` venía
+  registrado desde el config de la versión 2 y ponía la versión de Filament y
+  enlaces a filamentphp.com **en el tablero de un panel que ven los clientes**.
+  Por el mismo criterio con el que se apagó su logo del pie, se quitó.
+- **El logo de la marca ahora usa `->brandLogo()`.** En la versión 2 estaba
+  resuelto sobrescribiendo `vendor/filament/components/brand.blade.php`, una
+  vista que **no existe en la 3**: el override quedaba inerte y el panel salía
+  sin el escudo sin avisar de nada.
+
+### La API de pruebas también cambió
+
+Cuatro tests usaban la forma vieja y hubo que reescribirlos:
+
+- `getCachedActions()` → **`getCachedHeaderActions()`**.
+- `->call('mountAction', 'x')->set('mountedActionData.campo', …)->call('callMountedAction')`
+  → **`->callAction('x', ['campo' => …])`**. La propiedad ya no se llama así, y
+  los ayudantes oficiales no dependen de cómo se llame por dentro.
+- Igual con las acciones de tabla → **`->callTableAction($nombre, $registro, $datos)`**.
+- `$respuesta->payload` → **`$respuesta->effects`** (Livewire 3 no expone
+  `payload`).
+
+Y uno mejoró de fondo: `test_el_supervisor_no_asigna_la_cobertura` ponía la
+propiedad a mano, **saltándose la comprobación de visibilidad**, y verificaba el
+resultado de rebote. Ahora afirma lo que quiere afirmar:
+`assertTableActionHidden()`.
+
+### Cómo se hizo sin tirar la API abajo
+
+No se usó `artisan down`: **el panel y la API son independientes**, así que
+mientras se migraban los 27 recursos la API siguió respondiendo. La excepción
+fue el fallo de `AppServiceProvider`, que sí tumbó todo hasta que se movieron los
+tres registros al panel provider — y es la razón por la que ese arreglo fue lo
+primero.
 
 ## 7. Etapa 4 — Laravel 10 → 12 y Filament 3 → 4
 
@@ -478,7 +556,7 @@ cabeza en cada etapa:
 | **0** Red de seguridad ✅ | 2 tests guiados por datos (+86) | Ninguno | **Hecha** |
 | **1** Desatascar Composer ✅ | 9 pins, 8 paquetes fuera, 8.75→8.83.29, **1 CVE alto cerrado** | Bajo | **Hecha** |
 | **2** Laravel 8 → 10 ✅ | Framework, sanctum, permission, modules, **6 avisos de dompdf cerrados** | Medio | **Hecha** |
-| **3** Filament 2 → 3 + Livewire 3 | 27 recursos, 81 páginas, 96 iconos, 4 vistas | **Alto** | Sí |
+| **3** Filament 2 → 3 + Livewire 3 ✅ | 27 recursos, 39 iconos, visibilidades y firmas, **0 abandonados** | **Alto** | **Hecha** |
 | **4** Laravel 12 + Filament 4 | Saltos cortos sobre stack moderno | Bajo | — |
 
 La etapa 3 es la que concentra el trabajo, y las etapas 0 a 2 son las que la

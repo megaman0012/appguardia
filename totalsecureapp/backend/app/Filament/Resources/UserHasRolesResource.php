@@ -13,10 +13,10 @@ use Modules\Acceso\Models\user_has_roles;
 use Modules\Acceso\Models\users;
 use Modules\Acceso\Models\Role;
 
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 
 use Filament\Forms;
 use Filament\Forms\Components\TextInput;
@@ -53,7 +53,7 @@ class UserHasRolesResource extends Resource
      * 126 consultas en vez de 6.
      */
     protected const RELACIONES_TABLA = ['roles', 'users'];
-    protected static ?string $navigationIcon = 'heroicon-o-user-add';
+    protected static ?string $navigationIcon = 'heroicon-o-user-plus';
 
     public static function form(Form $form): Form {
         return $form
@@ -73,7 +73,10 @@ class UserHasRolesResource extends Resource
                 )
                 ->searchable()
                 ->required()
-                ->unique(table: static::$model, callback: function ($rule, $get) {
+                // ⚠️ En Filament 3 el argumento se llama `modifyRuleUsing`, no
+                // `callback`. Con el nombre viejo el formulario revienta al
+                // dibujarse con «Unknown named parameter $callback».
+                ->unique(table: static::$model, modifyRuleUsing: function ($rule, $get) {
                     return $rule->where('user_id', $get('user_id'));
                 }, ignoreRecord: true),
             ]);
@@ -121,7 +124,7 @@ class UserHasRolesResource extends Resource
             'edit' => Pages\EditUserHasRoles::route('/{record}/edit'),
         ];
     }
-    protected static function shouldRegisterNavigation(): bool {
+    public static function shouldRegisterNavigation(): bool {
         return PerfilPanel::puedeGestionarPersonal();
     }
 

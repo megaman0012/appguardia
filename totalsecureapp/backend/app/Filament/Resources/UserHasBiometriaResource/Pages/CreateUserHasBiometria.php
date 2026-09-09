@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\UserHasBiometriaResource\Pages;
 
 use App\Filament\Resources\UserHasBiometriaResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateUserHasBiometria extends CreateRecord

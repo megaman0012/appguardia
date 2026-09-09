@@ -5,7 +5,7 @@ namespace App\Filament\Resources\OrganizacionInstitucionResource\Pages;
 use App\Support\PerfilPanel;
 
 use App\Filament\Resources\OrganizacionInstitucionResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
 use Session;
 
@@ -17,7 +17,7 @@ class ListOrganizacionInstitucions extends ListadoBase {
             ->visible(fn () => PerfilPanel::puedeAdministrarLocales()), ];
     }
 
-    protected function getTitle(): string {
+    public function getTitle(): string {
         return 'Organizanizacion > Institucion';
     }
 

@@ -8,9 +8,9 @@ use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
 use Filament\Tables\Actions\CreateAction;
 use Filament\Tables\Columns\BooleanColumn;
@@ -36,7 +36,7 @@ class InvProductosRelationManager extends RelationManager
 
     protected static ?string $recordTitleAttribute = 'Listas';
 
-    public static function form($form): Form
+    public function form($form): Form
     {
         return $form->schema([
             Hidden::make('lia_lista_id')
@@ -55,7 +55,7 @@ class InvProductosRelationManager extends RelationManager
                 })
                 ->searchable()
                 ->required()
-                ->unique(table: 'inv_lista_item', callback: function ($rule, $get) {
+                ->unique(table: 'inv_lista_item', modifyRuleUsing: function ($rule, $get) {
                     return $rule->where('lia_lista_id', $get('lia_lista_id'));
                 }, ignoreRecord: true),
             TextInput::make('lia_cantidad_default')
@@ -71,7 +71,7 @@ class InvProductosRelationManager extends RelationManager
         ]);
     }
 
-    public static function table($table): Table
+    public function table($table): Table
     {
         return $table->columns([
             TextColumn::make('producto.ipc_id')->size('sm')

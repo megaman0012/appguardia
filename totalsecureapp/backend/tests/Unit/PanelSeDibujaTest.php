@@ -58,6 +58,35 @@ class PanelSeDibujaTest extends TestCase
      */
     private const CARPETA_RECURSOS = __DIR__ . '/../../app/Filament/Resources';
 
+    /**
+     * La clase de la pagina «index» de un recurso.
+     *
+     * ⚠️ **La forma cambio entre versiones de Filament**, y hay que aguantar
+     * las dos: en Filament 2 `getPages()` devolvia arreglos
+     * `['class' => ..., 'route' => ...]`; en Filament 3 devuelve objetos
+     * `PageRegistration` con `getPage()`. Cuando subimos a la 3, el proveedor
+     * de datos empezo a devolver **cero recursos** y el test pasaba a verde sin
+     * probar nada -- lo unico que lo delato fue el guardia que cuenta 27.
+     */
+    private static function claseDeIndice(string $recurso): ?string
+    {
+        $indice = $recurso::getPages()['index'] ?? null;
+
+        if ($indice === null) {
+            return null;
+        }
+
+        if (is_array($indice)) {
+            return $indice['class'] ?? null;
+        }
+
+        if (is_object($indice) && method_exists($indice, 'getPage')) {
+            return $indice->getPage();
+        }
+
+        return null;
+    }
+
     /** @return array<string,array{0: string, 1: string}> */
     public static function listados(): array
     {
@@ -70,8 +99,7 @@ class PanelSeDibujaTest extends TestCase
                 continue;
             }
 
-            $indice = $recurso::getPages()['index'] ?? null;
-            $pagina = is_array($indice) ? ($indice['class'] ?? null) : null;
+            $pagina = self::claseDeIndice($recurso);
 
             if ($pagina === null || !class_exists($pagina)) {
                 continue;

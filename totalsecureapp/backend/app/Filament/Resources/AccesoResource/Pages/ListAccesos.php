@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\AccesoResource\Pages;
 
 use App\Filament\Resources\AccesoResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
 
 class ListAccesos extends ListadoBase {

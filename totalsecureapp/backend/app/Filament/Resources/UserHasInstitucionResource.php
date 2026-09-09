@@ -12,10 +12,10 @@ use App\Filament\Resources\UserHasInstitucionResource\Pages;
 use App\Filament\Resources\UserHasInstitucionResource\RelationManagers;
 
 use App\helpers;
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 
 use Filament\Forms;
 use Filament\Forms\Components\TextInput;
@@ -169,7 +169,7 @@ class UserHasInstitucionResource extends Resource
         ];
     }
 
-    protected static function shouldRegisterNavigation(): bool {
+    public static function shouldRegisterNavigation(): bool {
         return PerfilPanel::puedeGestionarPersonal();
     }
 

@@ -12,10 +12,10 @@ use App\Filament\Resources\UsersResource\Pages;
 use App\Filament\Resources\UsersResource\RelationManagers;
 use Modules\Acceso\Models\users;
 
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 
 use Filament\Forms;
 use Filament\Forms\Components\TextInput;
@@ -201,8 +201,8 @@ class UsersResource extends Resource
                     ->icon('heroicon-o-key')
                     ->color('warning')
                     ->modalHeading(fn (users $record) => 'Nueva contraseña para ' . $record->usu_nmbcom)
-                    ->modalSubheading('El usuario entra con su cédula y esta contraseña, tanto en el panel como en la app de la tablet.')
-                    ->modalButton('Cambiar')
+                    ->modalDescription('El usuario entra con su cédula y esta contraseña, tanto en el panel como en la app de la tablet.')
+                    ->modalSubmitActionLabel('Cambiar')
                     ->form([
                         Forms\Components\TextInput::make('password')
                             ->label('Contraseña nueva')
@@ -257,10 +257,10 @@ class UsersResource extends Resource
 
                 Tables\Actions\Action::make('darDeBaja')
                     ->label('Registrar baja')
-                    ->icon('heroicon-o-user-remove')
+                    ->icon('heroicon-o-user-minus')
                     ->color('danger')
                     ->modalHeading('Registrar la baja del guardia')
-                    ->modalSubheading('Se cierran sus asignaciones del cuadrante y se abre una vacante por cada turno futuro que tenía programado.')
+                    ->modalDescription('Se cierran sus asignaciones del cuadrante y se abre una vacante por cada turno futuro que tenía programado.')
                     ->form([
                         Select::make('motivo')
                             ->label('Motivo')
@@ -332,7 +332,7 @@ class UsersResource extends Resource
 
     public static function canDelete($record): bool { return false; }
 
-    protected static function shouldRegisterNavigation(): bool {
+    public static function shouldRegisterNavigation(): bool {
         return PerfilPanel::puedeGestionarPersonal();
     }
 

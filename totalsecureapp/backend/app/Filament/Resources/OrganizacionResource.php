@@ -9,10 +9,10 @@ use App\Support\PerfilPanel;
 use App\Filament\Resources\OrganizacionResource\Pages;
 use App\Filament\Resources\OrganizacionResource\RelationManagers;
 use Modules\Administracion\Models\Organizacion;
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 
 use Filament\Forms;
 use Filament\Forms\Components\TextInput;
@@ -40,7 +40,7 @@ class OrganizacionResource extends Resource {
     protected static ?string $modelLabel = 'cliente';
     protected static ?string $pluralModelLabel = 'clientes';
     protected static ?string $navigationLabel = 'Clientes';
-    protected static ?string $navigationIcon = 'heroicon-o-office-building';
+    protected static ?string $navigationIcon = 'heroicon-o-building-office';
 
     public static function form(Form $form): Form
     {
@@ -128,7 +128,7 @@ class OrganizacionResource extends Resource {
 
     public static function canDelete($record): bool { return false; }
 
-    protected static function shouldRegisterNavigation(): bool {
+    public static function shouldRegisterNavigation(): bool {
         return PerfilPanel::puedeConfigurarSistema();
     }
 

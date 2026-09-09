@@ -4,7 +4,7 @@ namespace App\Filament\Resources\UsersResource\Pages;
 
 use App\Filament\Resources\UsersResource;
 use App\helpers;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
 class EditUsers extends EditRecord
@@ -15,7 +15,7 @@ class EditUsers extends EditRecord
         return [ $this->getSaveFormAction() ];
     }
 
-    protected function getActions(): array {
+    protected function getHeaderActions(): array {
         return [
             Actions\DeleteAction::make(),
             Actions\Action::make('Volver a Usuarios')

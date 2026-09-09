@@ -10,10 +10,10 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Resources\RelationManagers\Concerns\CanCreate;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
 use Filament\Tables\Actions\Action;
 use Filament\Support\Actions\Modal\Actions\Action as ModalAction;
@@ -29,7 +29,7 @@ class InstitucionMarcadoresRelationManager extends RelationManager
     protected static ?string $recordTitleAttribute = 'InstitucionMarcadores';
 
 
-    public static function form(Form $form): Form
+    public function form(Form $form): Form
     {
         return $form
             ->schema([
@@ -149,7 +149,7 @@ class InstitucionMarcadoresRelationManager extends RelationManager
                     ->columnSpan('full'),
             ]);
     }
-    public static function table(Table $table): Table
+    public function table(Table $table): Table
     {
         return $table
             ->columns([
@@ -191,7 +191,7 @@ class InstitucionMarcadoresRelationManager extends RelationManager
                     ->label('qrcode')
                     ->url(fn ($record) => route('qrcode.point', helpers::CryptCypher($record->im_code)))
                     ->openUrlInNewTab()
-                    ->icon('heroicon-o-qrcode')
+                    ->icon('heroicon-o-qr-code')
                     ->color('primary'),
                 Tables\Actions\EditAction::make()
                     ->mutateFormDataUsing(function (array $data): array {

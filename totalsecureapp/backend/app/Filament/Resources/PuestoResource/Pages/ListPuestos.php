@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\PuestoResource\Pages;
 
 use App\Filament\Resources\PuestoResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
 
 class ListPuestos extends ListadoBase

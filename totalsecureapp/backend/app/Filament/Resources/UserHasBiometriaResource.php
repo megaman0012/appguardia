@@ -2,15 +2,16 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Tables\Etiqueta;
 use App\Support\PerfilPanel;
 
 use App\Filament\Resources\UserHasBiometriaResource\Pages;
 use App\Filament\Resources\UserHasBiometriaResource\RelationManagers;
 
 use Filament\Forms\Components\DatePicker;
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
@@ -70,7 +71,7 @@ class UserHasBiometriaResource extends Resource
                     ->searchable(),
                 BadgeColumn::make('bio_is_entrada')->size('sm')
                     ->label('Tipo')
-                    ->enum([ 1 => 'Entrada', 0 => 'Salida' ])
+                    ->formatStateUsing(Etiqueta::de([ 1 => 'Entrada', 0 => 'Salida' ]))
                     ->colors([
                         'success' => fn ($state): bool => $state === 1 || $state === '1',
                         'danger' => fn ($state): bool => $state === 0 || $state === '0',

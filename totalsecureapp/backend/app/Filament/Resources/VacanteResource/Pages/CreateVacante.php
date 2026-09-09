@@ -18,7 +18,7 @@ class CreateVacante extends CreateRecord
 {
     protected static string $resource = VacanteResource::class;
 
-    protected function getTitle(): string
+    public function getTitle(): string
     {
         return 'Pedir cobertura';
     }

@@ -4,14 +4,14 @@ namespace App\Filament\Resources\InvListaProductoResource\Pages;
 
 use App\Filament\Resources\InvListaProductoResource;
 use App\helpers;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
 class EditInvListaProducto extends EditRecord
 {
     protected static string $resource = InvListaProductoResource::class;
 
-    protected function getTitle(): string { return 'Editar Listas'; }
+    public function getTitle(): string { return 'Editar Listas'; }
 
     protected function getFormActions(): array
     {
@@ -20,7 +20,7 @@ class EditInvListaProducto extends EditRecord
         ];
     }
 
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
         return [
             Actions\DeleteAction::make(),
@@ -32,7 +32,12 @@ class EditInvListaProducto extends EditRecord
         ];
     }
 
-    public function save(bool $shouldRedirect = true): void
+    /*
+     * ⚠️ La firma sigue a Filament 3: `EditRecord::save()` gano el segundo
+     * parametro `$shouldSendSavedNotification`. Con la firma de la 2 es un
+     * error fatal de PHP al cargar la clase, o sea aplicacion caida.
+     */
+    public function save(bool $shouldRedirect = true, bool $shouldSendSavedNotification = true): void
     {
         try {
             parent::save($shouldRedirect);

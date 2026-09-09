@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\UserHasInstitucionResource\Pages;
 
 use App\Filament\Resources\UserHasInstitucionResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
 
 class ListUserHasInstitucions extends ListadoBase
@@ -14,7 +14,7 @@ class ListUserHasInstitucions extends ListadoBase
         return [ Actions\CreateAction::make()->label("Asignar Institucion") ];
     }
 
-    protected function getTitle(): string {
+    public function getTitle(): string {
         return 'Usuario > Institucion';
     }
 }

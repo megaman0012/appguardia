@@ -5,14 +5,14 @@ namespace App\Filament\Resources\UserHasGestionResource\Pages;
 use App\Filament\Resources\UserHasGestionResource;
 use App\helpers;
 use Filament\Notifications\Notification;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Validation\ValidationException;
 use Modules\Acceso\Models\user_has_gestions;
 
 class EditUserHasGestion extends EditRecord {
     protected static string $resource = UserHasGestionResource::class;
-    protected function getActions(): array {
+    protected function getHeaderActions(): array {
         return [
             Actions\Action::make('Volver a Gestion')
                 ->label('Volver')
@@ -26,7 +26,7 @@ class EditUserHasGestion extends EditRecord {
         return [ $this->getSaveFormAction() ];
     }
 
-    protected function getTitle(): string {
+    public function getTitle(): string {
         return 'Editar Gestion';
     }
 

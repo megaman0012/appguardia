@@ -9,7 +9,7 @@ use App\Support\PerfilPanel;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Notifications\Notification;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -26,7 +26,7 @@ class ListUsers extends ListadoBase
             // de los errores de carga: el modelo sale con datos de esta base.
             Actions\Action::make('descargarModelo')
                 ->label('Modelo de carga')
-                ->icon('heroicon-o-download')
+                ->icon('heroicon-o-arrow-down-tray')
                 ->color('secondary')
                 ->action(fn () => $this->descargarModelo())
                 ->visible(fn () => PerfilPanel::puedeGestionarPersonal()),
@@ -35,27 +35,27 @@ class ListUsers extends ListadoBase
             // crear trescientos usuarios es la mitad del valor de la carga.
             Actions\Action::make('revisarCarga')
                 ->label('Revisar archivo')
-                ->icon('heroicon-o-search')
+                ->icon('heroicon-o-magnifying-glass')
                 ->color('secondary')
                 ->modalHeading('Revisar el archivo sin crear nada')
-                ->modalSubheading('Se leen todas las filas y se informan los problemas. No se escribe nada en la base.')
+                ->modalDescription('Se leen todas las filas y se informan los problemas. No se escribe nada en la base.')
                 ->form($this->campoDeArchivo())
                 ->action(fn (array $data) => $this->revisar($data))
                 ->visible(fn () => PerfilPanel::puedeGestionarPersonal()),
 
             Actions\Action::make('cargarUsuarios')
                 ->label('Cargar usuarios')
-                ->icon('heroicon-o-upload')
+                ->icon('heroicon-o-arrow-up-tray')
                 ->color('primary')
                 ->modalHeading('Cargar usuarios desde un archivo')
-                ->modalSubheading('Crea el usuario, su rol, su gestión abierta y el vínculo a sus locales. Las claves temporales se muestran al terminar: anótelas, no se vuelven a mostrar.')
+                ->modalDescription('Crea el usuario, su rol, su gestión abierta y el vínculo a sus locales. Las claves temporales se muestran al terminar: anótelas, no se vuelven a mostrar.')
                 ->form($this->campoDeArchivo())
                 ->action(fn (array $data) => $this->cargar($data))
                 ->visible(fn () => PerfilPanel::puedeGestionarPersonal()),
         ];
     }
 
-    protected function getTitle(): string
+    public function getTitle(): string
     {
         return 'Usuarios';
     }

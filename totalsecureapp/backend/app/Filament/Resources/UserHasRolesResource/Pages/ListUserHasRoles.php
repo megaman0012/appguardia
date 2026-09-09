@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\UserHasRolesResource\Pages;
 
 use App\Filament\Resources\UserHasRolesResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
 
 class ListUserHasRoles extends ListadoBase
@@ -16,7 +16,7 @@ class ListUserHasRoles extends ListadoBase
         ];
     }
 
-    protected function getTitle(): string {
+    public function getTitle(): string {
         return 'Usuarios > Perfiles';
     }
 

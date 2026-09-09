@@ -3,6 +3,7 @@
 namespace Modules\Acceso\Models;
 
 use App\Support\PerfilPanel;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Notifications\Notifiable;
@@ -47,7 +48,18 @@ class users extends Authenticatable implements FilamentUser, HasName{
         return $this->usu_nmbcom;
     }
 
-    public function canAccessFilament(): bool{
+    /**
+     * ⚠️ En Filament 2 el contrato `FilamentUser` pedia
+     * `canAccessFilament(): bool`; en **Filament 3 es
+     * `canAccessPanel(Panel $panel): bool`**, con el panel como argumento
+     * porque una aplicacion puede tener varios. Dejar el nombre viejo hace que
+     * el modelo no implemente el contrato y PHP aborte con «contains 1 abstract
+     * method and must therefore be declared abstract».
+     *
+     * Aca hay un solo panel, asi que el argumento se ignora.
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
         return PerfilPanel::puedeEntrarAlPanel();
     }
 

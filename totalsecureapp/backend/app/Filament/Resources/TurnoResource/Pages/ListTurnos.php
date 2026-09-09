@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\TurnoResource\Pages;
 
 use App\Filament\Resources\TurnoResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
 
 class ListTurnos extends ListadoBase

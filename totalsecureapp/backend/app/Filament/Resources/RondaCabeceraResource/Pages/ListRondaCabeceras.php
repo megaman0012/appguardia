@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\RondaCabeceraResource\Pages;
 
 use App\Filament\Resources\RondaCabeceraResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
 
 class ListRondaCabeceras extends ListadoBase {

@@ -16,7 +16,7 @@ class ViewVacante extends ViewRecord
 {
     protected static string $resource = VacanteResource::class;
 
-    protected function getTitle(): string
+    public function getTitle(): string
     {
         return 'Vacante';
     }

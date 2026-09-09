@@ -5,7 +5,7 @@ namespace App\Filament\Resources\UserHasGestionResource\Pages;
 use App\Filament\Resources\UserHasGestionResource;
 use App\helpers;
 use Filament\Notifications\Notification;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Validation\ValidationException;
 use Modules\Acceso\Models\user_has_gestions;
@@ -20,7 +20,7 @@ class CreateUserHasGestion extends CreateRecord
         ];
     }
 
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
         return [
             Actions\Action::make('Volver a Gestion')
@@ -31,7 +31,7 @@ class CreateUserHasGestion extends CreateRecord
         ];
     }
 
-    protected function getTitle(): string {
+    public function getTitle(): string {
         return 'Crear Gestion';
     }
 

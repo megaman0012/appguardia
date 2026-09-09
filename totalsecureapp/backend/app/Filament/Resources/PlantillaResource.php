@@ -9,10 +9,10 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -36,7 +36,7 @@ class PlantillaResource extends Resource
     protected static ?string $modelLabel = 'cuadrante';
     protected static ?string $pluralModelLabel = 'cuadrantes';
     protected static ?string $navigationLabel = 'Cuadrantes';
-    protected static ?string $navigationIcon = 'heroicon-o-template';
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-group';
     protected static ?int $navigationSort = 2;
 
     protected const RELACIONES_TABLA = ['institucion'];
@@ -106,7 +106,7 @@ class PlantillaResource extends Resource
                 // la pantalla de edición la tiene cerrada.
                 Tables\Actions\Action::make('grilla')
                     ->label('Ver grilla')
-                    ->icon('heroicon-o-view-grid')
+                    ->icon('heroicon-o-squares-2x2')
                     ->color('secondary')
                     ->url(fn (Plantilla $record) => static::getUrl('grilla', ['record' => $record])),
                 Tables\Actions\EditAction::make(),
@@ -136,7 +136,7 @@ class PlantillaResource extends Resource
         return false;
     }
 
-    protected static function shouldRegisterNavigation(): bool
+    public static function shouldRegisterNavigation(): bool
     {
         return PerfilPanel::puedeOperar();
     }

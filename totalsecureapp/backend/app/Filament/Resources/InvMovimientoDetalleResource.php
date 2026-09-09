@@ -2,13 +2,14 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Tables\Etiqueta;
 use App\Filament\Resources\InvMovimientoDetalleResource\Pages;
 use App\Support\PerfilPanel;
 use Filament\Forms;
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\BooleanColumn;
@@ -61,7 +62,7 @@ class InvMovimientoDetalleResource extends Resource
     protected static ?string $modelLabel = 'detalle';
     protected static ?string $pluralModelLabel = 'detalles';
     protected static ?string $navigationLabel = 'Detalle de movimiento';
-    protected static ?string $navigationIcon = 'heroicon-o-collection';
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static bool $shouldRegisterNavigation = false;
 
     public static function form(Form $form): Form { return $form->schema([]); }
@@ -108,11 +109,11 @@ class InvMovimientoDetalleResource extends Resource
                     ->tooltip(fn ($record) => $record->md_observacion),
                 BadgeColumn::make('md_estado')->size('sm')
                     ->label('Estado')
-                    ->enum([
+                    ->formatStateUsing(Etiqueta::de([
                         MovimientoDetalle::ESTADO_OK     => 'OK',
                         MovimientoDetalle::ESTADO_FALTA  => 'Falta',
                         MovimientoDetalle::ESTADO_DANADO => 'Dañado',
-                    ])
+                    ]))
                     ->colors([
                         'success' => MovimientoDetalle::ESTADO_OK,
                         'warning' => MovimientoDetalle::ESTADO_FALTA,

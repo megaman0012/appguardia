@@ -86,11 +86,9 @@ class PlantillaImportPanelTest extends TestCase
     public function test_el_archivo_subido_llega_al_servicio_y_carga_el_cuadrante(): void
     {
         $this->pagina()
-            ->call('mountAction', 'importar')
-            ->set('mountedActionData.archivo', $this->subir(
+            ->callAction('importar', ['archivo' => $this->subir(
                 "cedula;puesto;dia;hora_inicio;hora_fin\n1111111111;Garita;LUN;06:00;14:00\n"
-            ))
-            ->call('callMountedAction')
+            )])
             ->assertHasNoErrors();
 
         $this->assertSame(1, PlantillaFranja::where('pf_pl_id', $this->plantilla->pl_id)->count());
@@ -99,11 +97,9 @@ class PlantillaImportPanelTest extends TestCase
     public function test_el_archivo_no_queda_guardado_en_el_servidor(): void
     {
         $this->pagina()
-            ->call('mountAction', 'importar')
-            ->set('mountedActionData.archivo', $this->subir(
+            ->callAction('importar', ['archivo' => $this->subir(
                 "cedula;puesto;dia;hora_inicio;hora_fin\n1111111111;Garita;LUN;06:00;14:00\n"
-            ))
-            ->call('callMountedAction');
+            )]);
 
         // Ya quedó volcado en la plantilla: conservarlo solo acumularía copias
         // del cuadrante en disco.
@@ -113,11 +109,9 @@ class PlantillaImportPanelTest extends TestCase
     public function test_un_archivo_con_errores_no_escribe_nada(): void
     {
         $this->pagina()
-            ->call('mountAction', 'importar')
-            ->set('mountedActionData.archivo', $this->subir(
+            ->callAction('importar', ['archivo' => $this->subir(
                 "cedula;puesto;dia;hora_inicio;hora_fin\n9999999999;Garita;LUN;06:00;14:00\n"
-            ))
-            ->call('callMountedAction');
+            )]);
 
         $this->assertSame(0, PlantillaFranja::where('pf_pl_id', $this->plantilla->pl_id)->count());
     }
@@ -130,7 +124,13 @@ class PlantillaImportPanelTest extends TestCase
 
         $r->assertFileDownloaded('cuadrante-' . $this->plantilla->pl_id . '.csv');
 
-        $csv = base64_decode(data_get($r->payload, 'effects.download.content'));
+        /*
+         * ⚠️ En Livewire 2 el contenido de la descarga se leia de
+         * `$r->payload['effects']['download']['content']`. **Livewire 3 no
+         * expone `payload`** y el test moria con «Property [$payload] not
+         * found». La respuesta trae los efectos en `effects()`.
+         */
+        $csv = base64_decode(data_get($r->effects, 'download.content'));
 
         // Con BOM: sin él, Excel abre "ANDÉN" como "ANDÃ‰N" y el archivo vuelve
         // con los puestos irreconocibles.

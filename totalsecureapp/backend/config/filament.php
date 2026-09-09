@@ -1,353 +1,38 @@
 <?php
 
-use Filament\Http\Middleware\Authenticate;
-use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Http\Middleware\MirrorConfigToSubpackages;
-use Filament\Pages;
-use Filament\Widgets;
-use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
-use Illuminate\Cookie\Middleware\EncryptCookies;
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
-use Illuminate\Routing\Middleware\SubstituteBindings;
-use Illuminate\Session\Middleware\AuthenticateSession;
-use Illuminate\Session\Middleware\StartSession;
-use Illuminate\View\Middleware\ShareErrorsFromSession;
+/*
+|--------------------------------------------------------------------------
+| Lo que queda de config/filament.php
+|--------------------------------------------------------------------------
+|
+| En Filament 2 este archivo configuraba el panel entero. En Filament 3 el
+| panel se declara en `App\Providers\Filament\AdminPanelProvider` y de este
+| archivo sobreviven solo unas pocas claves que la libreria sigue leyendo
+| directamente del config.
+|
+| El resto -- ruta, marca, guard, ancho de contenido, middleware, grupos del
+| menu, descubrimiento de recursos -- se mudo al proveedor. Ver la tabla de
+| equivalencias que esta documentada ahi.
+|
+*/
 
 return [
 
+    /*
+     * Disco donde Filament guarda lo que se sube desde el panel. Era
+     * `default_filesystem_disk` y es la unica clave del archivo viejo que
+     * **no** tiene equivalente encadenable en el `Panel`.
+     */
+    'default_filesystem_disk' => env('FILAMENT_FILESYSTEM_DISK', 'public'),
 
     /*
-    |--------------------------------------------------------------------------
-    | Filament Path
-    |--------------------------------------------------------------------------
-    |
-    | The default is `admin` but you can change it to whatever works best and
-    | doesn't conflict with the routing in your application.
-    |
-    */
+     * Cache de los componentes que Filament descubre. `null` deja el valor por
+     * defecto de la libreria.
+     */
+    'assets_path' => null,
 
-    'path' => env('FILAMENT_PATH', 'admin'),
+    'cache_path' => base_path('bootstrap/cache/filament'),
 
-    /*
-    |--------------------------------------------------------------------------
-    | Filament Core Path
-    |--------------------------------------------------------------------------
-    |
-    | This is the path which Filament will use to load its core routes and assets.
-    | You may change it if it conflicts with your other routes.
-    |
-    */
-
-    'core_path' => env('FILAMENT_CORE_PATH', 'filament'),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Filament Domain
-    |--------------------------------------------------------------------------
-    |
-    | You may change the domain where Filament should be active. If the domain
-    | is empty, all domains will be valid.
-    |
-    */
-
-    'domain' => env('FILAMENT_DOMAIN'),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Homepage URL
-    |--------------------------------------------------------------------------
-    |
-    | This is the URL that Filament will redirect the user to when they click
-    | on the sidebar's header.
-    |
-    */
-
-    'home_url' => '/',
-
-    /*
-    |--------------------------------------------------------------------------
-    | Brand Name
-    |--------------------------------------------------------------------------
-    |
-    | This will be displayed on the login page and in the sidebar's header.
-    |
-    */
-
-    'brand' => env('APP_NAMES', 'Total Secure'),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Auth
-    |--------------------------------------------------------------------------
-    |
-    | This is the configuration that Filament will use to handle authentication
-    | into the admin panel.
-    |
-    */
-
-    'auth' => [
-        'guard' => env('FILAMENT_AUTH_GUARD', 'web'),
-        'pages' => [
-            'login' => \App\Http\Livewire\Auth\Login::class,
-        ],
-        'route' => 'filament.auth.login',
-        'middleware' => ['auth'],
-
-
-    ],
-    'user_model' => Modules\Acceso\Models\users::class,
-
-    /*
-    |--------------------------------------------------------------------------
-    | Pages
-    |--------------------------------------------------------------------------
-    |
-    | This is the namespace and directory that Filament will automatically
-    | register pages from. You may also register pages here.
-    |
-    */
-
-    'pages' => [
-        'namespace' => 'App\\Filament\\Pages',
-        'path' => app_path('Filament/Pages'),
-        'register' => [
-            Pages\Dashboard::class,
-        ],
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Resources
-    |--------------------------------------------------------------------------
-    |
-    | This is the namespace and directory that Filament will automatically
-    | register resources from. You may also register resources here.
-    |
-    */
-
-    'resources' => [
-        'namespace' => 'App\\Filament\\Resources',
-        'path' => app_path('Filament/Resources'),
-        'register' => [],
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Widgets
-    |--------------------------------------------------------------------------
-    |
-    | This is the namespace and directory that Filament will automatically
-    | register dashboard widgets from. You may also register widgets here.
-    |
-    */
-
-    'widgets' => [
-        'namespace' => 'App\\Filament\\Widgets',
-        'path' => app_path('Filament/Widgets'),
-        'register' => [
-            Widgets\AccountWidget::class,
-            Widgets\FilamentInfoWidget::class,
-        ],
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Livewire
-    |--------------------------------------------------------------------------
-    |
-    | This is the namespace and directory that Filament will automatically
-    | register Livewire components inside.
-    |
-    */
-
-    'livewire' => [
-        'namespace' => 'App\\Filament',
-        'path' => app_path('Filament'),
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Dark mode
-    |--------------------------------------------------------------------------
-    |
-    | By enabling this feature, your users are able to select between a light
-    | and dark appearance for the admin panel, or let their system decide.
-    |
-    */
-
-    'dark_mode' => env('FILAMENT_DARK'),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Database notifications
-    |--------------------------------------------------------------------------
-    |
-    | By enabling this feature, your users are able to open a slide-over within
-    | the admin panel to view their database notifications.
-    |
-    */
-
-    'database_notifications' => [
-        'enabled' => false,
-        'polling_interval' => '30s',
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Broadcasting
-    |--------------------------------------------------------------------------
-    |
-    | By uncommenting the Laravel Echo configuration, you may connect your
-    | admin panel to any Pusher-compatible websockets server.
-    |
-    | This will allow your admin panel to receive real-time notifications.
-    |
-    */
-
-    'broadcasting' => [
-
-        // 'echo' => [
-        //     'broadcaster' => 'pusher',
-        //     'key' => env('VITE_PUSHER_APP_KEY'),
-        //     'cluster' => env('VITE_PUSHER_APP_CLUSTER'),
-        //     'wsHost' => env('VITE_PUSHER_HOST'),
-        //     'wsPort' => env('VITE_PUSHER_PORT'),
-        //     'wssPort' => env('VITE_PUSHER_PORT'),
-        //     'forceTLS' => true,
-        // ],
-
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Layout
-    |--------------------------------------------------------------------------
-    |
-    | This is the configuration for the general layout of the admin panel.
-    |
-    | You may configure the max content width from `xl` to `7xl`, or `full`
-    | for no max width.
-    |
-    */
-
-    'layout' => [
-        'actions' => [
-            'modal' => [
-                'actions' => [
-                    'alignment' => 'left',
-                ],
-            ],
-        ],
-        'forms' => [
-            'actions' => [
-                'alignment' => 'left',
-                'are_sticky' => false,
-            ],
-            'have_inline_labels' => false,
-        ],
-        'footer' => [
-            // Filament pinta su propio logo con enlace a filamentphp.com al pie
-            // de cada pagina. Es un panel que ven los clientes: la marca de la
-            // libreria no va ahi.
-            'should_show_logo' => false,
-        ],
-        // 'full' = sin ancho maximo.
-        //
-        // Con null, Filament aplica su tope de 7xl (~1280 px) y en un monitor
-        // ancho el listado queda como un recuadro con espacio vacio a los lados.
-        // Estas tablas tienen muchas columnas -- cliente, local, guardia, fecha,
-        // ubicacion, distancia -- y con el tope hay que ir corriendo la barra
-        // horizontal para leer una fila completa.
-        'max_content_width' => 'full',
-        'notifications' => [
-            'vertical_alignment' => 'top',
-            'alignment' => 'right',
-        ],
-        'sidebar' => [
-            'is_collapsible_on_desktop' => false,
-            'groups' => [
-                'are_collapsible' => true,
-            ],
-            'width' => null,
-            'collapsed_width' => null,
-        ],
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Favicon
-    |--------------------------------------------------------------------------
-    |
-    | This is the path to the favicon used for pages in the admin panel.
-    |
-    */
-
-    'favicon' => null,
-
-    /*
-    |--------------------------------------------------------------------------
-    | Default Avatar Provider
-    |--------------------------------------------------------------------------
-    |
-    | This is the service that will be used to retrieve default avatars if one
-    | has not been uploaded.
-    |
-    */
-
-    'default_avatar_provider' => \Filament\AvatarProviders\UiAvatarsProvider::class,
-
-    /*
-    |--------------------------------------------------------------------------
-    | Default Filesystem Disk
-    |--------------------------------------------------------------------------
-    |
-    | This is the storage disk Filament will use to put media. You may use any
-    | of the disks defined in the `config/filesystems.php`.
-    |
-    */
-
-    'default_filesystem_disk' => env('FILAMENT_FILESYSTEM_DRIVER', 'public'),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Google Fonts
-    |--------------------------------------------------------------------------
-    |
-    | This is the URL for Google Fonts that should be loaded. You may use any
-    | font, or set to `null` to prevent any Google Fonts from loading.
-    |
-    | When using a custom font, you should also set the font family in your
-    | custom theme's `tailwind.config.js` file.
-    |
-    */
-
-    'google_fonts' => 'https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&display=swap',
-
-    /*
-    |--------------------------------------------------------------------------
-    | Middleware
-    |--------------------------------------------------------------------------
-    |
-    | You may customize the middleware stack that Filament uses to handle
-    | requests.
-    |
-    */
-
-    'middleware' => [
-        'auth' => [
-            Authenticate::class,
-        ],
-        'base' => [
-            EncryptCookies::class,
-            AddQueuedCookiesToResponse::class,
-            StartSession::class,
-            AuthenticateSession::class,
-            ShareErrorsFromSession::class,
-            VerifyCsrfToken::class,
-            SubstituteBindings::class,
-            DispatchServingFilamentEvent::class,
-            MirrorConfigToSubpackages::class,
-        ],
-    ],
+    'livewire_loading_delay' => 'default',
 
 ];

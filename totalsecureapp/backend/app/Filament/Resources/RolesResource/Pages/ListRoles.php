@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\RolesResource\Pages;
 
 use App\Filament\Resources\RolesResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
 
 class ListRoles extends ListadoBase

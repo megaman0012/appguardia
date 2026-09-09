@@ -4,7 +4,7 @@ namespace App\Filament\Resources\UserHasRolesResource\Pages;
 
 use App\Filament\Resources\UserHasRolesResource;
 use App\helpers;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateUserHasRoles extends CreateRecord
@@ -16,11 +16,11 @@ class CreateUserHasRoles extends CreateRecord
         ];
     }
 
-    protected function getTitle(): string {
+    public function getTitle(): string {
         return 'Asignacion de Perfil';
     }
 
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
         return [
             Actions\Action::make('Volver a Perfiles')

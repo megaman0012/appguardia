@@ -4,7 +4,7 @@ namespace App\Filament\Resources\OrganizacionInstitucionResource\Pages;
 
 use App\Filament\Resources\OrganizacionInstitucionResource;
 use App\Support\PerfilPanel;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
 
 /**
@@ -21,7 +21,7 @@ class ViewOrganizacionInstitucion extends ViewRecord
 {
     protected static string $resource = OrganizacionInstitucionResource::class;
 
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
         return [
             // Solo aparece para quien si puede editar.
@@ -30,7 +30,7 @@ class ViewOrganizacionInstitucion extends ViewRecord
         ];
     }
 
-    protected function getTitle(): string
+    public function getTitle(): string
     {
         return 'Local';
     }

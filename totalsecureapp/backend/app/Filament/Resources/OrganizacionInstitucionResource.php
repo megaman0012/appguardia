@@ -11,17 +11,17 @@ use App\Filament\Resources\OrganizacionInstitucionResource\RelationManagers\Inst
 use Modules\Administracion\Models\OrganizacionInstitucion;
 use Modules\Administracion\Models\Organizacion;
 use Session;
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 
 use Filament\Forms;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Tabs;
-use Filament\Forms\Components\Tab;
+use Filament\Forms\Components\Tabs\Tab;
 
 use Filament\Tables;
 use Filament\Tables\Actions\Action;
@@ -65,7 +65,10 @@ class OrganizacionInstitucionResource extends Resource
                 // Antes la unicidad colgaba de la sede. Sin sede, lo que
                 // distingue a dos locales homonimos es la ciudad: "Bodega
                 // Norte" puede existir en Quito y en Guayaquil.
-                ->unique(table: static::$model, callback: function ($rule, $get) {
+                // ⚠️ En Filament 3 el argumento se llama `modifyRuleUsing`, no
+                // `callback`. Con el nombre viejo el formulario revienta al
+                // dibujarse con «Unknown named parameter $callback».
+                ->unique(table: static::$model, modifyRuleUsing: function ($rule, $get) {
                     return $rule->where('ins_cd_id', $get('ins_cd_id'));
                 }, ignoreRecord: true),
 
@@ -241,7 +244,7 @@ class OrganizacionInstitucionResource extends Resource
         return PerfilPanel::puedeAdministrarLocales();
     }
 
-    protected static function shouldRegisterNavigation(): bool {
+    public static function shouldRegisterNavigation(): bool {
         return PerfilPanel::puedeOperar();
     }
 

@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\InvMovimientoResource\Pages;
 
 use App\Filament\Resources\InvMovimientoResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateInvMovimiento extends CreateRecord

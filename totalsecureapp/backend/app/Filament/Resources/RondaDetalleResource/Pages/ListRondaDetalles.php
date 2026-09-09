@@ -5,7 +5,7 @@ namespace App\Filament\Resources\RondaDetalleResource\Pages;
 use App\Filament\Resources\RondaDetalleResource;
 use App\Filament\Resources\RondaCabeceraResource;
 
-use Filament\Pages\Actions;
+use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
 
 class ListRondaDetalles extends ListadoBase
@@ -22,7 +22,7 @@ class ListRondaDetalles extends ListadoBase
         ];
     }
 
-    protected function getTitle(): string {
+    public function getTitle(): string {
         $ronda_id = request()->query('ronda');
         return 'Ronda '.$ronda_id.' Detalle';
     }

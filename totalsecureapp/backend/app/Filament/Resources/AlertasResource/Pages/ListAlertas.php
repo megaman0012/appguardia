@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\AlertasResource\Pages;
 
 use App\Filament\Resources\AlertasResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
 
 class ListAlertas extends ListadoBase

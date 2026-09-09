@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\UserHasBiometriaResource\Pages;
 
 use App\Filament\Resources\UserHasBiometriaResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
 
 class ListUserHasBiometrias extends ListadoBase
@@ -12,7 +12,7 @@ class ListUserHasBiometrias extends ListadoBase
 
     protected function accionesPropias(): array { return []; }
 
-    protected function getTitle(): string {
+    public function getTitle(): string {
         return 'Biometria';
     }
 }

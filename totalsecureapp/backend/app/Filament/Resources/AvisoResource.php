@@ -2,12 +2,13 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Tables\Etiqueta;
 use App\Filament\Resources\AvisoResource\Pages;
 use App\Support\PerfilPanel;
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -63,7 +64,7 @@ class AvisoResource extends Resource
                 TextColumn::make('ae_titulo')->size('sm')->label('Aviso')->limit(30),
                 BadgeColumn::make('ae_resultado')
                     ->label('Resultado')
-                    ->enum(AvisoEnvio::RESULTADOS)
+                    ->formatStateUsing(Etiqueta::de(AvisoEnvio::RESULTADOS))
                     ->colors([
                         'success'   => AvisoEnvio::ENVIADO,
                         'danger'    => AvisoEnvio::FALLIDO,
@@ -126,7 +127,7 @@ class AvisoResource extends Resource
         return false;
     }
 
-    protected static function shouldRegisterNavigation(): bool
+    public static function shouldRegisterNavigation(): bool
     {
         return PerfilPanel::puedeOperar();
     }

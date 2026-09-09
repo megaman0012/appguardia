@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Tables\Etiqueta;
 use App\Filament\Resources\VacanteResource\Pages;
 use App\Services\VacanteService;
 use App\Support\PerfilPanel;
@@ -10,10 +11,10 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TimePicker;
 use Filament\Notifications\Notification;
-use Filament\Resources\Form;
+use Filament\Forms\Form;
 use App\Filament\Tables\Descarga;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -37,7 +38,7 @@ class VacanteResource extends Resource
     protected static ?string $navigationLabel = 'Cobertura de turnos';
     protected static ?string $modelLabel = 'vacante';
     protected static ?string $pluralModelLabel = 'vacantes';
-    protected static ?string $navigationIcon = 'heroicon-o-user-add';
+    protected static ?string $navigationIcon = 'heroicon-o-user-plus';
     // Sin esto Filament derivaría la ruta del modelo: /admin/turno-vacantes.
     protected static ?string $slug = 'vacantes';
     protected static ?int $navigationSort = 3;
@@ -50,14 +51,14 @@ class VacanteResource extends Resource
     }
 
     /** Lo urgente es lo que espera decisión: por confirmar o abierto sin cubrir. */
-    protected static function getNavigationBadge(): ?string
+    public static function getNavigationBadge(): ?string
     {
         $pendientes = static::getEloquentQuery()->vivas()->count();
 
         return $pendientes > 0 ? (string) $pendientes : null;
     }
 
-    protected static function getNavigationBadgeColor(): ?string
+    public static function getNavigationBadgeColor(): ?string
     {
         return 'danger';
     }
@@ -116,7 +117,7 @@ class VacanteResource extends Resource
                 TextColumn::make('ausente.usu_nmbcom')->size('sm')->label('No cubrió')->default('—')->toggleable(),
                 BadgeColumn::make('tv_motivo')
                     ->label('Motivo')
-                    ->enum(TurnoVacante::MOTIVOS)
+                    ->formatStateUsing(Etiqueta::de(TurnoVacante::MOTIVOS))
                     ->colors([
                         'danger'  => 'falta',
                         'primary' => 'refuerzo',
@@ -130,7 +131,7 @@ class VacanteResource extends Resource
                     ]),
                 BadgeColumn::make('tv_estado')
                     ->label('Estado')
-                    ->enum(TurnoVacante::ESTADOS)
+                    ->formatStateUsing(Etiqueta::de(TurnoVacante::ESTADOS))
                     ->colors([
                         'danger'  => TurnoVacante::DETECTADA,
                         'warning' => TurnoVacante::ABIERTA,
@@ -174,11 +175,11 @@ class VacanteResource extends Resource
             ->actions([
                 Tables\Actions\Action::make('abrir')
                     ->label('Confirmar y ofrecer')
-                    ->icon('heroicon-o-speakerphone')
+                    ->icon('heroicon-o-megaphone')
                     ->color('warning')
                     ->requiresConfirmation()
                     ->modalHeading('Confirmar que el puesto quedó vacío')
-                    ->modalSubheading('Se ofrecerá primero a los guardias de este local. Si en media hora nadie se postula, se abre al resto de la ciudad.')
+                    ->modalDescription('Se ofrecerá primero a los guardias de este local. Si en media hora nadie se postula, se abre al resto de la ciudad.')
                     ->visible(fn (TurnoVacante $record) => $record->tv_estado === TurnoVacante::DETECTADA
                         && PerfilPanel::puedeOperar())
                     ->action(function (TurnoVacante $record) {
@@ -236,7 +237,7 @@ class VacanteResource extends Resource
                     ->icon('heroicon-o-x-circle')
                     ->color('secondary')
                     ->requiresConfirmation()
-                    ->modalSubheading('Use esto si el guardia apareció o si el puesto no se va a cubrir.')
+                    ->modalDescription('Use esto si el guardia apareció o si el puesto no se va a cubrir.')
                     ->visible(fn (TurnoVacante $record) => $record->estaViva() && PerfilPanel::puedeOperar())
                     ->action(function (TurnoVacante $record) {
                         app(VacanteService::class)->cancelar($record, \Session::get('usuID'), 'Cerrada desde el panel');
@@ -285,7 +286,7 @@ class VacanteResource extends Resource
         ];
     }
 
-    protected static function shouldRegisterNavigation(): bool
+    public static function shouldRegisterNavigation(): bool
     {
         return PerfilPanel::puedeOperar();
     }

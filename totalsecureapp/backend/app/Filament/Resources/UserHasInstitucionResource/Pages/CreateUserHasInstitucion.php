@@ -4,7 +4,7 @@ namespace App\Filament\Resources\UserHasInstitucionResource\Pages;
 
 use App\Filament\Resources\UserHasInstitucionResource;
 use App\helpers;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
@@ -20,7 +20,7 @@ class CreateUserHasInstitucion extends CreateRecord
         ];
     }
 
-    protected function getActions(): array {
+    protected function getHeaderActions(): array {
         return [
             Actions\Action::make('Volver a UsInst')
                 ->label('Volver')
@@ -30,7 +30,7 @@ class CreateUserHasInstitucion extends CreateRecord
         ];
     }
 
-    protected function getTitle(): string {
+    public function getTitle(): string {
         return 'Crear Usuario > Institucion';
     }
 

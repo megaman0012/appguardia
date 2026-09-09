@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\PlantillaResource\Pages;
 
 use App\Filament\Resources\PlantillaResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use App\Filament\Pages\ListadoBase;
 
 class ListPlantillas extends ListadoBase
@@ -15,7 +15,7 @@ class ListPlantillas extends ListadoBase
         return [Actions\CreateAction::make()->label('Nuevo cuadrante')];
     }
 
-    protected function getTitle(): string
+    public function getTitle(): string
     {
         return 'Cuadrantes de turnos';
     }

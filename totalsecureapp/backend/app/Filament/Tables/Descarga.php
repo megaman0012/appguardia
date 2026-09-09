@@ -64,7 +64,7 @@ class Descarga
     {
         return ExportAction::make('descargar')
             ->label('Descargar')
-            ->icon('heroicon-o-download')
+            ->icon('heroicon-o-arrow-down-tray')
             ->color('secondary')
             ->before(fn () => self::margenDeMemoria())
             ->exports([self::hoja($nombre)]);
@@ -74,7 +74,7 @@ class Descarga
     {
         return ExportBulkAction::make('descargar')
             ->label('Descargar selección')
-            ->icon('heroicon-o-download')
+            ->icon('heroicon-o-arrow-down-tray')
             ->before(fn () => self::margenDeMemoria())
             ->exports([self::hoja($nombre)]);
     }
