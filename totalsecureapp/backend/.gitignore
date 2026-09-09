@@ -36,3 +36,11 @@ composer.phar
 
 # Salida del generador de marca: se rehace con scripts/generar-marca.php
 /scripts/marca/salida
+
+# Recursos que publica Filament con `php artisan filament:assets`. Se
+# regeneran en cada despliegue y cambian con cada version de la libreria: 11
+# archivos y ~1 MB que no aportan nada al historial. **Hay que correr ese
+# comando al desplegar**, o el panel sale sin estilos ni tipografia.
+/public/css/filament
+/public/js/filament
+/public/fonts
