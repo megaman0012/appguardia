@@ -73,7 +73,12 @@ class CargaMasivaDeUsuariosTest extends TestCase
         $u = users::where('usu_cedula', '0912345678')->first();
         $this->assertNotNull($u);
         $this->assertSame(1, (int) $u->usu_state);
-        $this->assertSame('JUAN CARLOS PEREZ GOMEZ', $u->usu_nmbcom);
+        // ⚠️ **Apellidos primero.** Antes esto escribia «JUAN CARLOS PEREZ
+        // GOMEZ», al reves que el panel y que la mayoria de la data heredada.
+        // Desde el 2026-09-09 los tres caminos de alta comparten
+        // `NombreDePersona` y el mismo orden, para que el listado quede
+        // ordenado por apellido.
+        $this->assertSame('PEREZ GOMEZ JUAN CARLOS', $u->usu_nmbcom);
 
         // 2. Rol
         $rol = DB::table('user_has_roles')->join('roles', 'roles.id', '=', 'user_has_roles.role_id')

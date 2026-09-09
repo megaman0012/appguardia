@@ -24,6 +24,8 @@ use Modules\MobileApp\Models\users;
  * y opcionalmente el vinculo a instituciones, sin el cual la app movil no puede
  * registrar nada.
  */
+use App\Support\NombreDePersona;
+
 class CrearUsuario extends Command
 {
     protected $signature = 'usuario:crear
@@ -91,12 +93,9 @@ class CrearUsuario extends Command
             return self::FAILURE;
         }
 
-        $partesNombre    = preg_split('/\s+/', trim($nombres), -1, PREG_SPLIT_NO_EMPTY) ?: [$nombres];
-        $partesApellido  = preg_split('/\s+/', trim($apellidos), -1, PREG_SPLIT_NO_EMPTY) ?: [$apellidos];
 
         $usuario = DB::transaction(function () use (
-            $cedula, $nombres, $apellidos, $email, $password, $rolFila, $instituciones,
-            $partesNombre, $partesApellido
+            $cedula, $nombres, $apellidos, $email, $password, $rolFila, $instituciones
         ) {
             // usu_password esta en $hidden y no en $fillable, asi que create()
             // lo descartaria en silencio: se asigna directo, que evita la
@@ -105,11 +104,9 @@ class CrearUsuario extends Command
             $usuario = new users();
             $usuario->usu_cedula   = $cedula;
             $usuario->usu_tipdoc   = 'C';
-            $usuario->usu_nmbcom   = trim("{$nombres} {$apellidos}");
-            $usuario->usu_nmb1     = $partesNombre[0];
-            $usuario->usu_nmb2     = $partesNombre[1] ?? $partesNombre[0];
-            $usuario->usu_ape1     = $partesApellido[0];
-            $usuario->usu_ape2     = $partesApellido[1] ?? $partesApellido[0];
+            foreach (NombreDePersona::componer($nombres, $apellidos) as $columna => $valor) {
+                $usuario->$columna = $valor;
+            }
             $usuario->usu_email    = $email;
             $usuario->usu_state    = 1;
             $usuario->usu_password = $password;

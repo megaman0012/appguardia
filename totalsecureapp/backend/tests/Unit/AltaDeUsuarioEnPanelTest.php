@@ -3,6 +3,8 @@
 namespace Tests\Unit;
 
 use App\Filament\Resources\UsersResource\Pages\CreateUsers;
+use App\Filament\Resources\UsersResource\Pages\EditUsers;
+use PHPUnit\Framework\Attributes\Test;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -60,11 +62,10 @@ class AltaDeUsuarioEnPanelTest extends TestCase
             ->fillForm(array_merge([
                 'usu_cedula' => '0912345678',
                 'usu_tipdoc' => 'C',
-                'usu_nmbcom' => 'JUAN PEREZ',
-                'usu_ape1'   => 'PEREZ',
-                'usu_ape2'   => 'GOMEZ',
-                'usu_nmb1'   => 'JUAN',
-                'usu_nmb2'   => 'CARLOS',
+                // El formulario ya no pide las cinco columnas: pide dos, y
+                // `NombreDePersona` deriva el resto. Ver NombreDePersonaTest.
+                'apellidos'  => 'PEREZ GOMEZ',
+                'nombres'    => 'JUAN CARLOS',
                 'usu_email'  => 'juan@example.com',
                 'usu_state'  => true,
                 'rol'        => 'Vigilante',
@@ -117,8 +118,7 @@ class AltaDeUsuarioEnPanelTest extends TestCase
         $pagina = Livewire::test(CreateUsers::class)
             ->fillForm([
                 'usu_cedula' => '0912345678', 'usu_tipdoc' => 'C',
-                'usu_nmbcom' => 'JUAN PEREZ', 'usu_ape1' => 'PEREZ', 'usu_ape2' => 'GOMEZ',
-                'usu_nmb1' => 'JUAN', 'usu_nmb2' => 'CARLOS',
+                'apellidos' => 'PEREZ GOMEZ', 'nombres' => 'JUAN CARLOS',
                 'usu_email' => 'juan@example.com', 'usu_state' => true,
                 'rol' => 'Vigilante', 'locales' => [$this->local],
             ])
@@ -136,5 +136,59 @@ class AltaDeUsuarioEnPanelTest extends TestCase
     {
         // Sin rol, el usuario no ve ningun modulo: no tiene sentido crearlo asi.
         $this->crear(['rol' => null])->assertHasFormErrors(['rol']);
+    }
+
+    #[Test]
+    public function el_alta_compone_el_nombre_con_los_apellidos_primero(): void
+    {
+        // El formulario recibe dos campos y la base guarda cinco columnas. Si el
+        // cableado de `mutateFormDataBeforeCreate` se rompiera, Filament
+        // guardaria la fila igual pero con el nombre vacio -- y nadie lo notaria
+        // hasta ver el listado.
+        $this->crear();
+
+        $u = users::where('usu_cedula', '0912345678')->first();
+
+        $this->assertSame('PEREZ GOMEZ JUAN CARLOS', $u->usu_nmbcom);
+        $this->assertSame('PEREZ', $u->usu_ape1);
+        $this->assertSame('GOMEZ', $u->usu_ape2);
+        $this->assertSame('JUAN', $u->usu_nmb1);
+        $this->assertSame('CARLOS', $u->usu_nmb2);
+    }
+
+    #[Test]
+    public function el_correo_dejo_de_ser_obligatorio(): void
+    {
+        // **505 de los 880 usuarios no tienen correo**: la mayoria de los
+        // guardias no usa uno. Exigirlo obligaba a inventar direcciones falsas,
+        // que rompen el restablecimiento de clave sin que nadie se entere.
+        $this->crear(['usu_email' => null])->assertHasNoFormErrors();
+
+        // Cadena vacia y no null: `usu_email` es NOT NULL y asi estan guardados
+        // los 505 usuarios sin correo. Se respeta la convencion de la tabla.
+        $this->assertSame('', users::where('usu_cedula', '0912345678')->value('usu_email'));
+    }
+
+    #[Test]
+    public function editar_no_duplica_ni_pierde_el_nombre(): void
+    {
+        // La ida y vuelta completa por la pagina: abrir el registro llena los dos
+        // campos desde las columnas, y guardar sin tocar nada tiene que dejar el
+        // nombre EXACTAMENTE igual.
+        //
+        // Es la trampa clasica de este patron: si `descomponer()` mostrara la
+        // repeticion del ETL (`usu_nmb2 = usu_nmb1`), cada guardado agregaria una
+        // palabra y el nombre creceria en cada edicion.
+        $this->crear();
+        $id = users::where('usu_cedula', '0912345678')->value('id');
+
+        $antes = users::find($id)->usu_nmbcom;
+
+        Livewire::test(EditUsers::class, ['record' => $id])
+            ->assertFormSet(['apellidos' => 'PEREZ GOMEZ', 'nombres' => 'JUAN CARLOS'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame($antes, users::find($id)->usu_nmbcom);
     }
 }

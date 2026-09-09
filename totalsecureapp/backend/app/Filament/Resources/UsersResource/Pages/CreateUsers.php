@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\UsersResource\Pages;
 
 use App\Filament\Resources\UsersResource;
+use App\Support\NombreDePersona;
 use App\Services\UsuarioImportService;
 use App\helpers;
 use Filament\Notifications\Notification;
@@ -40,6 +41,22 @@ class CreateUsers extends CreateRecord
     {
         $data['created_user'] = auth()->id();
         $data['updated_user'] = auth()->id();
+
+        // El formulario pide «Apellidos» y «Nombres»; la base guarda cinco
+        // columnas. La conversion vive en un solo lugar, compartida con
+        // `usuario:crear` y con la carga masiva.
+        $data = array_merge($data, NombreDePersona::componer(
+            $data['nombres'] ?? null,
+            $data['apellidos'] ?? null,
+        ));
+        unset($data['nombres'], $data['apellidos']);
+
+        // ⚠️ `usu_email` es NOT NULL, y los 505 usuarios sin correo estan
+        // guardados como CADENA VACIA. Filament manda `null` cuando el campo
+        // queda en blanco, y eso revienta con «null value violates not-null
+        // constraint» al guardar. Se respeta la convencion que ya tiene la
+        // tabla en vez de pelearse con ella.
+        $data['usu_email'] = $data['usu_email'] ?? '';
 
         // ⚠️ **Antes esto era `Hash::make('123456')`**, la misma clave para
         // todos los usuarios creados desde el panel, y nadie se enteraba porque

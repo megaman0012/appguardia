@@ -32,6 +32,8 @@ use Modules\MobileApp\Models\users;
  * escribe nada y devuelve los problemas fila por fila. Revisar antes de crear
  * trescientos usuarios es la mitad del valor.
  */
+use App\Support\NombreDePersona;
+
 class UsuarioImportService
 {
     /** Columnas esperadas, en cualquier orden. */
@@ -199,18 +201,13 @@ class UsuarioImportService
                 $usuario = new users();
                 $usuario->usu_cedula = $fila['cedula'];
                 $usuario->usu_tipdoc = 'C';
-                $usuario->usu_nmbcom = trim($fila['nombres'] . ' ' . $fila['apellidos']);
-
-                $nombres = preg_split('/\s+/', $fila['nombres'], -1, PREG_SPLIT_NO_EMPTY) ?: [$fila['nombres']];
-                $apellidos = preg_split('/\s+/', $fila['apellidos'], -1, PREG_SPLIT_NO_EMPTY) ?: [$fila['apellidos']];
-
-                // El segundo nombre y apellido son NOT NULL en la base. Cuando
-                // la persona no tiene, se repite el primero: es lo que hizo el
-                // ETL con los 665 usuarios que vinieron sin desglosar.
-                $usuario->usu_nmb1 = $nombres[0];
-                $usuario->usu_nmb2 = $nombres[1] ?? $nombres[0];
-                $usuario->usu_ape1 = $apellidos[0];
-                $usuario->usu_ape2 = $apellidos[1] ?? $apellidos[0];
+                // ⚠️ Esto escribia el nombre completo como «nombres apellidos»,
+                // al reves que el panel y que la mayoria de la data heredada.
+                // Ahora los tres caminos de alta usan la misma clase y el mismo
+                // orden: **apellidos primero**.
+                foreach (NombreDePersona::componer($fila['nombres'], $fila['apellidos']) as $columna => $valor) {
+                    $usuario->$columna = $valor;
+                }
 
                 $usuario->usu_email = $fila['email'];
                 $usuario->usu_state = 1;

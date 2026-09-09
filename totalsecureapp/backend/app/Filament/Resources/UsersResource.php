@@ -33,6 +33,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Session;
 
+use Illuminate\Database\Eloquent\Model;
+
 class UsersResource extends Resource
 {
     public static function getNavigationGroup(): ?string {
@@ -58,26 +60,63 @@ class UsersResource extends Resource
                 TextInput::make('usu_tipdoc')
                     ->label('Tipo de Documento')
                     ->required(),
-                TextInput::make('usu_nmbcom')
-                    ->label('Nombre Completo')
-                    ->required(),
-                TextInput::make('usu_ape1')
-                    ->label('Primer Apellido')
-                    ->required(),
-                TextInput::make('usu_ape2')
-                    ->label('Segundo Apellido')
-                    ->required(),
-                TextInput::make('usu_nmb1')
-                    ->label('Primer Nombre')
-                    ->required(),
-                TextInput::make('usu_nmb2')
-                    ->label('Segundo Nombre')
-                    ->required(),
+                // ⚠️ **Dos campos, no cinco.** Este formulario pedia el nombre
+                // CINCO veces y todas obligatorias -- Nombre Completo, Primer y
+                // Segundo Apellido, Primer y Segundo Nombre --, mientras que
+                // `usuario:crear` y la carga masiva pedian solo estos dos y
+                // derivaban el resto. Ademas de la molestia, nada impedia que el
+                // nombre completo dijera una cosa y las piezas otra, y el nombre
+                // completo es el que se lee en 52 lugares del codigo.
+                //
+                // No son columnas: se componen y descomponen en las paginas de
+                // alta y edicion con `App\Support\NombreDePersona`. De ahi el
+                // `dehydrated(false)`, sin el cual Filament intentaria guardar
+                // una columna `nombres` que no existe.
+                // ⚠️ **NO lleva `dehydrated(false)`.** Parece lo correcto para un
+                // campo que no es columna, pero hace que Filament lo saque de
+                // `$data` ANTES de `mutateFormDataBeforeCreate`, asi que la
+                // pagina recibia los dos vacios y guardaba el nombre en blanco.
+                // El registro se creaba igual, sin error, y solo se notaba al
+                // mirar el listado. Se dejan hidratados y las paginas los
+                // consumen y los quitan.
+                TextInput::make('apellidos')
+                    ->label('Apellidos')
+                    ->required()
+                    ->maxLength(120)
+                    ->helperText('Los dos apellidos, separados por un espacio.'),
+                TextInput::make('nombres')
+                    ->label('Nombres')
+                    ->required()
+                    ->maxLength(120),
                 TextInput::make('usu_email')
                     ->label('Correo Electrónico')
+                    // ⚠️ Era obligatorio, y **505 de los 880 usuarios no tienen
+                    // correo**: la mayoria de los guardias no usa uno. Exigirlo
+                    // obligaba a inventar direcciones falsas, que es peor que no
+                    // tener ninguna -- una direccion inventada rompe el
+                    // restablecimiento de clave sin que nadie se entere.
                     ->email()
-                    ->required()
-                    ->unique(table: static::$model, column: 'usu_email', ignoreRecord: true),
+                    // La columna es NOT NULL y los 505 sin correo estan guardados
+                    // como cadena vacia, no como null. Por eso la unicidad se
+                    // comprueba a mano: con `->unique()` de Filament, el segundo
+                    // usuario sin correo chocaria contra los 505 vacios que ya
+                    // hay. No hay indice unico en la base, asi que el vacio
+                    // repetido no rompe nada.
+                    ->rule(function (?Model $record) {
+                        return function (string $attribute, $value, \Closure $fail) use ($record) {
+                            if (blank($value)) {
+                                return;
+                            }
+
+                            $existe = static::$model::where('usu_email', $value)
+                                ->when($record, fn ($q) => $q->whereKeyNot($record->getKey()))
+                                ->exists();
+
+                            if ($existe) {
+                                $fail('Ese correo ya está registrado para otro usuario.');
+                            }
+                        };
+                    }),
                 Toggle::make('usu_state')
                     ->label('Estado')
                     ->required()
