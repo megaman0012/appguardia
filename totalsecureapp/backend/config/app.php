@@ -170,6 +170,13 @@ return [
          */
         App\Providers\AppServiceProvider::class,
         /*
+         * Pisa correo y WhatsApp con lo que se guardo desde el panel. Va
+         * DESPUES de AppServiceProvider y su boot() esta entero dentro de un
+         * try/catch: consulta la base al arrancar, y un proveedor que falla no
+         * rompe una pantalla, no deja levantar nada.
+         */
+        App\Providers\AjustesServiceProvider::class,
+        /*
          * El panel se declara como proveedor, no en `config/filament.php`.
          * Ese archivo TODAVIA EXISTE, pero recortado: le quedan 8 claves que
          * la libreria sigue leyendo del config. Todo lo demas -- ruta, marca,
