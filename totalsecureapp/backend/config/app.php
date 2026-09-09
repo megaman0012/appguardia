@@ -170,8 +170,12 @@ return [
          */
         App\Providers\AppServiceProvider::class,
         /*
-         * El panel de Filament 3 se declara como proveedor, no como
-         * `config/filament.php` (que ya no existe). Ver AdminPanelProvider.
+         * El panel se declara como proveedor, no en `config/filament.php`.
+         * Ese archivo TODAVIA EXISTE, pero recortado: le quedan 8 claves que
+         * la libreria sigue leyendo del config. Todo lo demas -- ruta, marca,
+         * guard, ancho, middleware, grupos del menu, descubrimiento de
+         * recursos -- vive en AdminPanelProvider, que lleva la tabla de
+         * equivalencias.
          */
         App\Providers\Filament\AdminPanelProvider::class,
         App\Providers\AuthServiceProvider::class,
