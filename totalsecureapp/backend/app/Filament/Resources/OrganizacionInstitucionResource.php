@@ -196,9 +196,19 @@ class OrganizacionInstitucionResource extends Resource
                 // Quien puede editar va a la edicion; el Supervisor a la vista de
                 // solo lectura, que muestra los mismos marcadores sin permitir
                 // modificarlos.
+                //
+                // ⚠️ Esto era `route('filament.resources.organizacion-institucions.edit')`
+                // y en Filament 3+ ese nombre ya no existe: el nombre de la ruta
+                // paso a llevar el id del panel en el medio
+                // (`filament.admin.resources....`). El listado de Locales
+                // respondia 500 entero, porque la URL se resuelve al DIBUJAR la
+                // fila, no al hacer clic.
+                //
+                // `getUrl()` lo pregunta al propio recurso, asi que no vuelve a
+                // romperse si el panel cambia de id ni si se renombra la pagina.
                 ->url(fn ($record) => PerfilPanel::puedeAdministrarLocales()
-                    ? route('filament.resources.organizacion-institucions.edit', $record)
-                    : route('filament.resources.organizacion-institucions.view', $record))
+                    ? self::getUrl('edit', ['record' => $record])
+                    : self::getUrl('view', ['record' => $record]))
                 ->color('primary')
             ])
             ->bulkActions([

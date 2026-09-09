@@ -122,7 +122,10 @@ class UserHasGestionResource extends Resource{
                     ->label('Editar')
                     ->visible(fn ($record) => $record->ug_finish == 0)
                     ->icon('heroicon-o-pencil')  // Icono de editar
-                    ->url(fn ($record) => route('filament.resources.user-has-gestions.edit1', $record))
+                    // Misma causa que en Locales: el nombre viejo de la ruta de
+                    // Filament 2 ya no existe y el listado daba 500. La clave de
+                    // la pagina es `edit1`, no `edit` -- ver getPages().
+                    ->url(fn ($record) => self::getUrl('edit1', ['record' => $record]))
                     ->color('primary')
             ])
             ->bulkActions([
