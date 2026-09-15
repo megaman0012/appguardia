@@ -32,7 +32,20 @@ return new class extends Migration
                 $table->uuid('id')->primary();
                 $table->string('type');
                 $table->morphs('notifiable');
-                $table->text('data');
+
+                /*
+                 * ⚠️ `json`, no `text`.
+                 *
+                 * La migracion estandar de Laravel usa `text` porque esta
+                 * pensada para MySQL. En PostgreSQL el operador `->>` --que
+                 * Filament usa para contar las notificaciones no leidas de la
+                 * campanita-- **solo existe para `json` y `jsonb`**, asi que con
+                 * `text` cualquier pagina del panel devuelve 500 en cuanto hay
+                 * sesion iniciada. Lo corrige tambien la migracion
+                 * `2026_09_15_300001`, para las instalaciones donde esta ya
+                 * habia corrido.
+                 */
+                $table->json('data');
                 $table->timestamp('read_at')->nullable();
                 $table->timestamps();
             });
