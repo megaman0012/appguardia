@@ -189,12 +189,24 @@ El destino es la tabla `turno`, una fila por guardia y día trabajado:
 `tu_ins_code`, `tu_usu_id`, `tu_puesto_id`, `tu_fecha`, `tu_hora_inicio_prevista`,
 `tu_hora_fin_prevista`, `tu_estado='programado'`.
 
-**Tres cosas bloquean la carga y son del cliente, no técnicas:**
+**Diccionario de marcas: RESUELTO (2026-09-15).** Estaba en el propio Excel, al
+pie de cada hoja, en una tabla «NOMENCLATURA / TURNOS LABORAL / PROYECTO».
+Confirmado con el cliente: **D = 07:00–19:00, N = 19:00–07:00, X = libre**, que
+son el 98% de la malla.
 
-1. **El diccionario de marcas.** `D`, `N` y `X` se entienden (diurno, nocturno,
-   libre) pero hacen falta las **horas exactas** de cada uno. Y `A`, `T`, `C`,
-   `B`, `Z`, `D1`, `D2`, `V2`, `P` no están documentados en ninguna parte del
-   archivo: son 351 turnos que no se pueden cargar a ciegas.
+⚠️ **El detalle que decide si la carga sale bien: la nomenclatura es POR
+PROYECTO, no global.** `D1` es 10:00–16:00 en Cementerio, 07:00–13:00 en
+Neurociencias y 08:00–20:00 en Chilenita. En C.C. y Lotería hay **tres
+definiciones distintas de `D`** (07–19, 10–22, 08–19), una por proyecto. Cada
+mini-tabla aparece justo encima del bloque al que aplica, así que el importador
+tiene que leer el documento **en orden** y asociar cada tabla al bloque que la
+sigue. Uno que tome una nomenclatura global se equivoca en cientos de turnos.
+
+**Cifras reales, ya con las filas de encabezado descartadas** (`L M M J V S D` se
+colaban como si fueran marcas): **269 guardias, 40 proyectos, 5.008 turnos
+trabajados** y 1.487 días libres.
+
+**Lo que sigue bloqueando la carga:**
 2. **El cruce de personas.** El Excel trae nombres y apellidos; la base
    identifica por cédula. El cruce por nombre tiene homónimos y hay que
    resolverlo caso por caso. `NO VERIFICADO`: cuántos de los ~300 guardias
@@ -380,10 +392,15 @@ para que no dependa de volver a iniciar sesión.
 Todo lo de la app está en el código y **falta compilar el APK**, que se deja para
 el final a pedido del cliente. Los cambios del panel ya están en producción.
 
-- **3.1 Flujo tras el login.** Resultó estar **ya implementado**:
-  `ProfileSelectionScreen` salta sola cuando el guardia tiene un solo perfil (sólo
-  se ve un instante de carga). Lo que sí se hizo fue poner **Inventario primero**
-  en el menú, que es lo que se revisa al recibir el puesto.
+- **3.1 Flujo tras el login.** Orden confirmado con el cliente el 2026-09-15:
+  **inicio de sesión → elegir local → biometría → menú con Inventario primero**.
+  La selección de perfil ya se saltaba sola cuando el guardia tiene uno solo.
+
+  El local va **antes** del marcaje porque el servidor compara la ubicación
+  contra el punto de marcación *del local*: sin local elegido no hay contra qué
+  validar. Esa pantalla de biometría lleva un «Omitir», para que alguien que ya
+  marcó —o que no puede marcar en ese momento— no quede encerrado sin llegar a
+  su trabajo.
 - **3.2 Botón de GPS en biometría.** Antes la ubicación se leía *dentro* del
   envío: si fallaba, se abortaba la marcación **con la foto ya tomada** y había
   que repetir todo. Ahora se pide al abrir la pantalla, se muestra con su

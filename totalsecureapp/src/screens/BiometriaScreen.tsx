@@ -29,8 +29,14 @@ interface TurnoDelDia {
   minutos_tardanza_display: string | null;
 }
 
-export const BiometriaScreen = ({ navigation }: { navigation: any }) => {
+export const BiometriaScreen = ({ navigation, route }: { navigation: any; route?: any }) => {
   const { institucion } = useAuth();
+  // Se llega acá de dos formas: desde el menú, para marcar en cualquier momento,
+  // o recién elegido el local al empezar la jornada. En el segundo caso no hay
+  // pantalla anterior a la que volver: lo que sigue es el menú.
+  const alIniciarJornada: boolean = route?.params?.alIniciarJornada === true;
+  const continuar = () =>
+    alIniciarJornada ? navigation.replace('Home') : navigation.goBack();
   const [isEntrada, setIsEntrada] = useState(true);
   const [showCamera, setShowCamera] = useState(false);
   const [photo, setPhoto] = useState<{ uri: string } | null>(null);
@@ -164,7 +170,7 @@ export const BiometriaScreen = ({ navigation }: { navigation: any }) => {
         }
 
         Alert.alert('Éxito', detalle, [
-          { text: 'OK', onPress: () => navigation.goBack() },
+          { text: 'OK', onPress: continuar },
         ]);
       } else {
         Alert.alert('Error', data?.message || 'No se pudo guardar la marcación');
@@ -178,7 +184,22 @@ export const BiometriaScreen = ({ navigation }: { navigation: any }) => {
 
   return (
     <View style={styles.container}>
-      <Encabezado titulo="Marcación biométrica" onVolver={() => navigation.goBack()} />
+      <Encabezado
+        titulo="Marcación biométrica"
+        onVolver={continuar}
+        derecha={
+          alIniciarJornada ? (
+            // Un guardia que ya marcó, o que no puede marcar ahora, no puede
+            // quedarse encerrado en esta pantalla sin llegar a su trabajo.
+            <TouchableOpacity
+              onPress={() => navigation.replace('Home')}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Text style={styles.omitir}>Omitir</Text>
+            </TouchableOpacity>
+          ) : null
+        }
+      />
 
       {/* Con la tarjeta del turno, el selector, la cámara y el botón, en una
           pantalla chica el botón de registrar quedaba fuera de vista. */}
@@ -371,6 +392,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORES.fondoSuave,
     borderWidth: 1,
     borderColor: COLORES.borde,
+  },
+  omitir: {
+    color: COLORES.textoSobreMarca,
+    fontSize: 15,
+    fontWeight: '600',
   },
   gpsCaja: {
     flexDirection: 'row',

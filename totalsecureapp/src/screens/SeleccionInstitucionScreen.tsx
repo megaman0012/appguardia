@@ -44,7 +44,22 @@ export const SeleccionInstitucionScreen = ({ navigation }: { navigation: any }) 
 
   const seleccionar = async (inst: Institucion) => {
     await setInstitucion(inst);
-    navigation.replace('Home');
+
+    /*
+     * Del local se pasa a marcar, no al menú.
+     *
+     * El orden de la jornada es: entro, confirmo en qué puesto estoy, marco mi
+     * entrada y recién ahí empiezo a operar. Antes se caía en el menú y marcar
+     * era un paso más que había que acordarse de hacer.
+     *
+     * La selección de local va ANTES del marcaje a propósito: el servidor
+     * compara la ubicación contra el punto de marcación *del local*, así que sin
+     * local elegido no hay contra qué validar.
+     *
+     * `replace` y no `navigate`: volver atrás desde acá sería volver a elegir
+     * local con la sesión ya armada.
+     */
+    navigation.replace('Biometria', { alIniciarJornada: true });
   };
 
   const cerrarSesion = async () => {

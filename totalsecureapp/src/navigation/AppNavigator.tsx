@@ -23,7 +23,11 @@ export type RootStackParamList = {
   Alertas: undefined;
   Inventario: undefined;
   InventarioDetalle: { lp_id: number | string; lp_nombre: string };
-  Biometria: undefined;
+  /**
+   * `alIniciarJornada` marca la marcación de entrada a la que se llega justo
+   * después de elegir el local: de ahí se sigue al menú, no se vuelve atrás.
+   */
+  Biometria: { alIniciarJornada?: boolean } | undefined;
   Vacantes: undefined;
 };
 
