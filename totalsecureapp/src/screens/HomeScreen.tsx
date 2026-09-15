@@ -1,15 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { Encabezado } from '../components/Encabezado';
+import { MenuLateral } from '../components/MenuLateral';
+import { MODULOS } from '../utils/modulos';
 import { COLORES } from '../utils/tema';
 
 export const HomeScreen = ({ navigation }: { navigation: any }) => {
   const { user, perfil, logout, can } = useAuth();
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
   const nombres = user?.nombres || user?.usu_nombres || 'Usuario';
   const email = user?.email || user?.usu_email || '';
-  const acc = user?.acc || user?.usu_acc || '';
 
   const handleLogout = async () => {
     try {
@@ -28,28 +30,39 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
     ]);
   };
 
-  // Cada modulo se muestra solo si el perfil activo tiene el permiso de lectura.
-  // El backend vuelve a validarlo en cada endpoint (middleware permission.api).
-  const menu = [
-    { titulo: 'Rondas', permiso: 'rondas.ver', accion: () => navigation.navigate('RondaList') },
-    { titulo: 'Accesos', permiso: 'acceso.ver', accion: () => navigation.navigate('AccesoList') },
-    { titulo: 'Novedades', permiso: 'novedades.ver', accion: () => navigation.navigate('NovedadList') },
-    { titulo: 'Alertas', permiso: 'alertas.ver', accion: () => navigation.navigate('Alertas') },
-    { titulo: 'Inventario', permiso: 'inventario.ver', accion: () => navigation.navigate('Inventario') },
-    { titulo: 'Biometría', permiso: 'biometria.marcar', accion: () => navigation.navigate('Biometria') },
-    { titulo: 'Turnos disponibles', permiso: 'vacantes.ver', accion: () => navigation.navigate('Vacantes') },
-    { titulo: 'Perfil', permiso: 'perfil.ver', accion: () => navigation.navigate('Perfil') },
-  ].filter((item) => can(item.permiso));
+  /*
+   * La lista sale de `utils/modulos`, compartida con el menú lateral: antes
+   * estaba escrita acá y agregar un módulo en un sitio y olvidarlo en el otro
+   * era cuestión de tiempo.
+   *
+   * Cada módulo se muestra solo si el perfil activo tiene el permiso de lectura.
+   * El backend vuelve a validarlo en cada endpoint (middleware permission.api).
+   */
+  const menu = MODULOS.filter((item) => can(item.permiso));
 
   return (
     <View style={styles.container}>
       <Encabezado
         titulo="Total Secure"
+        // La hamburguesa ocupa el lugar de la flecha de volver, que en el Home
+        // no tiene a dónde ir.
+        onVolver={() => setMenuAbierto(true)}
+        iconoVolver="☰"
         derecha={
           <TouchableOpacity onPress={confirmarSalida} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <Text style={styles.salir}>Salir</Text>
           </TouchableOpacity>
         }
+      />
+
+      <MenuLateral
+        visible={menuAbierto}
+        onCerrar={() => setMenuAbierto(false)}
+        onIr={(pantalla) => navigation.navigate(pantalla)}
+        puede={can}
+        onSalir={confirmarSalida}
+        nombre={nombres}
+        perfil={perfil?.nombre}
       />
 
       {/*
@@ -65,14 +78,17 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
           {perfil && <Text style={styles.perfil}>{perfil.nombre}</Text>}
 
           {/*
-            El correo y el codigo de acceso ocupaban dos lineas cada uno con su
-            etiqueta encima, y empujaban el menu fuera de la pantalla. Se
-            muestran en una sola linea y solo si existen: 505 usuarios no tienen
-            correo cargado.
+            El correo ocupaba dos líneas con su etiqueta encima y empujaba el
+            menú fuera de la pantalla. Va en una sola línea y sólo si existe:
+            505 usuarios no tienen correo cargado.
+
+            El código de acceso **ya no se muestra acá**: esta pantalla vive en
+            la tablet del puesto, a la vista de quien pase. Quedó en Perfil,
+            oculto y visible a demanda.
           */}
-          {(email !== '' || acc !== '') && (
+          {email !== '' && (
             <Text style={styles.secundario} numberOfLines={1}>
-              {[email, acc && `Cód. ${acc}`].filter(Boolean).join('  ·  ')}
+              {email}
             </Text>
           )}
         </View>
@@ -86,10 +102,11 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
             {menu.map((item) => (
               <TouchableOpacity
                 key={item.permiso}
-                onPress={item.accion}
+                onPress={() => navigation.navigate(item.pantalla)}
                 style={styles.celda}
                 activeOpacity={0.7}
               >
+                <Text style={styles.celdaIcono}>{item.icono}</Text>
                 <Text style={styles.celdaTexto}>{item.titulo}</Text>
               </TouchableOpacity>
             ))}
@@ -157,6 +174,10 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 12,
     justifyContent: 'center',
+  },
+  celdaIcono: {
+    fontSize: 26,
+    marginBottom: 6,
   },
   celdaTexto: {
     fontSize: 16,

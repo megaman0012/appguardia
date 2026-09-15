@@ -375,7 +375,44 @@ para que no dependa de volver a iniciar sesión.
 
 ## Bloque 3 — Mejoras funcionales pedidas
 
-### App
+### ✅ Bloque 3 — HECHO (2026-09-15), salvo el APK
+
+Todo lo de la app está en el código y **falta compilar el APK**, que se deja para
+el final a pedido del cliente. Los cambios del panel ya están en producción.
+
+- **3.1 Flujo tras el login.** Resultó estar **ya implementado**:
+  `ProfileSelectionScreen` salta sola cuando el guardia tiene un solo perfil (sólo
+  se ve un instante de carga). Lo que sí se hizo fue poner **Inventario primero**
+  en el menú, que es lo que se revisa al recibir el puesto.
+- **3.2 Botón de GPS en biometría.** Antes la ubicación se leía *dentro* del
+  envío: si fallaba, se abortaba la marcación **con la foto ya tomada** y había
+  que repetir todo. Ahora se pide al abrir la pantalla, se muestra con su
+  precisión, y hay botón para reintentar sin perder nada. La precisión importa:
+  una lectura con 500 m de error es la que hace que un marcaje salga «fuera del
+  punto» sin que nadie se haya movido.
+- **3.3 Menú lateral con iconos.** Hecho con `Modal` y `Animated` del propio
+  React Native: `@react-navigation/drawer` arrastra dos módulos nativos, y acá
+  `android/` está versionado. Los módulos salen de `utils/modulos`, compartida
+  con el Home para que no puedan quedar desfasados.
+- **3.4 Novedades con filtro de días.** Más un selector **Mías / Del puesto**: el
+  endpoint devolvía sólo lo propio y de un día, así que al recibir el puesto no
+  había forma de leer el turno anterior. Los dos parámetros son opcionales, para
+  que el APK ya instalado siga funcionando. El listado ahora dice quién escribió
+  cada novedad.
+- **3.5 Código de acceso oculto**, en Perfil y también en el Home, donde también
+  se mostraba. Visible a demanda para dictarlo a soporte.
+- **3.6 y 3.7 «Personas dentro» (panel).** Pantalla nueva en Operación con quién
+  sigue adentro, búsqueda por documento, nombre, apellido y placa, y **acción de
+  registrar la salida** — que no existía en la web: `registrarSalida()` sólo la
+  llamaba la API de la tablet, así que un visitante que se iba por otra puerta
+  quedaba con el acceso abierto para siempre. Muestra cuánto lleva dentro cada
+  uno, en rojo a partir de doce horas, porque eso casi siempre es una salida que
+  nadie registró.
+- **3.8** ya se había hecho en el Bloque 2.
+
+20 tests nuevos entre los dos bloques del día. Suite: **493 en verde**.
+
+### 3-bis (diagnóstico original)
 
 - **3.1 Flujo posterior al login.** Hoy: login → selección de perfil →
   selección de local. Se pide llegar antes al local, y que de ahí se entre a

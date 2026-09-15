@@ -12,7 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
-import { getCurrentLocation } from '../utils/location';
+import { getCurrentLocation, Coords } from '../utils/location';
 import { CameraCapture } from '../components/CameraCapture';
 import { Encabezado } from '../components/Encabezado';
 import { ahoraDelDispositivo, useIdempotencia } from '../utils/idempotencia';
@@ -37,7 +37,38 @@ export const BiometriaScreen = ({ navigation }: { navigation: any }) => {
   const [enviando, setEnviando] = useState(false);
   const [turno, setTurno] = useState<TurnoDelDia | null>(null);
   const [cargandoTurno, setCargandoTurno] = useState(true);
+  const [coords, setCoords] = useState<Coords | null>(null);
+  const [ubicando, setUbicando] = useState(false);
+  const [errorUbicacion, setErrorUbicacion] = useState<string | null>(null);
   const { uuidPara, confirmar } = useIdempotencia();
+
+  /*
+   * La ubicación se pide por separado del envío, y ésta es la razón:
+   *
+   * antes se leía el GPS *dentro* del envío, así que una lectura fallida
+   * abortaba la marcación con la foto ya tomada, y el guardia tenía que
+   * repetirlo todo sin saber si la próxima vez iba a funcionar. Ahora se
+   * obtiene antes, se muestra lo que se obtuvo —con su precisión— y se puede
+   * reintentar las veces que haga falta sin perder nada.
+   */
+  const obtenerUbicacion = useCallback(async () => {
+    setUbicando(true);
+    setErrorUbicacion(null);
+    try {
+      setCoords(await getCurrentLocation());
+    } catch (e: any) {
+      setCoords(null);
+      setErrorUbicacion(e?.message || 'No se pudo obtener la ubicación');
+    } finally {
+      setUbicando(false);
+    }
+  }, []);
+
+  // Se intenta al abrir la pantalla para que, en el caso normal, ya esté lista
+  // cuando el guardia termina de tomarse la foto.
+  useEffect(() => {
+    obtenerUbicacion();
+  }, [obtenerUbicacion]);
 
   // El guardia necesita saber en qué puesto le toca y a qué hora antes de
   // marcar. Si la institución no usa turnos, la pantalla funciona igual.
@@ -80,16 +111,16 @@ export const BiometriaScreen = ({ navigation }: { navigation: any }) => {
       // Acá el GPS SÍ es obligatorio, al contrario que en una alerta: el
       // servidor compara la ubicación con el punto de marcación del local para
       // decidir si el guardia está en su puesto, y sin coordenada no hay nada
-      // que comparar. Lo que se mejora es el aviso: antes decía «No se pudo
-      // obtener la ubicación» y no sugería qué hacer.
-      let coords = { lat: '0', lng: '0' };
-      try {
-        coords = await getCurrentLocation();
-      } catch (e: any) {
+      // que comparar.
+      //
+      // La diferencia con antes es que ya no se lee acá: si falta, se avisa y
+      // **la foto se conserva**, así que reintentar es tocar un botón y no
+      // volver a empezar.
+      if (!coords) {
         Alert.alert(
           'Sin ubicación',
-          'Active el GPS y salga al aire libre unos segundos antes de marcar.\n\n' +
-            (e?.message || '')
+          'Toque «Obtener ubicación» antes de marcar. Si no la consigue, active el ' +
+            'GPS y acérquese a una ventana o salga al aire libre unos segundos.'
         );
         setEnviando(false);
         return;
@@ -203,6 +234,51 @@ export const BiometriaScreen = ({ navigation }: { navigation: any }) => {
       </View>
 
       {/*
+        El estado del GPS, a la vista y con su botón.
+
+        Antes no se mostraba nada: el guardia se enteraba de que no había
+        ubicación cuando ya había tomado la foto y pulsado enviar. La precisión
+        va porque una lectura con 500 m de error es la que hace que el marcaje
+        salga «fuera del punto» sin que nadie se haya movido del puesto.
+      */}
+      <View style={styles.gpsCaja}>
+        <View style={styles.gpsTexto}>
+          {ubicando ? (
+            <Text style={styles.gpsEstado}>Buscando ubicación…</Text>
+          ) : coords ? (
+            <>
+              <Text style={styles.gpsEstadoOk}>Ubicación lista</Text>
+              <Text style={styles.gpsDetalle}>
+                {Number(coords.lat).toFixed(5)}, {Number(coords.lng).toFixed(5)}
+                {coords.precision ? `  ·  ±${Math.round(coords.precision)} m` : ''}
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.gpsEstadoError}>Sin ubicación</Text>
+              <Text style={styles.gpsDetalle} numberOfLines={2}>
+                {errorUbicacion || 'Active el GPS y toque el botón.'}
+              </Text>
+            </>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={styles.gpsBoton}
+          onPress={obtenerUbicacion}
+          disabled={ubicando}
+        >
+          {ubicando ? (
+            <ActivityIndicator size="small" color={COLORES.textoSobreMarca} />
+          ) : (
+            <Text style={styles.gpsBotonTexto}>
+              {coords ? 'Actualizar' : 'Obtener ubicación'}
+            </Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/*
         La foto que se va a subir, visible.
 
         Antes la cámara guardaba la imagen en el estado y **no se mostraba en
@@ -295,6 +371,53 @@ const styles = StyleSheet.create({
     backgroundColor: COLORES.fondoSuave,
     borderWidth: 1,
     borderColor: COLORES.borde,
+  },
+  gpsCaja: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#DDD',
+  },
+  gpsTexto: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  gpsEstado: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORES.texto,
+  },
+  gpsEstadoOk: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1B7F3B',
+  },
+  gpsEstadoError: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORES.marca,
+  },
+  gpsDetalle: {
+    fontSize: 13,
+    color: COLORES.textoSuave,
+    marginTop: 2,
+  },
+  gpsBoton: {
+    backgroundColor: COLORES.marca,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 6,
+    minWidth: 110,
+    alignItems: 'center',
+  },
+  gpsBotonTexto: {
+    color: COLORES.textoSobreMarca,
+    fontWeight: '600',
+    fontSize: 14,
   },
   previewBotones: {
     flexDirection: 'row',

@@ -24,6 +24,7 @@ export const PerfilScreen = ({ navigation }: { navigation: any }) => {
   // Quien no active esto no recibe avisos de turnos por cubrir. Es a propósito:
   // si se le avisara a todos, en dos semanas nadie miraría los avisos.
   const [aceptaExtras, setAceptaExtras] = useState<boolean>(!!user?.usu_acepta_extras);
+  const [mostrarCodigo, setMostrarCodigo] = useState(false);
   const [guardandoExtras, setGuardandoExtras] = useState(false);
 
   const cambiarExtras = async (valor: boolean) => {
@@ -67,10 +68,21 @@ export const PerfilScreen = ({ navigation }: { navigation: any }) => {
           </>
         ) : null}
 
+        {/*
+          El código de acceso va oculto: la app corre en la tablet DEL PUESTO,
+          a la vista de quien pase, así que dejarlo escrito en pantalla es
+          repartirlo. Se puede mostrar a demanda para cuando haga falta dictarlo
+          a soporte, y vuelve a ocultarse al salir de la pantalla.
+        */}
         {acc ? (
           <>
             <Text style={styles.label}>Código de acceso</Text>
-            <Text style={styles.value}>{acc}</Text>
+            <TouchableOpacity onPress={() => setMostrarCodigo((v) => !v)} activeOpacity={0.7}>
+              <Text style={styles.value}>
+                {mostrarCodigo ? acc : '••••••'}
+                <Text style={styles.verCodigo}>{mostrarCodigo ? '  ocultar' : '  mostrar'}</Text>
+              </Text>
+            </TouchableOpacity>
           </>
         ) : null}
 
@@ -164,6 +176,11 @@ const styles = StyleSheet.create({
     color: COLORES.texto,
     fontWeight: '600',
     marginTop: 2,
+  },
+  verCodigo: {
+    fontSize: 13,
+    color: COLORES.marca,
+    fontWeight: '600',
   },
   subValue: {
     fontSize: 14,

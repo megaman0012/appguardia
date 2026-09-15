@@ -7,6 +7,12 @@ interface Props {
   titulo: string;
   /** Si se pasa, se dibuja la flecha de volver. */
   onVolver?: () => void;
+  /**
+   * Glifo del botón izquierdo. Por defecto la flecha de volver; el Home pone
+   * la hamburguesa del menú, que ocupa ese mismo lugar porque ahí no hay
+   * ninguna pantalla anterior a la que regresar.
+   */
+  iconoVolver?: string;
   /** Contenido opcional a la derecha: un badge, un botón. */
   derecha?: React.ReactNode;
 }
@@ -26,7 +32,7 @@ interface Props {
  * 2. **No parecía la app de nadie.** Fondo blanco, borde gris y texto `#333`.
  *    Ahora lleva el rojo de la marca y el título en blanco.
  */
-export const Encabezado: React.FC<Props> = ({ titulo, onVolver, derecha }) => {
+export const Encabezado: React.FC<Props> = ({ titulo, onVolver, iconoVolver, derecha }) => {
   const insets = useSafeAreaInsets();
 
   return (
@@ -44,9 +50,9 @@ export const Encabezado: React.FC<Props> = ({ titulo, onVolver, derecha }) => {
             // El área táctil que recomienda Android es 48dp: la flecha sola
             // mide 24 y en una tablet con guantes no se acierta.
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            accessibilityLabel="Volver"
+            accessibilityLabel={iconoVolver ? 'Abrir menú' : 'Volver'}
           >
-            <Text style={styles.flecha}>‹</Text>
+            <Text style={iconoVolver ? styles.glifo : styles.flecha}>{iconoVolver ?? '‹'}</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.volver} />
@@ -79,6 +85,11 @@ const styles = StyleSheet.create({
     fontSize: 34,
     lineHeight: 36,
     marginTop: -4,
+  },
+  glifo: {
+    color: COLORES.textoSobreMarca,
+    fontSize: 24,
+    lineHeight: 28,
   },
   titulo: {
     flex: 1,

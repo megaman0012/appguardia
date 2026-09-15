@@ -23,13 +23,24 @@ interface Novedad {
   nv_foto: string | null;
   nv_lat: string;
   nv_lng: string;
+  nv_autor?: string | null;
+  nv_usu_id?: number;
 }
+
+/** Rangos que se ofrecen en la pantalla. */
+const RANGOS = [
+  { dias: 1, etiqueta: 'Hoy' },
+  { dias: 7, etiqueta: '7 días' },
+  { dias: 30, etiqueta: '30 días' },
+];
 
 export const NovedadListScreen = ({ navigation }: { navigation: any }) => {
   const { institucion } = useAuth();
   const [novedades, setNovedades] = useState<Novedad[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [dias, setDias] = useState(1);
+  const [soloMias, setSoloMias] = useState(true);
 
   const insCode = institucion?.ins_code;
 
@@ -43,6 +54,11 @@ export const NovedadListScreen = ({ navigation }: { navigation: any }) => {
       const response = await api.post(API_ENDPOINTS.NOVEDAD.LIST_BY_DATE, {
         date: fecha,
         ins_code: insCode,
+        // `dias` cuenta hacia atrás desde hoy. El guardia sólo veía las de hoy,
+        // así que al recibir el puesto no había forma de leer lo del turno
+        // anterior.
+        dias,
+        alcance: soloMias ? 'propias' : 'local',
       });
       const data = response.data;
       if (data && Array.isArray(data.nvNovedad)) {
@@ -54,7 +70,7 @@ export const NovedadListScreen = ({ navigation }: { navigation: any }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [insCode]);
+  }, [insCode, dias, soloMias]);
 
   useEffect(() => {
     cargar();
@@ -66,7 +82,40 @@ export const NovedadListScreen = ({ navigation }: { navigation: any }) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backText}>‹ Volver</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Novedades del día</Text>
+        <Text style={styles.title}>Novedades</Text>
+      </View>
+
+      <View style={styles.filtros}>
+        <View style={styles.filtroFila}>
+          {RANGOS.map((r) => (
+            <TouchableOpacity
+              key={r.dias}
+              style={[styles.chip, dias === r.dias && styles.chipActivo]}
+              onPress={() => setDias(r.dias)}
+            >
+              <Text style={[styles.chipTexto, dias === r.dias && styles.chipTextoActivo]}>
+                {r.etiqueta}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={styles.filtroFila}>
+          <TouchableOpacity
+            style={[styles.chip, soloMias && styles.chipActivo]}
+            onPress={() => setSoloMias(true)}
+          >
+            <Text style={[styles.chipTexto, soloMias && styles.chipTextoActivo]}>Mías</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.chip, !soloMias && styles.chipActivo]}
+            onPress={() => setSoloMias(false)}
+          >
+            <Text style={[styles.chipTexto, !soloMias && styles.chipTextoActivo]}>
+              Del puesto
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <TouchableOpacity
@@ -89,11 +138,16 @@ export const NovedadListScreen = ({ navigation }: { navigation: any }) => {
             <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); cargar(); }} />
           }
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No hay novedades registradas hoy</Text>
+            <Text style={styles.emptyText}>
+              {dias === 1 ? 'No hay novedades registradas hoy' : 'No hay novedades en el período'}
+            </Text>
           }
           renderItem={({ item }) => (
             <View style={styles.item}>
-              <Text style={styles.itemDate}>{formatDateTime(item.nv_fecha_hora)}</Text>
+              <Text style={styles.itemDate}>
+                {formatDateTime(item.nv_fecha_hora)}
+                {!soloMias && item.nv_autor ? `  ·  ${item.nv_autor}` : ''}
+              </Text>
               <Text style={styles.itemObs}>{item.nv_observacion}</Text>
               {item.nv_foto ? (
                 <Image source={{ uri: item.nv_foto }} style={styles.itemPhoto} resizeMode="cover" />
@@ -118,6 +172,35 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORES.borde,
   },
   backBtn: { marginRight: 12 },
+  filtros: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  filtroFila: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORES.borde,
+    marginRight: 8,
+    backgroundColor: '#FFF',
+  },
+  chipActivo: {
+    backgroundColor: COLORES.marca,
+    borderColor: COLORES.marca,
+  },
+  chipTexto: {
+    fontSize: 14,
+    color: COLORES.texto,
+  },
+  chipTextoActivo: {
+    color: COLORES.textoSobreMarca,
+    fontWeight: '600',
+  },
   backText: { fontSize: 16, color: COLORES.marca },
   title: { fontSize: 20, fontWeight: 'bold', color: COLORES.texto },
   newButton: {

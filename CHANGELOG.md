@@ -2,7 +2,18 @@
 
 ## [Sin publicar]
 
+### Agregado
+- **2026-09-15 — «Personas dentro» en el panel**, con búsqueda por documento,
+  nombre, apellido o placa y **registro de salida desde la web**, que antes sólo
+  se podía desde la tablet.
+- **2026-09-15 — App: menú lateral con iconos**, botón de ubicación en biometría
+  (antes una lectura fallida abortaba la marcación con la foto ya tomada),
+  filtro de días y alcance en Novedades, e Inventario primero en el menú.
+  ⚠️ **Todo esto necesita un APK nuevo**, que aún no se compiló.
+
 ### Corregido
+- **2026-09-15 — El código de acceso ya no queda a la vista** en la tablet del
+  puesto: estaba escrito en el Home y en Perfil.
 - **2026-09-15 — El QR vuelve a salir en la hoja imprimible.** dompdf descartaba
   la imagen en silencio porque desde su versión 2.0 el esquema `data:` pasa por
   `allowed_protocols`, donde no estaba declarado. Sin tocar `enable_remote`.
