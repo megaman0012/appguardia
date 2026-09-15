@@ -17,7 +17,7 @@ configuracion y exposicion pero no el codigo de cada controlador.
 
 | Severidad | Cantidad |
 |---|---|
-| 🔴 CRITICO | **2** |
+| 🔴 CRITICO | **1** (eran 2; SEC-00 cerrado el 2026-09-15) |
 | 🟠 ALTO | 2 |
 | 🟡 MEDIO | 4 |
 | 🔵 BAJO | 1 |
@@ -25,7 +25,21 @@ configuracion y exposicion pero no el codigo de cada controlador.
 
 ## 🔴 CRITICO
 
-### SEC-00 — Toma de cuentas: cambio de contrasena sin autenticacion ni token
+### SEC-00 — ✅ RESUELTO el 2026-09-15 — Toma de cuentas sin autenticacion ni token
+
+> **Estado: cerrado.** El codigo ahora se genera con `random_bytes`, se guarda
+> hasheado, vence a los 30 minutos, sirve una sola vez, se invalida al quinto
+> intento fallido y se compara con `hash_equals`. Ya no vuelve en la respuesta, y
+> esta responde lo mismo exista o no la cedula. **El portal web tenia el mismo
+> agujero** (`POST /acceso/procesar_cambiopass` tomaba el `user_id` del
+> formulario) y tambien se cerro: ahora el usuario autorizado vive en la sesion.
+> 15 tests lo cubren, incluidos los dos que reproducen el agujero original.
+>
+> ⚠️ Efecto operativo: **el autoservicio de recuperacion queda sin efecto hasta
+> que se configure un canal de entrega** (SMTP o WhatsApp) en `/admin/configuracion`.
+> Mientras tanto el supervisor cambia la clave desde el panel.
+
+El hallazgo original, para referencia:
 
 **Evidencia.** `POST /api/procesar_paswchg` tiene middleware `['api']`, sin
 autenticacion (confirmado en `php artisan route:list --json`). Su controlador,
@@ -153,9 +167,20 @@ No se encontro cron ni timer para este proyecto. Con 57 tablas, 880 usuarios y
 
 Con ~38.247 vinculos usuario-institucion, **que un usuario no vea datos de una
 institucion que no le corresponde es una regla critica**. Usa
-`spatie/laravel-permission`, que es la libreria correcta, pero **la verificacion
-efectiva no se ejecuto**: `NO DETERMINADO`. Es la prueba pendiente mas
-importante.
+`spatie/laravel-permission`, que es la libreria correcta.
+
+> **Verificado el 2026-09-15, y habia fuga.** `RondaDetalleResource` e
+> `InstitucionMarcadoresResource` filtraban **solo por el parametro de la URL**,
+> sin mirar el perfil. Con ids consecutivos, un Supervisor leia el detalle de las
+> rondas de otro cliente --hora, foto y coordenadas de cada punto-- y en
+> marcadores, que es editable, **podia mover las coordenadas de los QR de otro
+> cliente**, lo que hace fallar la validacion de cercania de ese local sin dejar
+> rastro. Habia ademas una segunda via: el formulario de marcadores lleva el
+> local en un campo oculto, asi que se podia **crear** uno en un local ajeno.
+>
+> Cerrado con `PerfilPanel::localesVisibles()`, que resuelve los dos alcances en
+> un solo lugar, y 12 tests. El patron estaba copiado recurso por recurso: **el
+> agujero estaba justo donde no se habia copiado.**
 
 ### SEC-06 — Contenedor `v1_analisis` suelto y sin control
 

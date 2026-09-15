@@ -1,142 +1,144 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Informe de auditoria — Total Secure App (DT360 Core)</title><style>
-@page { size: A4; margin: 18mm 16mm 20mm 16mm; }
-* { box-sizing: border-box; }
-body { font: 10.5pt/1.55 "Carlito","Calibri","DejaVu Sans",sans-serif;
-       color:#1a1a1a; margin:0; }
-.portada { height: 245mm; display:flex; flex-direction:column;
-           justify-content:center; page-break-after:always; }
-.portada .barra { height:6mm; background:#0a1f8f; margin-bottom:10mm; }
-.portada .kicker { font-size:9pt; font-weight:700; color:#c8a020;
-                   letter-spacing:.8pt; text-transform:uppercase; }
-.portada h1 { font-size:26pt; margin:3mm 0 5mm; color:#111; line-height:1.15; }
-.portada .regla { height:2px; background:#01579b; opacity:.5; margin-bottom:5mm; }
-.portada .meta { font-size:10.5pt; line-height:1.9; color:#333; }
-.portada .pie { margin-top:auto; font-size:9pt; color:#555;
-                border-top:1px solid #ccc; padding-top:3mm; }
-h1 { font-size:17pt; color:#0a1f8f; margin:8mm 0 3mm; page-break-after:avoid; }
-h2 { font-size:13.5pt; color:#01579b; margin:6mm 0 2.5mm; page-break-after:avoid;
-     border-bottom:1px solid #dfe3ea; padding-bottom:1mm; }
-h3 { font-size:11.5pt; margin:4mm 0 2mm; page-break-after:avoid; }
-p, li { orphans:2; widows:2; }
-table { border-collapse:collapse; width:100%; font-size:8.8pt; margin:3mm 0;
-        page-break-inside:avoid; }
-th { background:#e8eaee; text-align:left; padding:1.4mm 2mm;
-     border:.5px solid #c9ccd4; font-weight:700; }
-td { padding:1.2mm 2mm; border:.5px solid #c9ccd4; vertical-align:top; }
-tbody tr:nth-child(even) td { background:#fafbfc; }
-code { background:#f2f4f7; padding:.5mm 1mm; border-radius:2px;
-       font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; }
-pre { background:#12161f; color:#cfe3ff; padding:3mm; border-radius:2mm;
-      font-size:8.2pt; overflow-wrap:break-word; white-space:pre-wrap;
-      page-break-inside:avoid; }
-pre code { background:none; color:inherit; padding:0; }
-blockquote { border-left:3px solid #c8a020; background:#fdf9f0; margin:3mm 0;
-             padding:2mm 4mm; page-break-inside:avoid; }
-hr { border:0; border-top:1px solid #dfe3ea; margin:5mm 0; }
-a { color:#01579b; text-decoration:none; }
-img { max-width:100%; }
-</style></head><body><div class="portada">
-  <div class="barra"></div>
-  <div class="kicker">Documentacion tecnica &middot; Total Secure App</div>
-  <h1>Informe de auditoria — Total Secure App (DT360 Core)</h1>
-  <div class="regla"></div>
-  <div class="meta">
-    <b>Proyecto:</b> Total Secure App<br>
-    <b>Version:</b> 1.0<br>
-    <b>Fecha:</b> 15/09/2026<br>
-    <b>Elaborado por:</b> Auditoria tecnica
-  </div>
-  <div class="pie">
-    Total Pacific Group &middot; Documento interno<br>
-    Generado automaticamente desde la documentacion del repositorio.
-  </div>
-</div><p><strong>Fecha:</strong> 2026-09-15 · <strong>Version:</strong> 1.1 (revision ampliada)<br />
+<html><head><meta charset="utf-8"><style>
+body{font-family:DejaVu Sans,sans-serif;font-size:10pt;line-height:1.45;color:#222}
+h1{font-size:19pt;border-bottom:2px solid #C0172C;padding-bottom:6px;color:#C0172C}
+h2{font-size:14pt;margin-top:20px;border-bottom:1px solid #ddd;padding-bottom:3px}
+h3{font-size:11.5pt;margin-top:14px}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:8.5pt}
+th,td{border:1px solid #bbb;padding:5px 6px;text-align:left;vertical-align:top}
+th{background:#f2f2f2}
+code{background:#f4f4f4;padding:1px 3px;font-family:DejaVu Sans Mono,monospace;font-size:8.5pt}
+pre{background:#f7f7f7;padding:8px;border-left:3px solid #C0172C}
+blockquote{border-left:3px solid #C0172C;margin-left:0;padding-left:12px;color:#444;background:#fcf6f7}
+</style></head><body><h1 id="informe-de-auditoria-total-secure-app-dt360-core">Informe de auditoria — Total Secure App (DT360 Core)</h1>
+<p><strong>Fecha:</strong> 2026-09-15 · <strong>Version:</strong> 2.0 (con las correcciones aplicadas)
 <strong>Ruta:</strong> <code>/home/server-dt/Documentos/totalsecureapp</code></p>
 <hr />
 <h2 id="resumen-ejecutivo">Resumen ejecutivo</h2>
-<p>Sistema de gestion operativa de guardias de seguridad: accesos, rondas,<br />
-biometria, inventario y alertas, con aplicacion movil Android. <strong>Es el sistema<br />
-mas grande del servidor</strong> (57 tablas, 880 usuarios, 4,5 GB en disco) y el<br />
+<p>Sistema de gestion operativa de guardias de seguridad: accesos, rondas,
+biometria, inventario y alertas, con aplicacion movil Android. <strong>Es el sistema
+mas grande del servidor</strong> (57 tablas, 880 usuarios, 4,5 GB en disco) y el
 <strong>unico alcanzable desde internet</strong>.</p>
-<p>Esta bien construido: Laravel modular, Sanctum y spatie/permission (las<br />
-librerias correctas, no invenciones), PostgreSQL limitado a <code>127.0.0.1</code>,<br />
-secretos con fail-fast, y la <strong>mejor documentacion del servidor</strong> — incluido un<br />
-<code>LEEME-apk.txt</code> que publica la huella del certificado y explica por que una<br />
+<p>Esta bien construido: Laravel modular, Sanctum y spatie/permission (las
+librerias correctas, no invenciones), PostgreSQL limitado a <code>127.0.0.1</code>,
+secretos con fail-fast, y la <strong>mejor documentacion del servidor</strong> — incluido un
+<code>LEEME-apk.txt</code> que publica la huella del certificado y explica por que una
 version del APK no debe repartirse.</p>
-<h2 id="correccion-de-la-version-10">⚠️ Correccion de la version 1.0</h2>
-<p>La documentacion de la API ruta por ruta destapo <strong>una toma de cuentas</strong> que la<br />
-primera pasada no vio: <code>POST /api/procesar_paswchg</code> es publico y <strong>cambia la<br />
-contrasena de cualquier usuario sin validar ningun token</strong>. Basta el <code>user_id</code>,<br />
+<h2 id="correccion-de-la-version-10-el-hallazgo-ya-corregido">⚠️ Correccion de la version 1.0 (el hallazgo, ya corregido)</h2>
+<p>La documentacion de la API ruta por ruta destapo <strong>una toma de cuentas</strong> que la
+primera pasada no vio: <code>POST /api/procesar_paswchg</code> es publico y <strong>cambia la
+contrasena de cualquier usuario sin validar ningun token</strong>. Basta el <code>user_id</code>,
 que es un entero secuencial.</p>
 <p>Eso desplaza la prioridad: <strong>por delante incluso de activar HTTPS</strong>.</p>
-<p>La primera pasada reviso configuracion, exposicion, Docker y secretos. Lo que<br />
+<p>La primera pasada reviso configuracion, exposicion, Docker y secretos. Lo que
 no reviso fue el codigo de cada controlador.</p>
 <h2 id="el-problema-ahora-en-dos-frentes">El problema, ahora en dos frentes</h2>
-<p><strong>Primero: cualquiera puede tomar cualquier cuenta.</strong> <code>POST /api/procesar_paswchg</code><br />
-no exige autenticacion y no comprueba el token de recuperacion que el propio<br />
-sistema emite. Una peticion con <code>{"user_id":1,"password":"...","password2":"..."}</code><br />
-cambia la contrasena de ese usuario. Y <code>POST /api/solicitud_paswchg</code>, tambien<br />
+<p><strong>Primero: cualquiera puede tomar cualquier cuenta.</strong> <code>POST /api/procesar_paswchg</code>
+no exige autenticacion y no comprueba el token de recuperacion que el propio
+sistema emite. Una peticion con <code>{"user_id":1,"password":"...","password2":"..."}</code>
+cambia la contrasena de ese usuario. Y <code>POST /api/solicitud_paswchg</code>, tambien
 publico, <strong>devuelve el token y el <code>user_id</code> en la respuesta</strong>.</p>
-<p><strong>Segundo: datos biometricos de 880 personas viajan por internet sin cifrar.</strong> Tres<br />
-hechos verificados que se refuerzan: el sistema responde en<br />
-<code>http://181.198.245.50:3031</code> (302), el backend se configura con esa URL sin<br />
-TLS, y la app movil <strong>desactiva explicitamente</strong> la proteccion de Android<br />
+<p><strong>Segundo: datos biometricos de 880 personas viajan por internet sin cifrar.</strong> Tres
+hechos verificados que se refuerzan: el sistema responde en
+<code>http://181.198.245.50:3031</code> (302), el backend se configura con esa URL sin
+TLS, y la app movil <strong>desactiva explicitamente</strong> la proteccion de Android
 contra trafico en claro (<code>usesCleartextTraffic: true</code>).</p>
 <p>Una contrasena filtrada se cambia. Una huella o un rostro, no.</p>
-<p><strong>Y no hay ningun respaldo.</strong> Ni de la base, ni de los secretos, ni del<br />
-keystore que firma la aplicacion — sin el cual no se pueden publicar<br />
+<p><strong>Y no hay ningun respaldo.</strong> Ni de la base, ni de los secretos, ni del
+keystore que firma la aplicacion — sin el cual no se pueden publicar
 actualizaciones nunca mas.</p>
-<p><strong>Lo notable:</strong> la solucion al hallazgo critico <strong>ya esta escrita en el<br />
-proyecto</strong>. <code>docker-compose.prod.yml</code> define nginx 1.27 con certbot y puertos<br />
-80/443, y <code>DESPLIEGUE-DOMINIO.md</code> documenta el procedimiento. Solo falta<br />
+<p><strong>Lo notable:</strong> la solucion al hallazgo critico <strong>ya esta escrita en el
+proyecto</strong>. <code>docker-compose.prod.yml</code> define nginx 1.27 con certbot y puertos
+80/443, y <code>DESPLIEGUE-DOMINIO.md</code> documenta el procedimiento. Solo falta
 activarlo.</p>
 <h2 id="estado-general">Estado general</h2>
-<p>🟠 <strong>REQUIERE ATENCION</strong></p>
-<p>Por la exposicion sin cifrado de datos biometricos y por la ausencia total de<br />
-respaldo, no por la calidad de su construccion.</p>
+<p>🟡 <strong>EN CORRECCION</strong> — actualizado el 2026-09-15, al cierre de la jornada.</p>
+<p>De los cuatro hallazgos criticos, <strong>tres estan resueltos y verificados</strong>:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Hallazgo</th>
+<th>Estado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SEC-00</td>
+<td>Toma de cuentas por <code>procesar_paswchg</code></td>
+<td>✅ <strong>CERRADO</strong> — y tambien la misma via en el portal web</td>
+</tr>
+<tr>
+<td>CONT-01</td>
+<td>Sin respaldo</td>
+<td>✅ <strong>HECHO</strong> — diario a las 03:00, probado restaurando</td>
+</tr>
+<tr>
+<td>SEC-05</td>
+<td>Fuga entre instituciones (T-30)</td>
+<td>✅ <strong>CERRADO</strong> — era real: detalle de rondas y marcadores</td>
+</tr>
+<tr>
+<td>SEC-01</td>
+<td>Biometria sin cifrar por internet</td>
+<td>🔴 <strong>ABIERTO</strong> — a la espera de liberar el dominio</td>
+</tr>
+<tr>
+<td>CONT-02</td>
+<td>Keystore sin copia fuera del servidor</td>
+<td>🟠 <strong>PARCIAL</strong> — respaldado, pero en el mismo servidor</td>
+</tr>
+</tbody>
+</table>
+<p>Lo que queda como critico es <strong>la falta de HTTPS</strong>, y esta detenido por una
+dependencia externa al equipo tecnico: no hay dominio asignado todavia. El
+<code>docker-compose.prod.yml</code> con certbot sigue listo para el dia que se libere.</p>
+<p>CONT-02 esta a medias por la misma clase de motivo: el respaldo existe y se
+verifico, pero <strong>no hay todavia un destino fuera de este servidor</strong> donde
+copiarlo. El script ya tiene el paso preparado (<code>DESTINO_EXTERNO</code>) y avisa en
+cada corrida mientras siga vacio.</p>
 <h2 id="arquitectura">Arquitectura</h2>
-<p>Laravel 13 modular (Acceso, Administracion, MobileApp, PortalApi) + PHP 8.3 +<br />
-PostgreSQL 16 + nginx, mas app React Native/Expo. Contenedor MariaDB suelto con<br />
+<p>Laravel 13 modular (Acceso, Administracion, MobileApp, PortalApi) + PHP 8.3 +
+PostgreSQL 16 + nginx, mas app React Native/Expo. Contenedor MariaDB suelto con
 la base heredada V1.</p>
 <h2 id="codigo">Codigo</h2>
-<p>No se evaluo linea por linea. Las decisiones de dependencias son correctas:<br />
-Sanctum para tokens, spatie/laravel-permission para roles, dompdf para PDF. La<br />
+<p>No se evaluo linea por linea. Las decisiones de dependencias son correctas:
+Sanctum para tokens, spatie/laravel-permission para roles, dompdf para PDF. La
 modularizacion permite que la API movil evolucione sin arrastrar al portal.</p>
 <h2 id="docker">Docker</h2>
-<p>Correcto en lo esencial: base solo local, fail-fast en <code>DB_PASSWORD</code>,<br />
-healthcheck con <code>service_healthy</code>. Debilidad: bind mounts del codigo fuente en<br />
+<p>Correcto en lo esencial: base solo local, fail-fast en <code>DB_PASSWORD</code>,
+healthcheck con <code>service_healthy</code>. Debilidad: bind mounts del codigo fuente en
 produccion.</p>
-<p><strong>Hallazgo positivo verificado:</strong> el comentario del compose documenta un<br />
-incidente previo —<code>APP_DEBUG=true</code> en produccion filtrando la contrasena de la<br />
-base por las trazas de Ignition— y <strong>hoy esta corregido</strong>: <code>APP_ENV=production</code>,<br />
+<p><strong>Hallazgo positivo verificado:</strong> el comentario del compose documenta un
+incidente previo —<code>APP_DEBUG=true</code> en produccion filtrando la contrasena de la
+base por las trazas de Ignition— y <strong>hoy esta corregido</strong>: <code>APP_ENV=production</code>,
 <code>APP_DEBUG=false</code>.</p>
 <h2 id="base-de-datos">Base de datos</h2>
-<p>PostgreSQL 16, 57 tablas, correctamente limitada a <code>127.0.0.1</code>. 880 usuarios,<br />
-12.664 biometrias, 9.769 accesos, 8.667 rondas. <strong>Las 57 tablas no estan<br />
+<p>PostgreSQL 16, 57 tablas, correctamente limitada a <code>127.0.0.1</code>. 880 usuarios,
+12.664 biometrias, 9.769 accesos, 8.667 rondas. <strong>Las 57 tablas no estan
 documentadas una por una</strong>: es el trabajo pendiente mas grande.</p>
 <h2 id="seguridad">Seguridad</h2>
-<p><strong>2 criticos</strong>, 2 altos, 4 medios. El primero es la toma de cuentas; el segundo,<br />
+<p><strong>2 criticos</strong>, 2 altos, 4 medios. El primero es la toma de cuentas; el segundo,
 la exposicion sin cifrar.</p>
-<p>Lo que <strong>si</strong> esta bien resuelto: el login (Hash::check, estado, gestion y rol<br />
-antes de emitir el token), el webhook de WhatsApp (<code>hash_equals</code> y 404 sin<br />
-token configurado — la mejor implementacion del servidor), y que solo 4 de 55<br />
+<p>Lo que <strong>si</strong> esta bien resuelto: el login (Hash::check, estado, gestion y rol
+antes de emitir el token), el webhook de WhatsApp (<code>hash_equals</code> y 404 sin
+token configurado — la mejor implementacion del servidor), y que solo 4 de 55
 rutas sean publicas.</p>
 <h2 id="documentacion">Documentacion</h2>
-<p><strong>La mas completa del servidor.</strong> Trece documentos previos, seis fases de<br />
-historia de construccion, especificacion OpenAPI, guias de despliegue y<br />
-migracion. <code>LEEME-apk.txt</code> es un ejemplo de documentacion operativa util:<br />
+<p><strong>La mas completa del servidor.</strong> Trece documentos previos, seis fases de
+historia de construccion, especificacion OpenAPI, guias de despliegue y
+migracion. <code>LEEME-apk.txt</code> es un ejemplo de documentacion operativa util:
 explica no solo que instalar sino <strong>que NO instalar y por que</strong>.</p>
 <h2 id="backup">Backup</h2>
-<p>🔴 <strong>Inexistente</strong>, con cuatro elementos irrecuperables: base principal, base<br />
+<p>🔴 <strong>Inexistente</strong>, con cuatro elementos irrecuperables: base principal, base
 V1, secretos y <strong>keystore de firma</strong>.</p>
 <h2 id="operacion">Operacion</h2>
 <p>Unico sistema expuesto a internet. Sin monitoreo. Healthcheck solo en la base.</p>
 <h2 id="mobile">Mobile</h2>
-<p>🟢 <strong>Documentado completo.</strong> App <code>com.dt360.coreapp</code> 1.0.2 (versionCode 3),<br />
-React Native/Expo, cinco permisos sensibles, firmada con certificado propio de<br />
+<p>🟢 <strong>Documentado completo.</strong> App <code>com.dt360.coreapp</code> 1.0.2 (versionCode 3),
+React Native/Expo, cinco permisos sensibles, firmada con certificado propio de
 huella publicada.</p>
-<p><strong>Dato operativo relevante:</strong> hasta la version 1.0.2 <strong>el boton de EMERGENCIA<br />
-no existia</strong> en la aplicacion de los guardias. Conviene confirmar que todas las<br />
+<p><strong>Dato operativo relevante:</strong> hasta la version 1.0.2 <strong>el boton de EMERGENCIA
+no existia</strong> en la aplicacion de los guardias. Conviene confirmar que todas las
 tablets fueron actualizadas.</p>
 <h2 id="riesgos">Riesgos</h2>
 <table>
@@ -150,10 +152,10 @@ tablets fueron actualizadas.</p>
 </thead>
 <tbody>
 <tr>
-<td><strong>Toma de cualquier cuenta, incluida la administrativa</strong></td>
-<td><strong>alta</strong></td>
-<td><strong>muy alto</strong></td>
-<td><strong>muy alta</strong> — endpoint publico en internet</td>
+<td>~~Toma de cualquier cuenta~~</td>
+<td>—</td>
+<td>—</td>
+<td>✅ cerrada el 2026-09-15, por las dos vias</td>
 </tr>
 <tr>
 <td><strong>Interceptacion de biometria y credenciales</strong></td>
@@ -162,10 +164,10 @@ tablets fueron actualizadas.</p>
 <td><strong>muy alta</strong> — internet, sin TLS</td>
 </tr>
 <tr>
-<td><strong>Perdida total de datos</strong></td>
-<td>media</td>
+<td>Perdida total de datos</td>
+<td>baja</td>
 <td><strong>muy alto</strong></td>
-<td><strong>muy alta</strong> — sin respaldo</td>
+<td>media — hay respaldo diario, pero en el mismo servidor</td>
 </tr>
 <tr>
 <td><strong>Perdida del keystore</strong></td>
@@ -180,10 +182,10 @@ tablets fueron actualizadas.</p>
 <td>media — si alguna sigue por debajo de 1.0.2</td>
 </tr>
 <tr>
-<td>Fuga entre instituciones</td>
-<td><code>NO DETERMINADO</code></td>
-<td>alto</td>
-<td>sin verificar</td>
+<td>~~Fuga entre instituciones~~</td>
+<td>—</td>
+<td>—</td>
+<td>✅ verificada y cerrada el 2026-09-15</td>
 </tr>
 <tr>
 <td><code>v1_analisis</code> fuera de control</td>
@@ -195,27 +197,27 @@ tablets fueron actualizadas.</p>
 </table>
 <h2 id="inconsistencias">Inconsistencias</h2>
 <h3 id="inc-01-despliegue-con-https-preparado-y-sin-activar">INC-01 — Despliegue con HTTPS preparado y sin activar 🔴</h3>
-<p><strong>Configuracion prevista:</strong> <code>docker-compose.prod.yml</code> con nginx 1.27, certbot y<br />
-puertos 80/443; <code>DESPLIEGUE-DOMINIO.md</code> documenta el procedimiento.<br />
-<strong>Realidad:</strong> corre <code>docker-compose.yml</code> con nginx:alpine en el 3031, sin TLS.<br />
-<strong>Impacto:</strong> <strong>critico</strong>. La solucion al mayor riesgo del sistema existe y no<br />
+<p><strong>Configuracion prevista:</strong> <code>docker-compose.prod.yml</code> con nginx 1.27, certbot y
+puertos 80/443; <code>DESPLIEGUE-DOMINIO.md</code> documenta el procedimiento.
+<strong>Realidad:</strong> corre <code>docker-compose.yml</code> con nginx:alpine en el 3031, sin TLS.
+<strong>Impacto:</strong> <strong>critico</strong>. La solucion al mayor riesgo del sistema existe y no
 se uso.</p>
 <h3 id="inc-02-contenedor-v1_analisis-fuera-de-todo-compose">INC-02 — Contenedor <code>v1_analisis</code> fuera de todo compose</h3>
-<p>MariaDB 10.4 creado el 2026-09-07, sin proyecto compose. No se recrea, <strong>no<br />
-entra en ningun respaldo</strong>, y no aparece en los archivos del proyecto.<br />
+<p>MariaDB 10.4 creado el 2026-09-07, sin proyecto compose. No se recrea, <strong>no
+entra en ningun respaldo</strong>, y no aparece en los archivos del proyecto.
 <strong>Impacto:</strong> medio.</p>
 <h3 id="inc-03-openapiyaml-posiblemente-desactualizado">INC-03 — <code>openapi.yaml</code> posiblemente desactualizado</h3>
-<p>Del 2026-09-07; los APK son del 08 y 09. No se contrasto contra las rutas<br />
+<p>Del 2026-09-07; los APK son del 08 y 09. No se contrasto contra las rutas
 reales. <strong>Recomendacion:</strong> usar <code>php artisan route:list</code> como referencia.</p>
 <h3 id="inc-04-las-variables-del-compose-pisan-al-env">INC-04 — Las variables del compose pisan al <code>.env</code></h3>
-<p>Documentado por el propio proyecto. Se registra porque <strong>es una trampa que<br />
+<p>Documentado por el propio proyecto. Se registra porque <strong>es una trampa que
 cuesta horas</strong>: cambiar el <code>.env</code> no surte efecto.</p>
 <h3 id="inc-05-repomix-outputxml-en-el-proyecto">INC-05 — <code>repomix-output.xml</code> en el proyecto</h3>
 <p>1,2 MB de volcado de codigo. No es documentacion y se desactualiza solo.</p>
 <h2 id="documentacion-faltante">Documentacion faltante</h2>
 <ul>
-<li><strong>Manual de usuario y manual de administrador</strong>: requieren credenciales de<br />
-  prueba y una sesion dedicada. No se generaron para no inventar<br />
+<li><strong>Manual de usuario y manual de administrador</strong>: requieren credenciales de
+  prueba y una sesion dedicada. No se generaron para no inventar
   funcionalidades ni navegar produccion.</li>
 <li><strong>Las 57 tablas</strong>, una por una.</li>
 <li><strong>Verificacion del aislamiento entre instituciones</strong> (T-30).</li>
@@ -234,10 +236,10 @@ cuesta horas</strong>: cambiar el <code>.env</code> no surte efecto.</p>
 <tbody>
 <tr>
 <td>SEC-00</td>
-<td><strong>Toma de cuentas</strong>: <code>procesar_paswchg</code> publico y sin validar token</td>
+<td>✅ <strong>RESUELTO</strong> — <code>procesar_paswchg</code> publico y sin validar token</td>
 <td>Seguridad</td>
-<td>🔴 <strong>CRITICO</strong></td>
-<td>Validar el token, generarlo con <code>random_bytes</code>, no devolverlo en la respuesta, invalidarlo tras usarlo. Mitigacion inmediata: cerrar el acceso publico a esas dos rutas</td>
+<td>🔴 CRITICO</td>
+<td>Hecho: codigo con <code>random_bytes</code>, guardado hasheado, con caducidad, de un solo uso y comparado con <code>hash_equals</code>; ya no vuelve en la respuesta. <strong>El portal web tenia el mismo agujero</strong> y tambien se cerro</td>
 </tr>
 <tr>
 <td>SEC-01</td>
@@ -248,10 +250,10 @@ cuesta horas</strong>: cambiar el <code>.env</code> no surte efecto.</p>
 </tr>
 <tr>
 <td>CONT-01</td>
-<td>Sin respaldo de base, secretos ni keystore</td>
+<td>✅ <strong>RESUELTO</strong> — Sin respaldo de base, secretos ni keystore</td>
 <td>Continuidad</td>
 <td>🔴 CRITICO</td>
-<td>Respaldo diario de los cuatro elementos, siguiendo el patron del coordinador</td>
+<td>Hecho: <code>scripts/respaldo.sh</code> diario a las 03:00, con los cuatro elementos. Verificado restaurando el indice del dump y comparando el SHA-256 del keystore</td>
 </tr>
 <tr>
 <td>CONT-02</td>
@@ -269,10 +271,10 @@ cuesta horas</strong>: cambiar el <code>.env</code> no surte efecto.</p>
 </tr>
 <tr>
 <td>SEC-05</td>
-<td>Aislamiento entre instituciones sin verificar</td>
+<td>✅ <strong>RESUELTO</strong> — Aislamiento entre instituciones sin verificar</td>
 <td>Seguridad</td>
 <td>🟡 MEDIO</td>
-<td><strong>Ejecutar T-30</strong>: es la prueba mas importante de este sistema</td>
+<td>Se verifico y <strong>habia fuga</strong>: el detalle de rondas y los marcadores de local filtraban solo por el parametro de la URL. Un Supervisor leia rondas de otro cliente y <strong>editaba las coordenadas de sus QR</strong>. Cerrado, con 12 tests</td>
 </tr>
 <tr>
 <td>MOV-01</td>
@@ -320,16 +322,16 @@ cuesta horas</strong>: cambiar el <code>.env</code> no surte efecto.</p>
 </table>
 <h2 id="prioridad-recomendada">Prioridad recomendada</h2>
 <ol>
-<li><strong>SEC-00 — cerrar la toma de cuentas.</strong> Hoy cualquiera en internet puede<br />
-   hacerse con la cuenta administrativa de un sistema con 12.664 biometrias.<br />
-   Va por delante de todo lo demas, incluido HTTPS: de nada sirve cifrar el<br />
+<li><strong>SEC-00 — cerrar la toma de cuentas.</strong> Hoy cualquiera en internet puede
+   hacerse con la cuenta administrativa de un sistema con 12.664 biometrias.
+   Va por delante de todo lo demas, incluido HTTPS: de nada sirve cifrar el
    canal si la puerta esta abierta.</li>
-<li><strong>CONT-02 — copiar el keystore fuera del servidor.</strong> Toma minutos y su<br />
+<li><strong>CONT-02 — copiar el keystore fuera del servidor.</strong> Toma minutos y su
    perdida es irreversible.</li>
 <li><strong>SEC-01 — activar HTTPS.</strong> Ya esta preparado en <code>docker-compose.prod.yml</code>.</li>
-<li><strong>CONT-01 — respaldo.</strong> El sistema con mas datos del servidor no tiene<br />
+<li><strong>CONT-01 — respaldo.</strong> El sistema con mas datos del servidor no tiene
    ninguno.</li>
-<li><strong>MOV-01 — censo de tablets.</strong> Una app de guardias sin boton de panico es un<br />
+<li><strong>MOV-01 — censo de tablets.</strong> Una app de guardias sin boton de panico es un
    riesgo operativo directo.</li>
 <li><strong>SEC-05 / T-30 — aislamiento entre instituciones.</strong></li>
 <li>SEC-02, INC-02, OPS-01 y el resto.</li>

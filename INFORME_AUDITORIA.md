@@ -1,6 +1,6 @@
 # Informe de auditoria — Total Secure App (DT360 Core)
 
-**Fecha:** 2026-09-15 · **Version:** 1.1 (revision ampliada)
+**Fecha:** 2026-09-15 · **Version:** 2.0 (con las correcciones aplicadas)
 **Ruta:** `/home/server-dt/Documentos/totalsecureapp`
 
 ---
@@ -18,7 +18,7 @@ secretos con fail-fast, y la **mejor documentacion del servidor** — incluido u
 `LEEME-apk.txt` que publica la huella del certificado y explica por que una
 version del APK no debe repartirse.
 
-## ⚠️ Correccion de la version 1.0
+## ⚠️ Correccion de la version 1.0 (el hallazgo, ya corregido)
 
 La documentacion de la API ruta por ruta destapo **una toma de cuentas** que la
 primera pasada no vio: `POST /api/procesar_paswchg` es publico y **cambia la
@@ -57,10 +57,26 @@ activarlo.
 
 ## Estado general
 
-🟠 **REQUIERE ATENCION**
+🟡 **EN CORRECCION** — actualizado el 2026-09-15, al cierre de la jornada.
 
-Por la exposicion sin cifrado de datos biometricos y por la ausencia total de
-respaldo, no por la calidad de su construccion.
+De los cuatro hallazgos criticos, **tres estan resueltos y verificados**:
+
+| | Hallazgo | Estado |
+|---|---|---|
+| SEC-00 | Toma de cuentas por `procesar_paswchg` | ✅ **CERRADO** — y tambien la misma via en el portal web |
+| CONT-01 | Sin respaldo | ✅ **HECHO** — diario a las 03:00, probado restaurando |
+| SEC-05 | Fuga entre instituciones (T-30) | ✅ **CERRADO** — era real: detalle de rondas y marcadores |
+| SEC-01 | Biometria sin cifrar por internet | 🔴 **ABIERTO** — a la espera de liberar el dominio |
+| CONT-02 | Keystore sin copia fuera del servidor | 🟠 **PARCIAL** — respaldado, pero en el mismo servidor |
+
+Lo que queda como critico es **la falta de HTTPS**, y esta detenido por una
+dependencia externa al equipo tecnico: no hay dominio asignado todavia. El
+`docker-compose.prod.yml` con certbot sigue listo para el dia que se libere.
+
+CONT-02 esta a medias por la misma clase de motivo: el respaldo existe y se
+verifico, pero **no hay todavia un destino fuera de este servidor** donde
+copiarlo. El script ya tiene el paso preparado (`DESTINO_EXTERNO`) y avisa en
+cada corrida mientras siga vacio.
 
 ## Arquitectura
 
@@ -131,12 +147,12 @@ tablets fueron actualizadas.
 
 | Riesgo | Probabilidad | Impacto | Exposicion |
 |---|---|---|---|
-| **Toma de cualquier cuenta, incluida la administrativa** | **alta** | **muy alto** | **muy alta** — endpoint publico en internet |
+| ~~Toma de cualquier cuenta~~ | — | — | ✅ cerrada el 2026-09-15, por las dos vias |
 | **Interceptacion de biometria y credenciales** | **media-alta** | **muy alto** | **muy alta** — internet, sin TLS |
-| **Perdida total de datos** | media | **muy alto** | **muy alta** — sin respaldo |
+| Perdida total de datos | baja | **muy alto** | media — hay respaldo diario, pero en el mismo servidor |
 | **Perdida del keystore** | media | **muy alto** | **alta** — sin copia; imposibilita actualizar la app |
 | Tablets sin boton de panico | media | alto | media — si alguna sigue por debajo de 1.0.2 |
-| Fuga entre instituciones | `NO DETERMINADO` | alto | sin verificar |
+| ~~Fuga entre instituciones~~ | — | — | ✅ verificada y cerrada el 2026-09-15 |
 | `v1_analisis` fuera de control | media | medio | media |
 
 ## Inconsistencias
@@ -181,12 +197,12 @@ cuesta horas**: cambiar el `.env` no surte efecto.
 
 | ID | Hallazgo | Categoria | Severidad | Recomendacion |
 |---|---|---|---|---|
-| SEC-00 | **Toma de cuentas**: `procesar_paswchg` publico y sin validar token | Seguridad | 🔴 **CRITICO** | Validar el token, generarlo con `random_bytes`, no devolverlo en la respuesta, invalidarlo tras usarlo. Mitigacion inmediata: cerrar el acceso publico a esas dos rutas |
+| SEC-00 | ✅ **RESUELTO** — `procesar_paswchg` publico y sin validar token | Seguridad | 🔴 CRITICO | Hecho: codigo con `random_bytes`, guardado hasheado, con caducidad, de un solo uso y comparado con `hash_equals`; ya no vuelve en la respuesta. **El portal web tenia el mismo agujero** y tambien se cerro |
 | SEC-01 | Biometria y credenciales por internet sin cifrar | Seguridad | 🔴 CRITICO | **Activar HTTPS.** Ya esta preparado en `docker-compose.prod.yml`. Luego quitar `usesCleartextTraffic` y recompilar el APK |
-| CONT-01 | Sin respaldo de base, secretos ni keystore | Continuidad | 🔴 CRITICO | Respaldo diario de los cuatro elementos, siguiendo el patron del coordinador |
+| CONT-01 | ✅ **RESUELTO** — Sin respaldo de base, secretos ni keystore | Continuidad | 🔴 CRITICO | Hecho: `scripts/respaldo.sh` diario a las 03:00, con los cuatro elementos. Verificado restaurando el indice del dump y comparando el SHA-256 del keystore |
 | CONT-02 | Keystore sin copia fuera del servidor | Continuidad | 🔴 CRITICO | Copia en almacen de secretos. Sin el, **no hay mas actualizaciones de la app** |
 | SEC-02 | Bind mounts de codigo en produccion | Seguridad | 🟠 ALTO | Imagen con `COPY` para produccion |
-| SEC-05 | Aislamiento entre instituciones sin verificar | Seguridad | 🟡 MEDIO | **Ejecutar T-30**: es la prueba mas importante de este sistema |
+| SEC-05 | ✅ **RESUELTO** — Aislamiento entre instituciones sin verificar | Seguridad | 🟡 MEDIO | Se verifico y **habia fuga**: el detalle de rondas y los marcadores de local filtraban solo por el parametro de la URL. Un Supervisor leia rondas de otro cliente y **editaba las coordenadas de sus QR**. Cerrado, con 12 tests |
 | MOV-01 | Tablets posiblemente sin boton de panico | Operacion | 🟡 MEDIO | Censar versiones; actualizar a 1.0.2 |
 | INC-02 | `v1_analisis` fuera de control | Operacion | 🟡 MEDIO | Definir si la migracion concluyo; respaldar y apagar |
 | OPS-01 | Backend y nginx sin healthcheck | Operacion | 🟡 MEDIO | Agregarlos |
