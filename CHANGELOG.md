@@ -3,6 +3,18 @@
 ## [Sin publicar]
 
 ### Agregado
+- **2026-09-15 — Puestos de trabajo cargados**: 130, uno por cada local activo.
+  Sin puestos, Turnos, el cuadrante y las vacantes no tenían nada que mostrar.
+  Comando `puestos:cargar`, idempotente y con simulación por defecto.
+- `fotos:revisar`, para detectar fotos de evidencia que el registro no encuentra.
+
+### Corregido
+- **2026-09-15 — Las fotos ya no se pierden por sincronizar tarde.** `storeFiles()`
+  armaba la carpeta con la hora del servidor mientras los modelos la reconstruían
+  con la fecha del hecho: una marcación de las 23:50 sincronizada a las 00:10
+  quedaba con la foto en una carpeta y el registro apuntando a otra, sin error ni
+  log. Ahora se guarda la ruta completa. **Medido en producción: ninguna de las
+  45.341 fotos existentes estaba afectada.**
 - **2026-09-15 — «Personas dentro» en el panel**, con búsqueda por documento,
   nombre, apellido o placa y **registro de salida desde la web**, que antes sólo
   se podía desde la tablet.

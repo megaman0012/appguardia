@@ -186,13 +186,33 @@ trait generalTrait{
 
     }
 
+    /**
+     * Guarda una foto de evidencia y devuelve DONDE quedo.
+     *
+     * ⚠️ **Antes devolvia solo el nombre del archivo, y eso perdia fotos.** La
+     * carpeta se arma con `Carbon::now()` -- cuando el servidor recibe el
+     * archivo -- pero los modelos la reconstruian con la fecha del HECHO, que la
+     * manda el dispositivo. Mientras se crea y se sincroniza el mismo dia
+     * coinciden; una marcacion de las 23:50 que la tablet sincroniza a las 00:10
+     * quedaba con la foto en una carpeta y el registro apuntando a otra. La foto
+     * estaba en el disco y no se veia en ninguna parte, sin error ni log.
+     *
+     * Ahora devuelve la **ruta relativa** (`novedad/2026/09/15/archivo.jpg`), asi
+     * que no hay nada que reconstruir y el desfase no puede volver a pasar. Los
+     * registros viejos, que tienen solo el nombre, los sigue resolviendo
+     * `App\Support\FotoDeEvidencia`.
+     *
+     * @return array{0: bool, 1: string} [se movio, ruta relativa a public/images]
+     */
     function storeFiles($folder, $file, $user){
         $fileName = $user. '_' . time() . '.' . $file->getClientOriginalExtension();
         $datePath = Carbon::now()->format('Y/m/d');
         $directoryPath = public_path('images/'.$folder. '/' . $datePath);
         if (!file_exists($directoryPath)) { mkdir($directoryPath, 0777, true); }
-        //return Storage::disk('public')->put($directoryPath . '/' . $fileName, file_get_contents($file));
-        return [ $file->move($directoryPath, $fileName), $fileName];
+
+        $movido = $file->move($directoryPath, $fileName);
+
+        return [ $movido, $folder . '/' . $datePath . '/' . $fileName ];
     }
 
     function getSanctumSession($request){

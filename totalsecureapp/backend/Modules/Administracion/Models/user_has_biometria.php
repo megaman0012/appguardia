@@ -2,6 +2,7 @@
 
 namespace Modules\Administracion\Models;
 
+use App\Support\FotoDeEvidencia;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -61,12 +62,10 @@ class user_has_biometria extends Model {
     }
 
     public function getImagenUrlAttribute(): ?string {
-        $fecha = Carbon::parse($this->bio_created_at)->format('Y/m/d');
-        $imagePath = public_path('images/biometria/' . $fecha . '/' . $this->bio_image_name);
-        if (file_exists($imagePath) && !empty($this->bio_image_name)) {
-            return asset('images/biometria/' . $fecha . '/' . $this->bio_image_name);
-        }
-        return null;
+        // La carpeta se resolvia aca reconstruyendola con la fecha del
+        // registro, y eso perdia las fotos cuya sincronizacion cayo en
+        // otro dia. Ver App\Support\FotoDeEvidencia.
+        return FotoDeEvidencia::url($this->bio_image_name, 'biometria', $this->bio_created_at);
     }
 
 }

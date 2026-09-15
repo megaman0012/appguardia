@@ -2,6 +2,7 @@
 
 namespace Modules\Administracion\Models;
 
+use App\Support\FotoDeEvidencia;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -37,13 +38,11 @@ class Bitacora extends Model
     const CREATED_AT = 'bt_created_at';
     const UPDATED_AT = 'bt_updated_at';
 
-    public function getImagenUrlAttribute(){
-        $fecha = Carbon::parse($this->bt_fecha_hora)->format('Y/m/d');
-        $imagePath = public_path('images/bitacora/' . $fecha . '/' . $this->bt_foto);
-        if (file_exists($imagePath) && !empty($this->bt_foto)) {
-            return asset('images/bitacora/' . $fecha . '/' . $this->bt_foto);
-        }
-        return null;
+    public function getImagenUrlAttribute() {
+        // La carpeta se resolvia aca reconstruyendola con la fecha del
+        // registro, y eso perdia las fotos cuya sincronizacion cayo en
+        // otro dia. Ver App\Support\FotoDeEvidencia.
+        return FotoDeEvidencia::url($this->bt_foto, 'bitacora', $this->bt_fecha_hora);
     }
 
     public function users() {

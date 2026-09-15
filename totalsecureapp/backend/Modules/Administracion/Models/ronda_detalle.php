@@ -1,7 +1,8 @@
 <?php
 
 namespace Modules\Administracion\Models;
-use Modules\Acceso\Models\users;
+
+use App\Support\FotoDeEvidencia;use Modules\Acceso\Models\users;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -34,13 +35,11 @@ class ronda_detalle extends Model
         'rd_sincronizado_en',
     ];
 
-    public function getImagenUrlAttribute(){
-        $fecha = Carbon::parse($this->rd_fecha_hora)->format('Y/m/d');
-        $imagePath = public_path('images/rondas/' . $fecha . '/' . $this->rd_foto);
-        if (file_exists($imagePath) && !empty($this->rd_foto)) {
-            return asset('images/rondas/' . $fecha . '/' . $this->rd_foto);
-        }
-        return null;
+    public function getImagenUrlAttribute() {
+        // La carpeta se resolvia aca reconstruyendola con la fecha del
+        // registro, y eso perdia las fotos cuya sincronizacion cayo en
+        // otro dia. Ver App\Support\FotoDeEvidencia.
+        return FotoDeEvidencia::url($this->rd_foto, 'rondas', $this->rd_fecha_hora);
     }
 
     const CREATED_AT = 'rd_created_at';

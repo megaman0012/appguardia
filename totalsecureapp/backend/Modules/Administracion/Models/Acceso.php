@@ -2,6 +2,7 @@
 
 namespace Modules\Administracion\Models;
 
+use App\Support\FotoDeEvidencia;
 use Modules\Acceso\Models\users;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -98,12 +99,10 @@ class Acceso extends Model {
     }
 
     public function getImagenUrlAttribute(): ?string {
-        $fecha = Carbon::parse($this->ac_created_at)->format('Y/m/d');
-        $imagePath = public_path('images/accesos/' . $fecha . '/' . $this->ac_foto);
-        if (file_exists($imagePath) && !empty($this->ac_foto)) {
-            return asset('images/accesos/' . $fecha . '/' . $this->ac_foto);
-        }
-        return null;
+        // La carpeta se resolvia aca reconstruyendola con la fecha del
+        // registro, y eso perdia las fotos cuya sincronizacion cayo en
+        // otro dia. Ver App\Support\FotoDeEvidencia.
+        return FotoDeEvidencia::url($this->ac_foto, 'accesos', $this->ac_created_at);
     }
 
     public function getTiempoPermanenciaAttribute(): ?string {
