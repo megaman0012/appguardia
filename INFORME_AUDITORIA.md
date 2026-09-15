@@ -1,6 +1,6 @@
 # Informe de auditoria — Total Secure App (DT360 Core)
 
-**Fecha:** 2026-09-15 · **Version:** 1.0
+**Fecha:** 2026-09-15 · **Version:** 1.1 (revision ampliada)
 **Ruta:** `/home/server-dt/Documentos/totalsecureapp`
 
 ---
@@ -18,9 +18,27 @@ secretos con fail-fast, y la **mejor documentacion del servidor** — incluido u
 `LEEME-apk.txt` que publica la huella del certificado y explica por que una
 version del APK no debe repartirse.
 
-El problema es de exposicion, y es grave:
+## ⚠️ Correccion de la version 1.0
 
-**Datos biometricos de 880 personas viajan por internet sin cifrar.** Tres
+La documentacion de la API ruta por ruta destapo **una toma de cuentas** que la
+primera pasada no vio: `POST /api/procesar_paswchg` es publico y **cambia la
+contrasena de cualquier usuario sin validar ningun token**. Basta el `user_id`,
+que es un entero secuencial.
+
+Eso desplaza la prioridad: **por delante incluso de activar HTTPS**.
+
+La primera pasada reviso configuracion, exposicion, Docker y secretos. Lo que
+no reviso fue el codigo de cada controlador.
+
+## El problema, ahora en dos frentes
+
+**Primero: cualquiera puede tomar cualquier cuenta.** `POST /api/procesar_paswchg`
+no exige autenticacion y no comprueba el token de recuperacion que el propio
+sistema emite. Una peticion con `{"user_id":1,"password":"...","password2":"..."}`
+cambia la contrasena de ese usuario. Y `POST /api/solicitud_paswchg`, tambien
+publico, **devuelve el token y el `user_id` en la respuesta**.
+
+**Segundo: datos biometricos de 880 personas viajan por internet sin cifrar.** Tres
 hechos verificados que se refuerzan: el sistema responde en
 `http://181.198.245.50:3031` (302), el backend se configura con esa URL sin
 TLS, y la app movil **desactiva explicitamente** la proteccion de Android
@@ -75,7 +93,13 @@ documentadas una por una**: es el trabajo pendiente mas grande.
 
 ## Seguridad
 
-1 critico, 2 altos, 3 medios. El critico es la exposicion sin cifrar.
+**2 criticos**, 2 altos, 4 medios. El primero es la toma de cuentas; el segundo,
+la exposicion sin cifrar.
+
+Lo que **si** esta bien resuelto: el login (Hash::check, estado, gestion y rol
+antes de emitir el token), el webhook de WhatsApp (`hash_equals` y 404 sin
+token configurado — la mejor implementacion del servidor), y que solo 4 de 55
+rutas sean publicas.
 
 ## Documentacion
 
@@ -107,6 +131,7 @@ tablets fueron actualizadas.
 
 | Riesgo | Probabilidad | Impacto | Exposicion |
 |---|---|---|---|
+| **Toma de cualquier cuenta, incluida la administrativa** | **alta** | **muy alto** | **muy alta** — endpoint publico en internet |
 | **Interceptacion de biometria y credenciales** | **media-alta** | **muy alto** | **muy alta** — internet, sin TLS |
 | **Perdida total de datos** | media | **muy alto** | **muy alta** — sin respaldo |
 | **Perdida del keystore** | media | **muy alto** | **alta** — sin copia; imposibilita actualizar la app |
@@ -156,6 +181,7 @@ cuesta horas**: cambiar el `.env` no surte efecto.
 
 | ID | Hallazgo | Categoria | Severidad | Recomendacion |
 |---|---|---|---|---|
+| SEC-00 | **Toma de cuentas**: `procesar_paswchg` publico y sin validar token | Seguridad | 🔴 **CRITICO** | Validar el token, generarlo con `random_bytes`, no devolverlo en la respuesta, invalidarlo tras usarlo. Mitigacion inmediata: cerrar el acceso publico a esas dos rutas |
 | SEC-01 | Biometria y credenciales por internet sin cifrar | Seguridad | 🔴 CRITICO | **Activar HTTPS.** Ya esta preparado en `docker-compose.prod.yml`. Luego quitar `usesCleartextTraffic` y recompilar el APK |
 | CONT-01 | Sin respaldo de base, secretos ni keystore | Continuidad | 🔴 CRITICO | Respaldo diario de los cuatro elementos, siguiendo el patron del coordinador |
 | CONT-02 | Keystore sin copia fuera del servidor | Continuidad | 🔴 CRITICO | Copia en almacen de secretos. Sin el, **no hay mas actualizaciones de la app** |
@@ -170,17 +196,19 @@ cuesta horas**: cambiar el `.env` no surte efecto.
 
 ## Prioridad recomendada
 
-1. **CONT-02 — copiar el keystore fuera del servidor.** Toma minutos y su
+1. **SEC-00 — cerrar la toma de cuentas.** Hoy cualquiera en internet puede
+   hacerse con la cuenta administrativa de un sistema con 12.664 biometrias.
+   Va por delante de todo lo demas, incluido HTTPS: de nada sirve cifrar el
+   canal si la puerta esta abierta.
+2. **CONT-02 — copiar el keystore fuera del servidor.** Toma minutos y su
    perdida es irreversible.
-2. **SEC-01 — activar HTTPS.** Ya esta preparado. Es biometria de 880 personas
-   viajando en claro por internet.
-3. **CONT-01 — respaldo.** El sistema con mas datos del servidor no tiene
+3. **SEC-01 — activar HTTPS.** Ya esta preparado en `docker-compose.prod.yml`.
+4. **CONT-01 — respaldo.** El sistema con mas datos del servidor no tiene
    ninguno.
-4. **MOV-01 — censo de tablets.** Una app de guardias sin boton de panico es un
+5. **MOV-01 — censo de tablets.** Una app de guardias sin boton de panico es un
    riesgo operativo directo.
-5. **SEC-05 / T-30 — aislamiento entre instituciones.**
-6. SEC-02, INC-02, OPS-01.
-7. El resto.
+6. **SEC-05 / T-30 — aislamiento entre instituciones.**
+7. SEC-02, INC-02, OPS-01 y el resto.
 
 ---
 

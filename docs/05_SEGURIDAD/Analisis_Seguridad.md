@@ -6,17 +6,71 @@ Revision del **2026-09-15**. Ningun cambio aplicado.
 que mas datos personales sensibles almacena: **12.664 registros biometricos**
 de 880 usuarios.
 
+## ⚠️ Revision ampliada del 2026-09-15 (segunda pasada)
+
+Al documentar la API ruta por ruta aparecio **una toma de cuentas**: un
+endpoint publico que cambia la contrasena de cualquier usuario sin validar
+ningun token. No se habia detectado en la primera pasada, que reviso
+configuracion y exposicion pero no el codigo de cada controlador.
+
 ## Resumen
 
 | Severidad | Cantidad |
 |---|---|
-| 🔴 CRITICO | 1 |
+| 🔴 CRITICO | **2** |
 | 🟠 ALTO | 2 |
-| 🟡 MEDIO | 3 |
+| 🟡 MEDIO | 4 |
 | 🔵 BAJO | 1 |
-| ⚪ INFORMATIVO | 2 |
+| ⚪ INFORMATIVO | 3 |
 
 ## 🔴 CRITICO
+
+### SEC-00 — Toma de cuentas: cambio de contrasena sin autenticacion ni token
+
+**Evidencia.** `POST /api/procesar_paswchg` tiene middleware `['api']`, sin
+autenticacion (confirmado en `php artisan route:list --json`). Su controlador,
+`Modules/MobileApp/Http/Controllers/LoginController.php`:
+
+    $user_id   = $request->user_id;
+    $password  = $request->password;
+    $rsUsuario = users::find($user_id);
+    // ... valida solo el FORMATO de la contrasena ...
+    $rsUsuario->usu_password   = $password;
+    $rsUsuario->remember_token = "";
+    $rsUsuario->save();
+
+**El `remember_token` que emite `solicitud_cambiopass` nunca se comprueba.**
+Basta `user_id` y la contrasena nueva.
+
+**Impacto.** Cualquiera que alcance el endpoint —y **el sistema responde desde
+internet**— toma control de **cualquiera de las 880 cuentas**, incluidas las
+administrativas, con una sola peticion. Los `user_id` son enteros secuenciales.
+
+Desde una cuenta administrativa se alcanzan **12.664 registros biometricos**,
+9.769 accesos y 8.667 rondas: datos personales sensibles que no se pueden
+cambiar si se filtran.
+
+**Agravante.** `POST /api/solicitud_paswchg`, tambien publico, **devuelve el
+token y el `user_id` en la respuesta**, y lo genera con
+`rand(1000, 10000000)` — no criptografico. Aunque se corrigiera la validacion,
+esto por si solo permitiria el ataque.
+
+**Atenuante.** El modelo `users` cifra la contrasena al guardar (evento
+`saving` → `Hash::make`), asi que **no se guardan en claro**. Limita el dano
+posterior, no la toma de la cuenta.
+
+> No se ejecuto la prueba: habria cambiado la contrasena de un usuario real en
+> produccion. La evidencia de codigo y el middleware vacio son concluyentes.
+
+**Recomendacion — es lo primero de todo el proyecto, por delante de HTTPS:**
+
+1. Validar el `remember_token` contra el usuario y su vigencia.
+2. Generarlo con `random_bytes`, no con `rand()`.
+3. **No devolverlo** en la respuesta de `solicitud_paswchg`.
+4. Invalidarlo tras el primer uso.
+
+Mientras no se corrija, **cerrar el acceso publico a esas dos rutas** es una
+mitigacion inmediata y valida.
 
 ### SEC-01 — Biometria y credenciales viajando por internet en HTTP plano
 
@@ -148,6 +202,18 @@ El comentario ademas advierte algo que conviene no olvidar: *"estos valores
 pisan al .env, asi que cambiar solo el archivo no alcanza"*. Es exacto, y es la
 clase de trampa que hace perder horas.
 
+### ✅ El webhook de WhatsApp, bien resuelto
+
+Contrasta con el resto y merece registrarse.
+`POST /api/whatsapp/webhook/{token}` compara el token con **`hash_equals`**
+(resistente a ataques de tiempo) y responde **404** si no hay token configurado.
+El comentario del codigo explica la decision: *"Sin token configurado el
+webhook no existe: es una puerta abierta a que cualquiera simule respuestas de
+guardias."*
+
+Es la mejor implementacion de webhook del servidor — comparar con la de
+`lavado_de_carros`, que no valida firma.
+
 ## Lo que se reviso y esta BIEN
 
 - **PostgreSQL solo en `127.0.0.1`.**
@@ -161,3 +227,8 @@ clase de trampa que hace perder horas.
 - **La huella SHA-256 del certificado esta publicada** en `LEEME-apk.txt`, lo
   que permite verificar que un APK salio de este servidor. Es una practica que
   no se ve en ningun otro proyecto auditado.
+- **El login es solido:** `Hash::check`, estado de cuenta, gestion asignada y
+  rol activo, antes de emitir un token de Sanctum con expiracion y un refresh
+  token de `random_bytes(32)`.
+- **Solo 4 rutas publicas de 55**, y dos de ellas lo son legitimamente.
+- **`CheckPermission` con permisos granulares** en biometria y en el portal.
