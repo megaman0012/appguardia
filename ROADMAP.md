@@ -108,7 +108,33 @@ ya tiene nginx 1.27 + certbot escrito y sin usar. Requiere decidir dominio y
 tocar el NAT del router. Luego hay que quitar `usesCleartextTraffic` del APK y
 recompilar.
 
-### 0.4 🟠 Fuga entre clientes en el panel
+### 0.4 ✅ Fuga entre clientes en el panel — CERRADA (2026-09-15)
+
+`RondaDetalleResource` e `InstitucionMarcadoresResource` ya acotan por perfil,
+con los dos alcances: por institución (Supervisor) y por país (Líder Operativo).
+
+- En rondas el filtro sube a la cabecera (`rc_ins_code`) y no usa el
+  `rd_ins_code` del propio detalle: quien decide de qué local es una ronda es su
+  cabecera, y así este filtro dice exactamente lo mismo que el del listado padre.
+- En marcadores el filtro es directo sobre `im_ins_code`.
+- **Y se cerró la otra vía**, que no estaba en el diagnóstico: el formulario de
+  marcadores manda el local en un `Hidden` cuyo valor sale de `?codigo=`. Un
+  campo oculto es oculto para la pantalla, no para quien arma la petición, así
+  que un Supervisor podía **crear** un marcador en el local de otro cliente.
+  `CreateInstitucionMarcadores::mutateFormDataBeforeCreate()` lo rechaza.
+- `PerfilPanel::localesVisibles()` resuelve los dos alcances en un solo lugar.
+  El patrón estaba copiado en cada recurso que acotaba, y **donde no se copió
+  quedó el agujero**. Devuelve `null` (ve todo), `[]` (no ve nada) o la lista;
+  esa distinción es la que evita que una configuración incompleta se vuelva
+  acceso global.
+
+12 tests nuevos (`AlcanceDeDetallesTest`). Suite: **462 en verde**.
+
+**Nota:** `InvMovimientoDetalleResource` sigue con el patrón copiado a mano. No
+se tocó porque funciona y está probado, pero podría migrarse a
+`localesVisibles()` para que quede una sola forma de hacerlo.
+
+### 0.4-bis (diagnóstico original, para referencia)
 
 `RondaDetalleResource.php:131` e `InstitucionMarcadoresResource.php:159` filtran
 sólo por el parámetro de la URL (`?ronda=`, `?codigo=`), sin consultar el perfil.

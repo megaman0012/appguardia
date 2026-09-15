@@ -28,6 +28,7 @@ use Filament\Tables\Columns\BooleanColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Columns\BadgeColumn;
 
+use App\Support\PerfilPanel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
@@ -158,8 +159,30 @@ class InstitucionMarcadoresResource extends Resource
 
     public static function getEloquentQuery(): Builder {
         $ins_code = request()->query('codigo');
-        return parent::getEloquentQuery()->with(self::RELACIONES_TABLA)
-        ->where('im_ins_code', $ins_code );
+
+        $query = parent::getEloquentQuery()->with(self::RELACIONES_TABLA)
+            ->where('im_ins_code', $ins_code );
+
+        /*
+         * ⚠️ Antes esto terminaba aca, filtrando SOLO por el `?codigo=` de la URL.
+         *
+         * Y es el peor de los dos casos, porque este recurso no es de lectura:
+         * un Supervisor cambiaba el `ins_code` a mano y **editaba las coordenadas
+         * de los QR de otro cliente**. Mover un marcador unos metros hace que las
+         * rondas de ese local empiecen a fallar la validacion de cercania, sin
+         * que nada quede registrado como un cambio de configuracion.
+         */
+        $locales = PerfilPanel::localesVisibles();
+
+        if ($locales === null) {
+            return $query;
+        }
+
+        if (empty($locales)) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->whereIn('im_ins_code', $locales);
     }
 
 }

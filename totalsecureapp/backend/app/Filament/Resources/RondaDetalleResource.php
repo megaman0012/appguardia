@@ -24,6 +24,7 @@ use Filament\Actions\Action;
 use Filament\Tables\Columns\ImageColumn;
 
 
+use App\Support\PerfilPanel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
@@ -130,8 +131,39 @@ class RondaDetalleResource extends Resource
 
     public static function getEloquentQuery(): Builder {
         $ronda_id = request()->query('ronda');
-        return parent::getEloquentQuery()->with(self::RELACIONES_TABLA)
-        ->where('rd_rc_id', $ronda_id );
+
+        $query = parent::getEloquentQuery()->with(self::RELACIONES_TABLA)
+            ->where('rd_rc_id', $ronda_id );
+
+        /*
+         * ⚠️ Antes esto terminaba aca, filtrando SOLO por el `?ronda=` de la URL.
+         *
+         * `rc_id` es un entero consecutivo, asi que un Supervisor cambiaba el
+         * numero a mano y leia el detalle de las rondas de otro cliente: a que
+         * hora paso el guardia por cada punto, con foto y coordenadas. El
+         * listado padre (`RondaCabeceraResource`) si acotaba, lo que hacia el
+         * agujero menos visible: por la navegacion normal nunca se llegaba a una
+         * ronda ajena.
+         *
+         * El alcance se aplica subiendo a la cabecera y no por `rd_ins_code`,
+         * que el detalle tambien tiene: quien decide de que local es una ronda
+         * es su cabecera, y asi este filtro dice exactamente lo mismo que el del
+         * listado padre. Si alguna fila quedara con los dos valores distintos,
+         * mandaria el de la cabecera en los dos lados y no en uno cada uno.
+         */
+        $locales = PerfilPanel::localesVisibles();
+
+        if ($locales === null) {
+            return $query;
+        }
+
+        if (empty($locales)) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->whereHas('rondaCabecera', function (Builder $q) use ($locales) {
+            $q->whereIn('rc_ins_code', $locales);
+        });
     }
 
 }

@@ -3,6 +3,11 @@
 ## [Sin publicar]
 
 ### Corregido
+- **2026-09-15 — Cerrada la fuga entre clientes en el panel.** El detalle de
+  rondas y los marcadores de local filtraban sólo por el parámetro de la URL, sin
+  mirar el perfil: con ids consecutivos, un Supervisor leía las rondas de otro
+  cliente y **editaba las coordenadas de sus QR**. También se cerró la creación de
+  marcadores en un local ajeno a través del campo oculto del formulario.
 - **2026-09-15 — Respaldo diario, que no existía.** `backend/scripts/respaldo.sh`
   a las 03:00: base PostgreSQL, base MariaDB de la V1, secretos con `APP_KEY` y
   el keystore de firma; las fotos por espejo incremental. Verificado restaurando

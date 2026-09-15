@@ -197,4 +197,44 @@ final class PerfilPanel
             ->map(fn ($id) => (int) $id)
             ->all();
     }
+
+    /**
+     * Los locales que el usuario en sesion puede ver, resolviendo los DOS
+     * alcances de una vez: por institucion (Supervisor) y por pais (Lider
+     * Operativo).
+     *
+     * Existe porque ese par de bloques estaba copiado en cada recurso que
+     * necesitaba acotar, y **donde no se copio quedo un agujero**: el detalle de
+     * rondas y los marcadores de local filtraban solo por el parametro de la
+     * URL, asi que un Supervisor leia las rondas de otro cliente y editaba las
+     * coordenadas de sus QR cambiando un numero a mano.
+     *
+     * Devuelve:
+     *   - `null`  -> no corresponde acotar (Administrador, Sistemas): ve todo.
+     *   - `[]`    -> **no ve nada.** Un Supervisor sin locales vinculados o un
+     *                Lider sin paises asignados. Es la distincion que importa:
+     *                tratar el vacio como "ve todo" convierte una configuracion
+     *                incompleta en acceso global.
+     *   - `int[]` -> los `ins_code` que puede ver.
+     *
+     * @return int[]|null
+     */
+    public static function localesVisibles(): ?array
+    {
+        if (self::alcanceEsPorInstitucion()) {
+            $usuId = Session::get('usuID');
+            if (!$usuId) {
+                return [];
+            }
+
+            return DB::table('user_has_institucion')
+                ->where('ui_usu_id', $usuId)
+                ->where('ui_state', 1)
+                ->pluck('ui_ins_code')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
+        return self::localesDelUsuario();
+    }
 }
