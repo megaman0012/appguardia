@@ -56,3 +56,27 @@ Es el proyecto con **mas documentacion previa** del servidor. Toda se conserva.
 | `docs/historia/FASE1..FASE6` | 🟢 VIGENTE | historia de construccion por fases |
 | `repomix-output.xml` (1,2 MB) | ⚪ NO ES DOCUMENTACION | volcado del codigo para herramientas |
 | `HISTORIAL_DE_CHAT.md` | ⚪ NO VERIFICABLE | transcripcion |
+
+
+## Formatos disponibles
+
+Estos documentos existen ademas en **PDF** y **DOCX**, junto a cada `.md`:
+
+| Documento | PDF | DOCX |
+|---|---|---|
+| `INFORME_AUDITORIA` | ✅ | ✅ |
+| `02_ARQUITECTURA/Arquitectura` | ✅ | ✅ |
+| `07_MANUAL_USUARIO/Manual_Usuario` | ✅ | ✅ |
+| `08_MANUAL_ADMINISTRADOR/Manual_Administrador` | ✅ | ✅ |
+| `09_MANUAL_SOPORTE/Manual_Soporte` | ✅ | ✅ |
+| `14_GESTION/Historial_Versiones` | ✅ | ✅ |
+
+**El Markdown es la fuente.** El PDF y el DOCX se regeneran desde el `.md`; no
+se editan a mano, porque el siguiente regenerado los pisa.
+
+Para regenerarlos:
+
+    python3 /usr/local/share/auditoria/md2pdf.py  <documento>.md --proyecto "<Nombre>"
+    python3 /usr/local/share/auditoria/md2docx.py <documento>.md --proyecto "<Nombre>"
+
+Ver `/usr/local/share/auditoria/LEEME.md`.
