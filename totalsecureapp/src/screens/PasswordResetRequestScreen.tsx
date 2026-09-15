@@ -34,19 +34,33 @@ export const PasswordResetRequestScreen = ({ navigation }: { navigation: any }) 
       });
 
       const data = response.data;
-      if (data && data.user_id) {
-        Alert.alert('Solicitud procesada', 'Se envió un correo con las instrucciones. Continúe para establecer su nueva contraseña.', [
-          { text: 'OK', onPress: () => navigation.replace('PasswordReset', { user_id: data.user_id }) },
-        ]);
-      } else if (data && data.message) {
-        Alert.alert('Solicitud enviada', data.message);
-        navigation.goBack();
-      } else if (data && data.errors) {
+
+      if (data && data.errors) {
         Alert.alert('Error', extraerError(data));
-      } else {
-        Alert.alert('Solicitud enviada', 'Revise su correo para continuar con el cambio de contraseña.');
-        navigation.goBack();
+        return;
       }
+
+      /*
+       * La respuesta ya NO trae `user_id` ni el token, y es la misma exista o no
+       * la cédula: antes los devolvía, y con eso cualquiera que supiera una
+       * cédula cambiaba la contraseña de esa persona.
+       *
+       * El código llega por fuera (WhatsApp o correo), así que la pantalla
+       * siguiente pide la cédula y ese código.
+       */
+      Alert.alert(
+        'Solicitud enviada',
+        (data && data.message) ||
+          'Si la cédula está registrada recibirá un código.',
+        [
+          {
+            text: 'Ya tengo el código',
+            onPress: () =>
+              navigation.replace('PasswordReset', { usu_cedula: identificacion.trim() }),
+          },
+          { text: 'Salir', style: 'cancel', onPress: () => navigation.goBack() },
+        ]
+      );
     } catch (error: any) {
       console.error('Solicitud de cambio de contraseña error:', error);
       if (error.response && error.response.data) {

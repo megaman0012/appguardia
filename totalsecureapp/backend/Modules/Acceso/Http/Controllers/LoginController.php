@@ -23,6 +23,7 @@ use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Support\Facades\Hash;
 
 use App\Services\PermisosApiService;
+use App\Services\RecuperacionDeClave;
 use Modules\Acceso\Models\users;
 use Modules\Acceso\Models\user_has_gestions;
 use Modules\Acceso\Models\role_has_permissions;
@@ -167,93 +168,128 @@ class LoginController extends Controller{
     ];
 
 
-    public function solicitud_cambiopass(Request $request)
+    /**
+     * Pide el enlace para cambiar la clave, desde el portal.
+     *
+     * ⚠️ Antes generaba el token con `rand()`, lo guardaba en claro en
+     * `remember_token` y **sin caducidad**, y respondia distinto segun la cedula
+     * existiera o no. Ahora lo emite `RecuperacionDeClave`: hasheado, con
+     * vencimiento, de un solo uso, y con la misma respuesta en todos los casos
+     * para que no se pueda averiguar quien esta registrado.
+     */
+    public function solicitud_cambiopass(Request $request, RecuperacionDeClave $recuperacion)
     {
-        try {
-            $request->merge(array_map('trim', $request->all()));
-            $validator = Validator::make($request->all(), $this->rules_solicitudpass);
-            if ($validator->fails()) {
-                return response()->json(['success' => false, 'errors' => $validator->errors()]);
-            }
-            $cedula = $request->cedula2;
-            $usuario = users::where('usu_cedula' , $cedula)->first();
-            if ($usuario) {
-                if ($usuario->usu_email == "" || !$this->valid_email($usuario->usu_email)) {
-                    return message_json('errors', 'Correo no válido');
-                } else {
-                    $aleatorio = rand(1000, 10000000);
-                    $url = url('/') . '/acceso/cambiar_password/' . $aleatorio;
-                    $arrData = array(
-                        'email_vista' => "acceso::mail.cambiar_password",
-                        'correo_receptor' => $usuario->usu_email,
-                        'nombre_receptor' => $usuario->usu_nmbcom,
-                        'cabecera_correo' => 'Solicitud de Cambio de Contraseña',
-                        'url' => $url,
-                    );
+        $request->merge(array_map('trim', $request->all()));
+        $validator = Validator::make($request->all(), $this->rules_solicitudpass);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()]);
+        }
 
-                    list($state, $msg) = $this->send_mail($arrData);
-                    if($state){
-                        $usuario->remember_token = $aleatorio;
-                        $usuario->save();
-                        return response()->json(['message' => $msg]);
-                    }else{
-                        return $this->message_json('errors', $msg );
-                    }
-                }
-            } else {
-                return $this->message_json('errors', 'Cedula No Valida' );
+        try {
+            $usuario = users::where('usu_cedula', $request->cedula2)
+                ->where('usu_state', 1)
+                ->first();
+
+            if ($usuario) {
+                $recuperacion->emitir($usuario, url('/') . '/acceso/cambiar_password');
             }
         } catch (\Exception $e) {
-            return $this->message_json('errors', $e->getMessage() );
+            report($e);
         }
+
+        return response()->json([
+            'message' => 'Si la cédula está registrada y tiene un medio de contacto cargado, '
+                . 'recibirá las instrucciones. Si no le llegan, pida el cambio a su supervisor.',
+        ]);
     }
 
-    public function cambiar_password($numero){
-        $rsUsuario = users::where("remember_token",$numero)->first();
-        if(!$rsUsuario){
-            Session::flash('message-error', "No existe usuario");
+    /**
+     * Abre el formulario, solo si el codigo del enlace es valido.
+     *
+     * El usuario autorizado queda en la SESION. Antes se pasaba su `user_id` a
+     * la vista y volvia como campo del formulario, que es de donde
+     * `procesar_cambiopass` lo tomaba: bastaba cambiar ese numero para cambiarle
+     * la clave a cualquier otra persona.
+     */
+    public function cambiar_password($numero, RecuperacionDeClave $recuperacion){
+        $rsUsuario = users::where('usu_reset_token', hash('sha256', $numero))->first();
+
+        if (!$rsUsuario || $recuperacion->verificar($rsUsuario, $numero) !== null) {
+            Session::flash('message-error', "El enlace no es válido o ya venció. Solicite uno nuevo.");
             return Redirect::to('/acceso/login');
-        }else{
-            $arrData = array( 'user_id' => $rsUsuario->id );
-            return view('acceso::login.cambiar_password',$arrData);
         }
+
+        Session::put('reset_usuario_id', $rsUsuario->id);
+
+        return view('acceso::login.cambiar_password', ['user_id' => $rsUsuario->id]);
     }
 
-    public function procesar_cambiopass(Request $request){
+    /**
+     * Cambia la clave del usuario que abrio un enlace valido.
+     *
+     * ⚠️ **Antes tomaba `user_id` del propio formulario y no comprobaba ningun
+     * token.** `POST /acceso/procesar_cambiopass` con `user_id=1` cambiaba la
+     * clave del usuario 1. Es el mismo agujero que tenia la API, por la otra
+     * puerta.
+     *
+     * Ahora el usuario sale de la sesion que dejo `cambiar_password` al validar
+     * el codigo. Lo que venga en el formulario se ignora.
+     */
+    public function procesar_cambiopass(Request $request, RecuperacionDeClave $recuperacion){
         $request->merge(array_map('trim', $request->all()));
         $password = $request->input("password");
         $password2 = $request->input("password2");
-        $user_id = $request->input("user_id");
-        $rsUsuario = users::find($user_id);
+
+        $rsUsuario = users::find(Session::get('reset_usuario_id'));
+
+        if (!$rsUsuario) {
+            Session::flash('message-error', "La sesión de cambio venció. Solicite un enlace nuevo.");
+            return Redirect::to('/acceso/login');
+        }
 
         $pattern = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/';
 
         if($password == "" || $password2 == ""){
-            Session::flash('message-error', "Ingrese Contraseña o Repetir Contraseña");
-            return Redirect::to('/acceso/cambiar_password/'.$rsUsuario->remember_token);
+            return $this->errorDeCambio("Ingrese Contraseña o Repetir Contraseña");
         }else if($password != $password2){
-            Session::flash('message-error', "Contraseñas no coinciden");
-            return Redirect::to('/acceso/cambiar_password/'.$rsUsuario->remember_token);
-        }else if($rsUsuario->usu_password == $password){
-            Session::flash('message-error', "Contraseña no puede usuario");
-            return Redirect::to('/acceso/cambiar_password/'.$rsUsuario->remember_token);
-        }else if($rsUsuario->usu_password == Hash::make($password)){
-            Session::flash('message-error', "Contraseña no debe ser la anterior");
-            return Redirect::to('/acceso/cambiar_password/'.$rsUsuario->remember_token);
+            return $this->errorDeCambio("Contraseñas no coinciden");
+        }else if($password === $rsUsuario->usu_cedula){
+            // Antes esto comparaba el HASH contra el texto plano diciendo
+            // «Contraseña no puede usuario»: nunca era cierto. Queria comparar
+            // contra la cedula, que es lo que hace ahora.
+            return $this->errorDeCambio("La contraseña no puede ser su número de cédula");
+        }else if(Hash::check($password, $rsUsuario->usu_password)){
+            // Y esto era `usu_password == Hash::make($password)`, que tampoco es
+            // cierto nunca: bcrypt sala distinto en cada llamada.
+            return $this->errorDeCambio("Contraseña no debe ser la anterior");
         }else if(strlen($password) < 8){
-            Session::flash('message-error', "Contraseña debe tener mínimo 8 caracteres");
-            return Redirect::to('/acceso/cambiar_password/'.$rsUsuario->remember_token);
+            return $this->errorDeCambio("Contraseña debe tener mínimo 8 caracteres");
         }else if(!preg_match($pattern, $password)){
-            Session::flash('message-error', "Debe contener una minuscula, una mayuscula y un numero.");
-            return Redirect::to('/acceso/cambiar_password/'.$rsUsuario->remember_token);
+            return $this->errorDeCambio("Debe contener una minuscula, una mayuscula y un numero.");
         }else{
             $rsUsuario->usu_password = Hash::make($password);
-            $rsUsuario->remember_token = "";
             $rsUsuario->save();
+
+            $recuperacion->invalidar($rsUsuario);
+            Session::forget('reset_usuario_id');
+
             Session::flash('message-success', "Clave Cambiada");
             return Redirect::to('acceso/login');
-
         }
+    }
+
+    /**
+     * Vuelve al formulario con el error, sin rehacer el enlace.
+     *
+     * Antes cada rechazo redirigia a `/acceso/cambiar_password/{remember_token}`,
+     * o sea que **el token viajaba otra vez por la URL** en cada error, y hoy
+     * ademas se consumiria el intento. La sesion ya guarda quien es.
+     */
+    private function errorDeCambio(string $mensaje)
+    {
+        Session::flash('message-error', $mensaje);
+
+        return Redirect::back();
     }
 
 }

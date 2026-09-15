@@ -11,7 +11,42 @@ producción y no se hizo.
 
 ## Bloque 0 — Seguridad. Va primero porque está expuesto a internet
 
-### 0.1 🔴 Toma de cualquier cuenta (SEC-00)
+### 0.1 ✅ Toma de cualquier cuenta (SEC-00) — CERRADO (2026-09-15)
+
+**Hecho y desplegado**, por las dos puertas: la API y el portal web tenían el
+mismo agujero, y cerrar sólo una habría dejado la otra abierta.
+
+- `App\Services\RecuperacionDeClave`: código de 8 dígitos con `random_int`,
+  **guardado hasheado**, con vencimiento de 30 minutos, de un solo uso, e
+  invalidado al quinto intento fallido. La comparación usa `hash_equals`.
+- El código **ya no vuelve en la respuesta**, y la respuesta es idéntica exista o
+  no la cédula, para que el endpoint no sirva para averiguar quién está
+  registrado.
+- `procesar_paswchg` ya no acepta `user_id`: identifica por cédula + código.
+- En el portal, `cambiar_password/{codigo}` valida el enlace y deja al usuario
+  autorizado **en la sesión**; `procesar_cambiopass` lo lee de ahí e ignora lo
+  que venga en el formulario. Antes tomaba el `user_id` del propio formulario.
+- Se entrega por WhatsApp o correo en cuanto alguno esté configurado. **Hoy no
+  hay ninguno** (`mailhog` no existe y el gateway está vacío), así que el
+  autoservicio queda sin efecto y el cambio lo hace el supervisor desde el panel,
+  con la acción «Cambiar contraseña» de Usuarios, que ya existía. Decidido así: un
+  autoservicio que entrega la cuenta a cualquiera es peor que no tenerlo.
+- La app se actualizó al contrato nuevo (pide el código). **El APK 1.0.2 ya
+  instalado no puede recuperar clave**: manda `user_id` y recibe error. Hay que
+  recompilar.
+- 15 tests nuevos (`RecuperacionDeClaveTest`), incluidos los dos que reproducen
+  el agujero por cada puerta. Suite: **450 en verde**.
+
+**De paso se corrigieron las dos validaciones muertas** que ya estaban
+documentadas: `usu_password == Hash::make($password)` nunca era cierta (bcrypt
+sala distinto cada vez), y la que comparaba el hash contra el texto plano
+diciendo «no puede ser el usuario» quería comparar contra la cédula.
+
+**Pendiente derivado:** `INFORME_AUDITORIA.md` y `docs/05_SEGURIDAD/` siguen
+marcando SEC-00 como crítico abierto, con sus PDF y DOCX ya generados. Hay que
+regenerarlos.
+
+### 0.1-bis (diagnóstico original, para referencia)
 
 `Modules/MobileApp/Routes/api.php:19` publica `procesar_paswchg` fuera de
 `api.auth`. En `LoginController::procesar_cambiopass` (líneas 170-211) el método

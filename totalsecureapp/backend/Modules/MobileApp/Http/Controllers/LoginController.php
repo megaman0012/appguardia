@@ -10,6 +10,7 @@ use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use App\Services\PermisosApiService;
+use App\Services\RecuperacionDeClave;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Modules\Administracion\Models\parametros;
@@ -123,91 +124,133 @@ class LoginController extends Controller {
 
     }
 
-    public function solicitud_cambiopass(Request $request)
+    /**
+     * Pide un codigo para cambiar la clave.
+     *
+     * ⚠️ **Antes esto entregaba la cuenta.** Devolvia `user_id` y el token en la
+     * respuesta a cambio de una cedula -- que en Ecuador no es un secreto -- y el
+     * endpoint es publico en internet. Con esos dos datos, `procesar_paswchg`
+     * cambiaba la clave de quien fuera.
+     *
+     * Ahora el codigo sale por un canal que solo alcanza al dueno de la cuenta, y
+     * la respuesta es **siempre la misma**, exista o no la cedula: si cambiara,
+     * serviria para averiguar quien esta registrado.
+     */
+    public function solicitud_cambiopass(Request $request, RecuperacionDeClave $recuperacion)
     {
+        $validator = Validator::make($request->all(), $this->rules_solicitudpass['rules'], $this->rules_solicitudpass['messages']);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()]);
+        }
+
         try {
+            $usuario = users::where('usu_cedula', $request->usu_cedula)
+                ->where('usu_state', 1)
+                ->first();
 
-            $validator = Validator::make($request->all(), $this->rules_solicitudpass['rules'], $this->rules_solicitudpass['messages']);
-            if ($validator->fails()) {
-                return response()->json(['success' => false, 'errors' => $validator->errors()]);
-            }
-
-            $cedula = $request->usu_cedula;
-            $usuario = users::where('usu_cedula' , $cedula)->first();
             if ($usuario) {
-                if ($usuario->usu_email == "" || !$this->valid_email($usuario->usu_email)) {
-                    return $this->message_json('errors', 'Correo no válido');
-                } else {
-                    $aleatorio = rand(1000, 10000000);
-                    $url = url('/') . '/login/cambiar_password/' . $aleatorio;
-                    $arrData = array(
-                        'email_vista' => "acceso::mail.cambiar_password",
-                        'correo_receptor' => $usuario->usu_email,
-                        'nombre_receptor' => $usuario->usu_nmbcom,
-                        'cabecera_correo' => 'Solicitud de Cambio de Contraseña',
-                        'url' => $url,
-                    );
-                    list($state, $msg) = $this->send_mail($arrData);
-                    $usuario->remember_token = $aleatorio;
-                    $usuario->save();
-                    return response()->json([
-                        'success' => true,
-                        'message' => $state ? $msg : 'No se pudo enviar el correo, pero puede continuar con el cambio desde la app.',
-                        'user_id' => $usuario->id,
-                        'token' => $aleatorio,
-                        'mail_sent' => $state,
-                        'mail_error' => $state ? null : $msg,
-                    ]);
-                }
-            } else {
-                return $this->message_json('errors', 'Cedula No Valida' );
+                $recuperacion->emitir($usuario);
             }
         } catch (\Exception $e) {
-            return $this->message_json('errors', $e->getMessage() );
+            // Tampoco el error puede distinguir una cedula registrada de una que
+            // no lo esta: se registra y se responde igual que siempre.
+            report($e);
         }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Si la cédula está registrada y tiene un medio de contacto cargado, '
+                . 'recibirá un código. Si no le llega, pida el cambio a su supervisor.',
+        ]);
     }
 
-    public function procesar_cambiopass(Request $request)
+    /**
+     * Cambia la clave, contra un codigo emitido y todavia valido.
+     *
+     * ⚠️ **Antes bastaba `user_id`.** No pedia token, no pedia autenticacion, y el
+     * `user_id` es un entero secuencial: mandar `{"user_id":1,...}` cambiaba la
+     * clave del usuario 1. Sobre un endpoint publicado en internet, eso es la
+     * cuenta de cualquiera, incluidas las cinco de Administrador.
+     *
+     * Ahora se identifica por cedula + codigo. El `user_id` ya no se acepta: era
+     * justamente lo que hacia falta adivinar, y no hay nada que adivinar en un
+     * entero consecutivo.
+     */
+    public function procesar_cambiopass(Request $request, RecuperacionDeClave $recuperacion)
     {
+        $validator = Validator::make($request->all(), [
+            'usu_cedula' => 'required',
+            'codigo'     => 'required|string',
+            'password'   => 'required|string|min:8',
+            'password2'  => 'required|string|same:password',
+        ], [
+            'usu_cedula.required' => 'La cedula es requerida para continuar.',
+            'codigo.required'     => 'Ingrese el código que recibió.',
+            'password.required'   => 'Ingrese Contraseña',
+            'password.min'        => 'Contraseña debe tener mínimo 8 caracteres',
+            'password2.required'  => 'Ingrese Repetir Contraseña',
+            'password2.same'      => 'Contraseñas no coinciden',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()]);
+        }
+
         try {
-            $user_id = $request->user_id;
+            $usuario = users::where('usu_cedula', $request->usu_cedula)
+                ->where('usu_state', 1)
+                ->first();
+
+            /*
+             * Un usuario que no existe recibe el mismo mensaje que un codigo
+             * equivocado. Distinguirlos convertiria este endpoint en una forma
+             * de averiguar que cedulas estan registradas.
+             */
+            if (!$usuario) {
+                return $this->message_json('errors', 'Código incorrecto.');
+            }
+
+            if ($motivo = $recuperacion->verificar($usuario, $request->codigo)) {
+                return $this->message_json('errors', $motivo);
+            }
+
             $password = $request->password;
-            $password2 = $request->password2;
 
-            $rsUsuario = users::find($user_id);
-            if (!$rsUsuario) {
-                return $this->message_json('errors', 'Usuario no válido');
-            }
-
-            $pattern = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/';
-
-            if ($password == "" || $password2 == "") {
-                return $this->message_json('errors', 'Ingrese Contraseña o Repetir Contraseña');
-            }
-
-            if ($password != $password2) {
-                return $this->message_json('errors', 'Contraseñas no coinciden');
-            }
-
-            if (strlen($password) < 8) {
-                return $this->message_json('errors', 'Contraseña debe tener mínimo 8 caracteres');
-            }
-
-            if (!preg_match($pattern, $password)) {
+            if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/', $password)) {
                 return $this->message_json('errors', 'Debe contener una minúscula, una mayúscula y un número');
             }
 
-            if (Hash::check($password, $rsUsuario->usu_password)) {
+            /*
+             * `Hash::check` y no `==`. La comprobacion original era
+             * `$rsUsuario->usu_password == Hash::make($password)`, que **nunca es
+             * cierta**: bcrypt usa una sal distinta cada vez, asi que dos hashes
+             * de la misma clave no coinciden. La regla «no debe ser la anterior»
+             * no bloqueaba nada.
+             */
+            if (Hash::check($password, $usuario->usu_password)) {
                 return $this->message_json('errors', 'Contraseña no debe ser la anterior');
             }
 
-            $rsUsuario->usu_password = $password;
-            $rsUsuario->remember_token = "";
-            $rsUsuario->save();
+            /*
+             * La otra comprobacion muerta que habia aca comparaba el hash contra
+             * el texto plano diciendo «no puede ser el usuario»; queria comparar
+             * contra `usu_cedula`. Eso si vale la pena, y ahora se hace de verdad.
+             */
+            if ($password === $usuario->usu_cedula) {
+                return $this->message_json('errors', 'La contraseña no puede ser su número de cédula');
+            }
+
+            $usuario->usu_password = $password;
+            $usuario->save();
+
+            // Un codigo sirve una sola vez.
+            $recuperacion->invalidar($usuario);
 
             return response()->json(['success' => true, 'message' => 'Clave cambiada correctamente']);
         } catch (\Exception $e) {
-            return $this->message_json('errors', $e->getMessage());
+            report($e);
+
+            return $this->message_json('errors', 'No se pudo cambiar la clave. Intente de nuevo.');
         }
     }
 

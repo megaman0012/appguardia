@@ -3,6 +3,18 @@
 ## [Sin publicar]
 
 ### Corregido
+- **2026-09-15 — 🔴 Cerrada la toma de cuentas (SEC-00).** `POST /api/procesar_paswchg`
+  cambiaba la contraseña de cualquier usuario mandando sólo su `user_id`, un entero
+  secuencial, sin token ni autenticación, sobre un endpoint publicado en internet;
+  `solicitud_paswchg` completaba el circuito devolviendo el `user_id` y el token a
+  cambio de una cédula. **El portal web tenía el mismo agujero** en
+  `POST /acceso/procesar_cambiopass`, que tomaba el `user_id` del formulario.
+  Ahora el código es criptográfico, se guarda hasheado, vence, sirve una sola vez
+  y no vuelve en la respuesta.
+- ⚠️ **El autoservicio de recuperación queda sin efecto hasta configurar un canal**
+  (SMTP o WhatsApp) desde `/admin/configuracion`. Mientras tanto el supervisor
+  cambia la clave desde el panel. **El APK 1.0.2 no puede recuperar clave**: usa el
+  contrato viejo y hay que recompilarlo.
 - **2026-09-15 — El botón de EMERGENCIA ahora avisa a alguien.** La alerta se
   guardaba bien desde siempre, pero el único aviso era un evento
   `ShouldBroadcast` emitido con `BROADCAST_DRIVER=log`: cada pedido de auxilio

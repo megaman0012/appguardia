@@ -5,7 +5,13 @@ import { API_ENDPOINTS } from '../utils/constants';
 import { COLORES } from '../utils/tema';
 
 export const PasswordResetScreen = ({ navigation, route }: { navigation: any; route: any }) => {
-  const { user_id } = route.params || {};
+  /*
+   * Llega la cédula, no el `user_id`: el endpoint ya no lo acepta. Era
+   * justamente lo que hacía falta adivinar para tomar una cuenta ajena, y en un
+   * entero consecutivo no hay nada que adivinar.
+   */
+  const { usu_cedula } = route.params || {};
+  const [codigo, setCodigo] = useState('');
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,6 +30,10 @@ export const PasswordResetScreen = ({ navigation, route }: { navigation: any; ro
   };
 
   const handleSubmit = async () => {
+    if (!codigo.trim()) {
+      Alert.alert('Error', 'Ingrese el código que recibió');
+      return;
+    }
     if (!password || !password2) {
       Alert.alert('Error', 'Por favor ingrese la nueva contraseña y su confirmación');
       return;
@@ -40,7 +50,8 @@ export const PasswordResetScreen = ({ navigation, route }: { navigation: any; ro
     setLoading(true);
     try {
       const response = await api.post(API_ENDPOINTS.AUTH.PROCESAR_PASS, {
-        user_id,
+        usu_cedula,
+        codigo: codigo.trim(),
         password,
         password2,
       });
@@ -74,9 +85,18 @@ export const PasswordResetScreen = ({ navigation, route }: { navigation: any; ro
       <View style={styles.formContainer}>
         <Text style={styles.title}>Cambiar Contraseña</Text>
         <Text style={styles.description}>
-          Ingrese su nueva contraseña. Debe tener mínimo 8 caracteres e incluir una mayúscula, una minúscula y un número.
+          Ingrese el código que recibió y su nueva contraseña. Debe tener mínimo 8 caracteres e incluir una mayúscula, una minúscula y un número.
         </Text>
 
+        <TextInput
+          placeholder="Código recibido"
+          value={codigo}
+          onChangeText={setCodigo}
+          style={styles.input}
+          keyboardType="number-pad"
+          maxLength={8}
+          autoCapitalize="none"
+        />
         <TextInput
           placeholder="Nueva contraseña"
           value={password}
