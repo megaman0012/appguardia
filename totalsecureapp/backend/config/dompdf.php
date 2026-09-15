@@ -90,7 +90,25 @@ return array(
          *
          * @var array
          */
+        /*
+         * ⚠️ `data://` tiene que estar, y su ausencia rompia el QR de las rondas.
+         *
+         * La hoja imprimible del marcador embebe el codigo como
+         * `<img src="data:image/png;base64,...">`. Hasta dompdf 1.x el esquema
+         * `data:` se leia siempre; **desde la 2.0 pasa por esta lista**, y al no
+         * estar declarado dompdf descartaba la imagen EN SILENCIO: el PDF salia
+         * con el formato, el recuadro y el texto, y sin el codigo. Que es
+         * exactamente lo que se veia.
+         *
+         * Declararlo NO reabre el riesgo por el que `enable_remote` esta
+         * apagado: `data://` no hace ninguna peticion --los bytes vienen en la
+         * propia URL-- y por eso dompdf no le aplica ninguna regla
+         * (`Options::addAllowedProtocol`). Los que salen a la red son `http://`
+         * y `https://`, que pasan por `validateRemoteUri` y ahi es donde manda
+         * `enable_remote`.
+         */
         'allowed_protocols' => [
+            "data://" => ["rules" => []],
             "file://" => ["rules" => []],
             "http://" => ["rules" => []],
             "https://" => ["rules" => []]

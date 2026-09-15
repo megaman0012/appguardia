@@ -171,6 +171,20 @@ class UsersResource extends Resource
                     // Aparte de "quiero turnos extra": aceptar trabajar de más no
                     // es aceptar que le escriban al teléfono personal.
                     ->helperText('Debe pedírsele expresamente. Sin esto no se le escribe.'),
+
+                Toggle::make('usu_acepta_extras')
+                    ->label('Quiere cubrir turnos extra')
+                    /*
+                     * Este interruptor **no existia en el panel**: el campo
+                     * estaba en la base y la API lo leia y escribia, pero solo
+                     * se podia activar desde el Perfil en la app del guardia.
+                     * Como la app vive en las tablets de los puestos, alguien
+                     * que queria ofrecerse tenia que ir a un puesto a hacerlo.
+                     *
+                     * Es lo que decide si el guardia ve las vacantes abiertas y
+                     * si entra en la convocatoria por WhatsApp.
+                     */
+                    ->helperText('Con esto activo ve los turnos disponibles y entra en las convocatorias.'),
             ]);
     }
 

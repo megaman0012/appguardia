@@ -42,6 +42,23 @@ return [
             'visibility' => 'public',
         ],
 
+        /*
+         * Las fotos que sube la operacion: novedades, biometria, accesos.
+         *
+         * Vive en `public/images` y no en `storage/app/public` porque es donde
+         * las viene dejando `generalTrait::storeFiles()` desde la V1, y donde
+         * las busca el accesor `imagen_url` de cada modelo. Un disco aparte
+         * permite que el panel suba al mismo sitio que la app movil en vez de
+         * abrir un segundo arbol de archivos que nadie sabria servir.
+         */
+        'imagenes' => [
+            'driver' => 'local',
+            'root' => public_path('images'),
+            'url' => env('APP_URL') . '/images',
+            'visibility' => 'public',
+            'throw' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

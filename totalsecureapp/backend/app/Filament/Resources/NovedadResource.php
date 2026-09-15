@@ -8,6 +8,11 @@ use App\Filament\Resources\NovedadResource\Pages;
 use App\Filament\Resources\NovedadResource\RelationManagers;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
@@ -19,7 +24,9 @@ use Filament\Tables\Filters\Filter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Modules\Administracion\Models\Novedad;
+use Modules\Administracion\Models\OrganizacionInstitucion;
 use Modules\Administracion\Models\UserHasInstitucion;
+use Modules\Acceso\Models\users;
 use App\Filament\Tables\Descarga;
 use Session;
 
@@ -45,7 +52,88 @@ class NovedadResource extends Resource
     protected const RELACIONES_TABLA = ['institucion.cliente', 'users'];
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-question-mark-circle';
 
-    public static function form(Schema $schema): Schema { return $schema->schema([ ]); }
+    /**
+     * ⚠️ Esto era `return $schema->schema([ ]);` -- un formulario **vacio** -- y
+     * aun asi el recurso tenia sus paginas de crear y editar registradas.
+     *
+     * El efecto era exactamente lo que se reporto: desde la web «se guardaba el
+     * registro pero no la foto». No es que la foto fallara: **no habia ningun
+     * campo**, ni de foto ni de nada, asi que se guardaba una novedad en blanco.
+     */
+    public static function form(Schema $schema): Schema
+    {
+        return $schema->schema([
+            Select::make('nv_ins_code')
+                ->label('Local')
+                ->required()
+                ->searchable()
+                ->options(fn () => self::localesParaElFormulario())
+                ->default(fn () => Session::get('insCode')),
+
+            Select::make('nv_usu_id')
+                ->label('Reportado por')
+                ->required()
+                ->searchable()
+                ->options(fn () => users::where('usu_state', 1)
+                    ->orderBy('usu_nmbcom')
+                    ->pluck('usu_nmbcom', 'id'))
+                ->default(fn () => Session::get('usuID')),
+
+            DateTimePicker::make('nv_fecha_hora')
+                ->label('Fecha y hora del hecho')
+                ->required()
+                ->seconds(false)
+                ->default(now())
+                // La carpeta de la foto se arma con esta fecha (ver
+                // `Novedad::getImagenUrlAttribute`), asi que no puede quedar nula.
+                ->maxDate(now()),
+
+            Textarea::make('nv_observacion')
+                ->label('Observación')
+                ->required()
+                ->rows(4)
+                ->maxLength(1000)
+                ->columnSpanFull(),
+
+            FileUpload::make('nv_foto')
+                ->label('Foto')
+                ->image()
+                ->disk('imagenes')
+                // Misma convencion que `generalTrait::storeFiles()`, que es
+                // donde las deja la app movil y donde las busca el accesor.
+                ->directory('novedad/' . now()->format('Y/m/d'))
+                ->visibility('public')
+                ->maxSize(8192)
+                ->helperText('Opcional. Máximo 8 MB.')
+                ->columnSpanFull(),
+
+            TextInput::make('nv_lat')->label('Latitud')->maxLength(255),
+            TextInput::make('nv_lng')->label('Longitud')->maxLength(255),
+        ])->columns(2);
+    }
+
+    /**
+     * Los locales que el usuario puede elegir.
+     *
+     * Acotado por el mismo alcance que el listado: sin esto, un Supervisor
+     * podria registrar una novedad en el local de otro cliente eligiendolo del
+     * desplegable.
+     */
+    private static function localesParaElFormulario(): array
+    {
+        $locales = PerfilPanel::localesVisibles();
+
+        $query = OrganizacionInstitucion::where('ins_estado', true);
+
+        if ($locales !== null) {
+            if (empty($locales)) {
+                return [];
+            }
+            $query->whereIn('ins_code', $locales);
+        }
+
+        return $query->orderBy('ins_descripcion')->pluck('ins_descripcion', 'ins_code')->all();
+    }
 
     public static function table(Table $table): Table
     {

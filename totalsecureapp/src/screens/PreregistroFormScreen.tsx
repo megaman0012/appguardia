@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { enmascararFecha, enmascararHora, horaEsValida } from '../utils/format';
 import { COLORES } from '../utils/tema';
 
 export const PreregistroFormScreen = ({ navigation }: { navigation: any }) => {
@@ -40,6 +41,10 @@ export const PreregistroFormScreen = ({ navigation }: { navigation: any }) => {
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaEstimada.trim())) {
       Alert.alert('Aviso', 'La fecha estimada debe tener formato AAAA-MM-DD');
+      return;
+    }
+    if (!horaEsValida(horaEstimada)) {
+      Alert.alert('Aviso', 'La hora estimada debe ser una hora válida entre 00:00 y 23:59');
       return;
     }
 
@@ -100,19 +105,26 @@ export const PreregistroFormScreen = ({ navigation }: { navigation: any }) => {
         style={styles.input}
       />
       <View style={styles.row2}>
+        {/*
+          * Los separadores los pone la máscara: el teclado numérico de Android
+          * no tiene `-` ni `:`, así que antes era imposible completar estos dos
+          * campos. Se teclean solo los dígitos.
+          */}
         <TextInput
           placeholder="Fecha estimada (AAAA-MM-DD) *"
           value={fechaEstimada}
-          onChangeText={setFechaEstimada}
+          onChangeText={(texto) => setFechaEstimada(enmascararFecha(texto))}
           style={[styles.input, styles.inputHalf]}
-          keyboardType="numeric"
+          keyboardType="number-pad"
+          maxLength={10}
         />
         <TextInput
           placeholder="Hora estimada (HH:MM)"
           value={horaEstimada}
-          onChangeText={setHoraEstimada}
+          onChangeText={(texto) => setHoraEstimada(enmascararHora(texto))}
           style={[styles.input, styles.inputHalf]}
-          keyboardType="numeric"
+          keyboardType="number-pad"
+          maxLength={5}
         />
       </View>
       <TextInput

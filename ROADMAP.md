@@ -265,7 +265,18 @@ panel. Encender un driver de broadcasting real es opcional; el aviso al
 supervisor no lo es. Ojo con `QUEUE_CONNECTION=sync`: mientras la cola sea
 síncrona, el envío del WhatsApp retrasa la respuesta al guardia.
 
-### 2.2 🔴 El QR no sale en el PDF
+### 2.2 ✅ El QR no sale en el PDF — RESUELTO (2026-09-15)
+
+Se declaró `data://` en `allowed_protocols` de `config/dompdf.php`. **No se tocó
+`enable_remote`**, que sigue apagado: `data://` no hace ninguna petición —los
+bytes viajan en la propia URL— y por eso dompdf no le aplica ninguna regla. Los
+que salen a la red son `http://` y `https://`, y ésos siguen cerrados.
+
+Medido antes y después sobre el PDF real: **2 imágenes antes, 3 después**. El
+test compara contra la configuración anterior en vez de contra un número fijo,
+así que sigue valiendo si alguien cambia la plantilla.
+
+### 2.2-bis (diagnóstico original)
 
 Sale la plantilla y el recuadro, sin el código. Causa: `generalTrait.php:209`
 genera el QR como data URI (`data:image/png;base64,...`) y la plantilla lo
@@ -278,7 +289,28 @@ SSRF. dompdf entonces descarta la imagen en silencio y dibuja el resto.
 temporal y referenciarlo por ruta local, o habilitar únicamente el protocolo
 `data://` en `allowed_protocols`.
 
-### 2.3 🟠 Las novedades creadas desde la web no guardan foto
+### 2.3 ✅ Las novedades desde la web no guardan foto — RESUELTO (2026-09-15)
+
+El formulario estaba vacío, así que no fallaba la foto: **se guardaba una novedad
+en blanco**. Ahora pide local, quién reporta, fecha y hora, observación, foto y
+coordenadas. El desplegable de locales está acotado por perfil, para que un
+Supervisor no registre una novedad en el local de otro cliente.
+
+La foto se guarda por un disco nuevo, `imagenes`, que apunta a `public/images`
+—donde las viene dejando `generalTrait::storeFiles()` desde la V1— en vez de
+abrir un segundo árbol de archivos que nadie sabría servir.
+
+**Hallazgo que apareció al hacerlo, y que sigue abierto:** `storeFiles()` arma la
+carpeta con `Carbon::now()` mientras el accesor `imagen_url` la reconstruye con
+`nv_fecha_hora`. Para una novedad creada y sincronizada el mismo día coinciden,
+pero **una que la tablet sincroniza al día siguiente queda con la foto en una
+carpeta y el registro apuntando a otra, y la foto no aparece**. El accesor ya
+acepta rutas relativas completas —que es lo que guarda el panel— y eso cierra el
+hueco para lo nuevo; migrar `storeFiles()` toca también biometría y accesos, así
+que va aparte. **Vale revisar cuántas fotos de novedades ya están perdidas por
+esto.**
+
+### 2.3-bis (diagnóstico original)
 
 `NovedadResource.php:48`: `public static function form(Schema $schema): Schema
 { return $schema->schema([ ]); }` — **el formulario está vacío**, y sin embargo
@@ -288,7 +320,17 @@ foto y sin ningún otro campo porque no hay dónde ponerlos.
 **Arreglo:** escribir el formulario, con `FileUpload` que respete la convención
 de `public/images/novedad/<fecha>/` que ya usa el modelo (`Novedad.php:49`).
 
-### 2.4 🟠 Preregistro: no se puede escribir la hora
+### 2.4 ✅ Preregistro: no se puede escribir la hora — RESUELTO (2026-09-15)
+
+Los campos llevan máscara: se teclean sólo los dígitos y la app pone el `-` y el
+`:`. Más validación de que la hora existe (00:00–23:59), que antes no se
+comprobaba.
+
+No se usó un selector nativo de fecha a propósito: sería un módulo nativo nuevo,
+y en este proyecto `android/` está versionado, así que `expo prebuild` rehace la
+carpeta entera. La máscara resuelve lo mismo sin tocar la compilación.
+
+### 2.4-bis (diagnóstico original)
 
 `PreregistroFormScreen.tsx:103-116`: fecha y hora son `TextInput` con
 `keyboardType="numeric"`. El teclado numérico de Android **no trae `:` ni `-`**,
@@ -298,7 +340,26 @@ minutos. El campo ya está separado en la base (`apr_fecha_estimada` y
 
 **Arreglo:** selectores nativos de fecha y hora en lugar de texto libre.
 
-### 2.5 🟡 «Quiero cubrir turnos extra» no se refleja entre web y app
+### 2.5 ✅ «Quiero cubrir turnos extra» — RESUELTO (2026-09-15)
+
+**Corrección del diagnóstico:** la app *sí* recarga el valor desde la API cada
+vez que se abre Vacantes o Perfil, así que no había un problema de
+sincronización. Lo que faltaba era el control: **no existía en ninguna parte del
+panel**, sólo en el Perfil dentro de la app — y la app vive en las tablets de los
+puestos, no en el teléfono del guardia, así que ofrecerse para un turno extra
+obligaba a ir hasta un puesto.
+
+Ahora está en dos sitios: el toggle en la ficha de Usuarios, junto al de
+WhatsApp, y **una pantalla nueva en el grupo Operación**, «Disponibilidad para
+extras», que es donde se pidió — junto a Turnos y Cobertura, porque cuando hay
+que cubrir un puesto lo primero es saber a quién ofrecérselo. Lista cédula,
+nombre, número de WhatsApp y los dos interruptores, con filtros. Acotada por
+perfil y sin alta de personas: eso sigue en Usuarios.
+
+Muestra el número de WhatsApp a propósito: sin número cargado el aviso no llega,
+y eso explica por qué un guardia disponible nunca contesta una convocatoria.
+
+### 2.5-bis (diagnóstico original)
 
 El campo `usu_acepta_extras` existe, está en el `fillable` y la API lo lee y
 escribe (`VacanteController.php:320`). Pero **no hay ningún control en el panel

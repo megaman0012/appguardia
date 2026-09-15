@@ -45,9 +45,37 @@ class Novedad extends Model
     const UPDATED_AT = 'nv_updated_at';
 
     public function getImagenUrlAttribute(){
+        if (empty($this->nv_foto)) {
+            return null;
+        }
+
+        /*
+         * Dos formas de guardar la foto conviven a proposito:
+         *
+         * - **Ruta relativa** (`novedad/2026/09/15/archivo.jpg`), que es lo que
+         *   guarda el panel. Se usa tal cual.
+         * - **Solo el nombre**, que es lo que viene guardando la app desde la V1
+         *   por `generalTrait::storeFiles()`. La carpeta se reconstruye con
+         *   `nv_fecha_hora`.
+         *
+         * ⚠️ La segunda forma tiene un problema conocido: `storeFiles()` arma la
+         * carpeta con `Carbon::now()` mientras esto la reconstruye con
+         * `nv_fecha_hora`. Para una novedad creada y sincronizada el mismo dia
+         * coinciden, pero **una novedad que la tablet sincroniza al dia
+         * siguiente queda con la foto en una carpeta y el registro apuntando a
+         * otra**, y la foto no aparece. Guardar la ruta completa --como hace el
+         * panel-- es lo que cierra ese hueco; migrar `storeFiles()` toca
+         * tambien biometria y accesos, asi que va aparte.
+         */
+        if (str_contains($this->nv_foto, '/')) {
+            return file_exists(public_path('images/' . $this->nv_foto))
+                ? asset('images/' . $this->nv_foto)
+                : null;
+        }
+
         $fecha = Carbon::parse($this->nv_fecha_hora)->format('Y/m/d');
         $imagePath = public_path('images/novedad/' . $fecha . '/' . $this->nv_foto);
-        if (file_exists($imagePath) && !empty($this->nv_foto)) {
+        if (file_exists($imagePath)) {
             return asset('images/novedad/' . $fecha . '/' . $this->nv_foto);
         }
         return null;

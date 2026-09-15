@@ -3,6 +3,16 @@
 ## [Sin publicar]
 
 ### Corregido
+- **2026-09-15 — El QR vuelve a salir en la hoja imprimible.** dompdf descartaba
+  la imagen en silencio porque desde su versión 2.0 el esquema `data:` pasa por
+  `allowed_protocols`, donde no estaba declarado. Sin tocar `enable_remote`.
+- **2026-09-15 — Las novedades desde la web ya guardan foto.** El formulario del
+  panel estaba vacío: no fallaba la subida, se guardaba una novedad en blanco.
+- **2026-09-15 — Se puede escribir la hora en el pre-registro.** Los campos de
+  fecha y hora llevan máscara: el teclado numérico de Android no tiene `-` ni `:`.
+- **2026-09-15 — «Quiere cubrir turnos extra» se puede activar desde el panel**,
+  en Operación → Disponibilidad para extras, y en la ficha de Usuarios. Antes sólo
+  se podía desde el Perfil dentro de la app.
 - **2026-09-15 — Cerrada la fuga entre clientes en el panel.** El detalle de
   rondas y los marcadores de local filtraban sólo por el parámetro de la URL, sin
   mirar el perfil: con ids consecutivos, un Supervisor leía las rondas de otro
