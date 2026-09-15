@@ -12,7 +12,7 @@ class AlertaService
 {
     public function crearAlerta(array $datos): Alertas
     {
-        return DB::transaction(function () use ($datos) {
+        $alerta = DB::transaction(function () use ($datos) {
             $alerta = Alertas::create([
                 'al_ins_code' => $datos['institucion_id'],
                 'al_usu_id' => $datos['usuario_id'],
@@ -42,10 +42,25 @@ class AlertaService
 
             $this->asignarASupervisor($alerta);
 
-            event(new \App\Events\AlertaCreada($alerta));
-
             return $alerta;
         });
+
+        /*
+         * El aviso sale FUERA de la transaccion, y no es un detalle.
+         *
+         * Antes se emitia adentro. Como el listener que manda el aviso es
+         * sincrono, eso significaba dos cosas malas a la vez: se avisaba de una
+         * alerta que todavia podia no existir (si la transaccion fallaba
+         * despues, ya se habia despertado al supervisor por nada), y la
+         * transaccion quedaba abierta durante la llamada HTTP al gateway de
+         * WhatsApp -- 8 segundos de timeout con una fila de la base tomada.
+         *
+         * Aca la alerta ya esta confirmada en disco: el aviso puede tardar o
+         * fallar sin arrastrar nada.
+         */
+        event(new \App\Events\AlertaCreada($alerta));
+
+        return $alerta;
     }
 
     /**
@@ -233,12 +248,31 @@ class AlertaService
             default => 'Supervisor',
         };
 
+        /*
+         * ⚠️ Esto estaba roto, con el mismo error que ya se habia corregido en
+         * `asignarASupervisor` unas lineas mas arriba: `whereHas('instituciones')`
+         * sobre un modelo que **no tiene esa relacion**. Ni el `users` de
+         * `Modules\Acceso` ni el de `Modules\MobileApp` la declaran.
+         *
+         * Eloquent lanzaba `BadMethodCallException: Call to undefined method
+         * users::instituciones()`, asi que **escalar una alerta reventaba
+         * siempre**. Se arreglo la asignacion y quedo sin arreglar el
+         * escalamiento, que es justo el camino que se usa cuando la primera
+         * persona no contesta.
+         *
+         * El vinculo real vive en `user_has_institucion`.
+         */
         return users::whereHas('roles', function ($q) use ($rolNivel) {
             $q->where('name', $rolNivel)->where('estado', 1);
         })
-        ->whereHas('instituciones', function ($q) use ($insCode) {
-            $q->where('ins_code', $insCode);
+        ->whereExists(function ($q) use ($insCode) {
+            $q->select(DB::raw(1))
+              ->from('user_has_institucion')
+              ->whereColumn('user_has_institucion.ui_usu_id', 'users.id')
+              ->where('user_has_institucion.ui_ins_code', $insCode)
+              ->where('user_has_institucion.ui_state', 1);
         })
+        ->where('usu_state', 1)
         ->first();
     }
 

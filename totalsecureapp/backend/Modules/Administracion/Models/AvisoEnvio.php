@@ -41,6 +41,7 @@ class AvisoEnvio extends Model
     protected $fillable = [
         'ae_usu_id', 'ae_canal', 'ae_tipo', 'ae_titulo', 'ae_cuerpo',
         'ae_destino', 'ae_resultado', 'ae_detalle', 'ae_tv_id', 'ae_direccion',
+        'ae_al_code',
     ];
 
     public function scopeRespuestas($query)
@@ -56,5 +57,11 @@ class AvisoEnvio extends Model
     public function vacante(): BelongsTo
     {
         return $this->belongsTo(TurnoVacante::class, 'ae_tv_id', 'tv_id');
+    }
+
+    /** De qué alerta salió este aviso, si salió de una. */
+    public function alerta(): BelongsTo
+    {
+        return $this->belongsTo(Alertas::class, 'ae_al_code', 'al_code');
     }
 }

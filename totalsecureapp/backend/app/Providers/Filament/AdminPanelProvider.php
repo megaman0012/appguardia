@@ -118,6 +118,22 @@ class AdminPanelProvider extends PanelProvider
                     ->icon('heroicon-o-link'),
             ])
 
+            /*
+             * La campanita del panel.
+             *
+             * Es «la web» donde el usuario espera ver una alerta de panico. Sin
+             * esto, el aviso de una emergencia no tenia donde aparecer: el unico
+             * rastro era el contador del tablero, que solo cambia si alguien
+             * entra y refresca.
+             *
+             * El sondeo es corto a proposito. El valor por defecto de Filament
+             * son 30 s, y en una emergencia medio minuto de espera es mucho;
+             * son usuarios internos y pocos, asi que el costo de consultar mas
+             * seguido es bajo.
+             */
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('10s')
+
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([

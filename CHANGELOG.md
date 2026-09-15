@@ -2,6 +2,18 @@
 
 ## [Sin publicar]
 
+### Corregido
+- **2026-09-15 — El botón de EMERGENCIA ahora avisa a alguien.** La alerta se
+  guardaba bien desde siempre, pero el único aviso era un evento
+  `ShouldBroadcast` emitido con `BROADCAST_DRIVER=log`: cada pedido de auxilio
+  terminaba como una línea en `storage/logs` y nadie se enteraba. Se agregó
+  `NotificadorAlerta`, el listener que faltaba y el canal `panel` (la campanita
+  de Filament, el único que no depende de Firebase ni del gateway de WhatsApp).
+- **Escalar una alerta reventaba siempre**: `buscarSupervisorPorNivel()` usaba
+  `whereHas('instituciones')`, una relación inexistente en ambos modelos `users`.
+- El evento de alerta se emitía **dentro** de la transacción, con el envío de
+  WhatsApp bloqueando una fila de la base durante su timeout.
+
 ### Agregado
 - **2026-09-15** — Documentacion en `docs/` (12 areas; manuales de usuario y
   administrador pendientes), `INFORME_AUDITORIA.md` y este changelog.

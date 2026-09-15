@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
+use App\Events\AlertaCreada;
+use App\Listeners\AvisarAlertaCreada;
 use App\Observers\AlertaObserver;
 use App\Observers\TurnoObserver;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -21,6 +23,18 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
         Registered::class => [
             SendEmailVerificationNotification::class,
+        ],
+
+        /*
+         * El boton de EMERGENCIA de los guardias.
+         *
+         * `AlertaCreada` se emitia desde el principio y **no lo escuchaba
+         * nadie**: al ser un `ShouldBroadcast` con `BROADCAST_DRIVER=log`, cada
+         * pedido de auxilio terminaba como una linea en `storage/logs`. Este
+         * listener es lo que convierte la alerta en un aviso a una persona.
+         */
+        AlertaCreada::class => [
+            AvisarAlertaCreada::class,
         ],
     ];
 

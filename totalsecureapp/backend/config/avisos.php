@@ -13,6 +13,11 @@ return [
      * App\Services\Avisos\CanalDeAviso y agregarla acá. Nada más cambia.
      */
     'canales' => [
+        // La campanita del panel. Va primero porque es el único que no depende
+        // de nada externo: push necesita Firebase y WhatsApp necesita el
+        // gateway, y una alerta de pánico no puede quedar esperando a ninguno
+        // de los dos.
+        App\Services\Avisos\CanalPanel::class,
         App\Services\Avisos\CanalPush::class,
         // Se auto-desactiva si falta la configuración de abajo, así que puede
         // quedar acá aunque todavía no exista el gateway.
