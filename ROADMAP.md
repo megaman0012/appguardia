@@ -63,7 +63,34 @@ valores, sin expiración y sin un solo intento de aleatoriedad criptográfica.
 darle caducidad (30 min) e invalidarlo al usarlo. Mitigación de hoy mismo, si el
 arreglo no entra ya: cerrar las dos rutas en `docker/nginx/default.conf`.
 
-### 0.2 🔴 Respaldo inexistente
+### 0.2 ✅ Respaldo inexistente — HECHO (2026-09-15), con una salvedad
+
+`backend/scripts/respaldo.sh`, diario a las 03:00 por el crontab de `server-dt`,
+siguiendo el patrón del respaldo de la ticketera. Guarda en
+`~/respaldos/totalsecureapp/` — **fuera del repositorio**, porque acá el árbol de
+trabajo es producción y ya se coló un dump en un commit y un `.zip` de 63 MB que
+llegó a GitHub.
+
+Cubre las cuatro cosas irrecuperables: la base PostgreSQL (formato custom, para
+poder restaurar una sola tabla), la MariaDB de la V1 que no pertenece a ningún
+compose, los secretos con `APP_KEY`, y el **keystore de firma**. Paquete diario
+de ~7 MB, 14 días de retención. Las fotos van aparte por `rsync` incremental
+—1,3 GB que casi no cambian— y sin `--delete`, para que un borrado accidental en
+el servidor no se propague al espejo.
+
+**Probado, no sólo escrito:** primera corrida completa sin errores, y el
+resultado verificado — 58 tablas con datos en el dump, gzip de la V1 íntegro, y
+el keystore del paquete con el mismo SHA-256 que el original. El procedimiento
+de restauración está en `backend/scripts/RESPALDO.md`.
+
+⚠️ **La salvedad, que sigue abierta: todo queda en este mismo servidor.** Sirve
+contra un borrado accidental o una tabla corrupta; no sirve si se pierde el
+servidor, que es justo el caso en el que el keystore no se recupera. El script ya
+tiene el paso de copia externa (`DESTINO_EXTERNO`) y avisa en cada corrida
+mientras esté vacío: **falta decidir a qué máquina copiar**. Eso es CONT-02 y no
+se cierra hasta que exista ese destino.
+
+### 0.2-bis (diagnóstico original, para referencia)
 
 Verificado en el crontab de `server-dt`: sólo hay respaldo de la ticketera, y
 traccar tiene su propio timer. Total Secure App **no tiene ninguno**. Cuatro

@@ -3,6 +3,12 @@
 ## [Sin publicar]
 
 ### Corregido
+- **2026-09-15 — Respaldo diario, que no existía.** `backend/scripts/respaldo.sh`
+  a las 03:00: base PostgreSQL, base MariaDB de la V1, secretos con `APP_KEY` y
+  el keystore de firma; las fotos por espejo incremental. Verificado restaurando
+  el índice del dump (58 tablas) y comparando el SHA-256 del keystore.
+  Procedimiento en `backend/scripts/RESPALDO.md`. ⚠️ Sigue faltando la copia
+  **fuera del servidor** (`DESTINO_EXTERNO`).
 - **2026-09-15 — 🔴 Cerrada la toma de cuentas (SEC-00).** `POST /api/procesar_paswchg`
   cambiaba la contraseña de cualquier usuario mandando sólo su `user_id`, un entero
   secuencial, sin token ni autenticación, sobre un endpoint publicado en internet;
