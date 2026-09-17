@@ -3,11 +3,12 @@ import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'rea
 import { useAuth } from '../context/AuthContext';
 import { Encabezado } from '../components/Encabezado';
 import { MenuLateral } from '../components/MenuLateral';
+import { BotonEmergencia } from '../components/BotonEmergencia';
 import { MODULOS } from '../utils/modulos';
 import { COLORES } from '../utils/tema';
 
 export const HomeScreen = ({ navigation }: { navigation: any }) => {
-  const { user, perfil, logout, can } = useAuth();
+  const { user, perfil, institucion, logout, can } = useAuth();
   const [menuAbierto, setMenuAbierto] = useState(false);
 
   const nombres = user?.nombres || user?.usu_nombres || 'Usuario';
@@ -112,6 +113,17 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
             ))}
           </View>
         )}
+        {/*
+          El botón de pánico, debajo de los módulos y siempre a la vista.
+
+          Estaba dentro de la pantalla de Alertas, a dos pasos de navegación, y
+          además exigía escribir el motivo antes de enviar. Lo que hace útil a un
+          botón de emergencia es estar donde ya se está mirando y salir de un
+          toque.
+        */}
+        {can('alertas.crear') ? (
+          <BotonEmergencia insCode={institucion?.ins_code} />
+        ) : null}
       </ScrollView>
     </View>
   );

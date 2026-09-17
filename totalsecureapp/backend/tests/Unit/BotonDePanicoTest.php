@@ -226,11 +226,21 @@ class BotonDePanicoTest extends TestCase
         $this->assertSame(1, Alertas::count());
     }
 
-    public function test_una_alerta_sin_motivo_se_rechaza(): void
+    /**
+     * ⚠️ **Antes se rechazaba, y estaba mal.** Exigir el motivo convierte el
+     * boton de panico en un formulario: primero escribir, despues enviar. En una
+     * emergencia real nadie escribe, y pedirlo solo garantiza dos cosas malas --
+     * que la alerta salga tarde, o que no salga.
+     *
+     * Queda registrada como «Boton de emergencia»: que alguien lo apreto, desde
+     * donde y cuando, que es lo que de verdad importa. El texto sigue
+     * aceptandose cuando hay tiempo de escribirlo.
+     */
+    public function test_una_alerta_sin_motivo_SE_ACEPTA(): void
     {
-        $respuesta = $this->crear(['observacion' => '']);
+        $this->crear(['observacion' => ''])->assertStatus(201);
 
-        $respuesta->assertJsonPath('success', false);
-        $this->assertSame(0, Alertas::count());
+        $this->assertSame(1, Alertas::count());
+        $this->assertSame('Botón de emergencia', Alertas::first()->al_observacion);
     }
 }

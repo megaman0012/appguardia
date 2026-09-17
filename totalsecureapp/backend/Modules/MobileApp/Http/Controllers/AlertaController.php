@@ -35,7 +35,18 @@ class AlertaController extends Controller
             'ins' => 'required|integer',
             'lat' => 'required|numeric',
             'lng' => 'required|numeric',
-            'observacion' => 'required|string|max:1000',
+            /*
+             * ⚠️ El motivo es OPCIONAL, y es una decision deliberada.
+             *
+             * Era obligatorio, y eso convierte el boton de panico en un
+             * formulario: en una emergencia real nadie escribe, se aprieta el
+             * boton. Exigir texto solo garantiza dos cosas malas -- que la
+             * alerta salga tarde, o que no salga.
+             *
+             * El texto sigue sirviendo cuando hay tiempo de escribirlo, y quien
+             * atiende ya sabe quien la mando y desde donde.
+             */
+            'observacion' => 'nullable|string|max:1000',
             'prioridad' => 'nullable|in:baja,media,alta,critica',
             // Opcional, como en los otros endpoints de campo: el APK ya
             // instalado no los manda y tiene que seguir funcionando.
@@ -46,7 +57,6 @@ class AlertaController extends Controller
             'ins.required' => 'Campo institucion es obligatorio',
             'lat.required' => 'Latitud es obligatoria',
             'lng.required' => 'Longitud es obligatoria',
-            'observacion.required' => 'Observación es obligatoria',
             'prioridad.in' => 'Prioridad no válida',
         ]
     ];
@@ -120,7 +130,11 @@ class AlertaController extends Controller
                     'usuario_id' => $us->id,
                     'lat' => $request->lat,
                     'lng' => $request->lng,
-                    'observacion' => $request->observacion,
+                    // Sin texto, queda constancia de que se apreto el boton y
+                    // ya: es lo que de verdad importa de una emergencia.
+                    'observacion' => trim((string) $request->observacion) !== ''
+                        ? $request->observacion
+                        : 'Botón de emergencia',
                     'prioridad' => $request->prioridad ?? 'media',
                     'client_uuid' => $clientUuid,
                     'sincronizado_en' => $this->offlineSync->sincronizadoEn(),
