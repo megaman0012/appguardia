@@ -53,12 +53,16 @@ class AlertasEnVivo extends Widget
 
     protected int | string | array $columnSpan = 'full';
 
-    /**
-     * Cada 15 s. Es un compromiso: medio minuto es mucho en una emergencia, y
-     * bajar de 10 multiplica las consultas de todos los que tengan el panel
-     * abierto sin ganar nada apreciable.
+    /*
+     * El refresco lo hace la vista con `wire:poll.15s="comprobar"`, que ademas
+     * de redibujar **compara y avisa si hay algo nuevo**. El `$pollingInterval`
+     * de Filament solo redibuja, asi que tenerlo tambien significaba consultar
+     * el doble para que la mitad de las veces no detectara nada.
+     *
+     * 15 s es un compromiso: medio minuto es mucho en una emergencia, y bajar de
+     * 10 multiplica las consultas de todos los que tengan el panel abierto sin
+     * ganar nada apreciable.
      */
-    protected static ?string $pollingInterval = '15s';
 
     public static function canView(): bool
     {

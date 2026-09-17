@@ -53,7 +53,9 @@ class AlertasResource extends Resource
      * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
      * 126 consultas en vez de 6.
      */
-    protected const RELACIONES_TABLA = ['institucion.cliente', 'usuario'];
+    // `asignacionActual` entra porque el listado muestra el comentario de cierre
+    // y el tiempo de respuesta: sin esto, cada fila dispara su propia consulta.
+    protected const RELACIONES_TABLA = ['institucion.cliente', 'usuario', 'asignacionActual'];
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-exclamation-triangle';
     public static function form(Schema $schema): Schema{ return $schema->schema([]); }
     public static function table(Table $table): Table
@@ -76,6 +78,32 @@ class AlertasResource extends Resource
                     ->label('Usuario')
                     ->toggleable()
                     ->searchable(),
+                /*
+                 * El comentario con el que se cerro, a la vista en el listado.
+                 *
+                 * ⚠️ Se escribia al finalizar y **no se veia en ninguna parte**:
+                 * quedaba en `alertas_detalle.ad_observacion_atencion`, que el
+                 * panel no mostraba. Cerrar una emergencia sin poder leer
+                 * despues que paso deja el registro sin valor: para eso se pide
+                 * el comentario.
+                 */
+                TextColumn::make('asignacionActual.ad_observacion_atencion')
+                    ->label('Cómo se resolvió')
+                    ->size('sm')
+                    ->wrap()
+                    ->placeholder('sin cerrar')
+                    ->toggleable(),
+
+                TextColumn::make('asignacionActual.ad_tiempo_respuesta_seg')
+                    ->label('Tardó')
+                    ->size('sm')
+                    ->formatStateUsing(fn ($state) => $state === null
+                        ? '—'
+                        : ($state < 60
+                            ? $state . ' s'
+                            : intdiv((int) $state, 60) . ' min'))
+                    ->toggleable(),
+
                 BadgeColumn::make('al_estado_alerta')->size('sm')
                     ->label('Estado Alerta')
                     ->colors([
@@ -141,6 +169,34 @@ class AlertasResource extends Resource
                  * emergencia cerrada sin decir que paso no se distingue de una
                  * que nadie atendio.
                  */
+                /*
+                 * La linea de tiempo completa: quien la creo, a quien se
+                 * asigno, quien la cerro y que escribio. Es lo que permite
+                 * reconstruir una emergencia despues, que es para lo que se
+                 * guarda el historial.
+                 */
+                Actions\Action::make('historial')
+                    ->label('Historial')
+                    ->icon('heroicon-o-clock')
+                    ->color('gray')
+                    ->modalHeading(fn (Alertas $record) => 'Historial de la alerta #' . $record->al_code)
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Cerrar')
+                    ->modalContent(function (Alertas $record) {
+                        $filas = \Illuminate\Support\Facades\DB::table('alertas_historial as h')
+                            ->leftJoin('users as u', 'u.id', '=', 'h.ah_usuario_id')
+                            ->where('h.ah_al_code', $record->al_code)
+                            ->orderBy('h.ah_id')
+                            ->get(['h.ah_accion', 'h.ah_descripcion', 'h.created_at', 'u.usu_nmbcom']);
+
+                        $cierre = optional($record->asignacionActual)->ad_observacion_atencion;
+
+                        return view('filament.modales.historial-alerta', [
+                            'filas'  => $filas,
+                            'cierre' => $cierre,
+                        ]);
+                    }),
+
                 Actions\Action::make('finalizar')
                     ->label('Finalizar')
                     ->icon('heroicon-o-check-circle')

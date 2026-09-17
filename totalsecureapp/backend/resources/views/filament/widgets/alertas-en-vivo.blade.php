@@ -1,14 +1,12 @@
 {{--
     Las emergencias abiertas, con sonido.
 
-    El widget se dibuja solo cuando hay alguna: un panel rojo permanente se
-    vuelve parte del decorado y deja de mirarse a los dos dias.
-
-    Todo el JavaScript va INLINE en el `x-data`, no en un `@push('scripts')`.
-    Motivo: el widget aparece por primera vez dentro de un refresco de Livewire
-    --justo cuando entra la emergencia-- y en ese momento los stacks del layout
-    ya se emitieron, asi que un script empujado ahi nunca llega. Era el unico
-    momento en que hacia falta.
+    ⚠️ Se usa `<x-filament::section>` y las clases que YA trae Filament, no
+    Tailwind propio. Este proyecto **no compila CSS**: no hay tema propio ni
+    `public/build`, asi que Filament sirve su hoja precompilada y cualquier clase
+    que no este ahi dentro simplemente no existe. La version anterior usaba
+    `bg-danger-50`, `border-2` y `dark:bg-danger-950/30`, y por eso el panel
+    salia sin formato.
 --}}
 @php($alertas = $this->getAlertas())
 
@@ -18,24 +16,34 @@
             audio: null,
             sonidoListo: false,
 
-            activar() {
+            init() {
+                // Si ya lo activo antes en este navegador, se reactiva solo: el
+                // navegador permite el audio mientras haya habido alguna
+                // interaccion previa en la pestaña.
+                if (localStorage.getItem('alertas-sonido') === '1') {
+                    this.preparar();
+                }
+            },
+
+            preparar() {
                 try {
                     this.audio = new (window.AudioContext || window.webkitAudioContext)();
                     this.sonidoListo = true;
-                    // Un pitido al activar sirve de prueba: si no se oye, el
-                    // volumen esta bajo, y mas vale saberlo ahora que durante una
-                    // emergencia.
-                    this.pitar();
+                    localStorage.setItem('alertas-sonido', '1');
                 } catch (e) {
                     console.warn('No se pudo iniciar el audio', e);
                 }
             },
 
+            activar() {
+                this.preparar();
+                this.pitar();
+            },
+
             /*
              * El sonido se genera, no se descarga: asi no hay que desplegar
              * ningun archivo ni depende de que una ruta exista. Tres tonos
-             * alternados, que es lo que se reconoce como alarma y no como
-             * notificacion de correo.
+             * alternados, que se reconocen como alarma y no como notificacion.
              */
             pitar() {
                 if (!this.audio) return;
@@ -60,38 +68,47 @@
                 });
             },
         }"
-        {{-- El servidor avisa cuando hay una emergencia que no estaba. --}}
         x-on:emergencia-nueva.window="pitar()"
     >
         @if (count($alertas) > 0)
-            <div class="rounded-xl border-2 border-danger-500 bg-danger-50 p-4 dark:bg-danger-950/30">
-                <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
-                    <h2 class="flex items-center gap-2 text-base font-bold text-danger-700 dark:text-danger-400">
-                        <span class="text-xl">🚨</span>
-                        {{ count($alertas) === 1
-                            ? 'Emergencia sin atender'
-                            : count($alertas) . ' emergencias sin atender' }}
-                    </h2>
+            <x-filament::section>
+                <x-slot name="heading">
+                    🚨 {{ count($alertas) === 1
+                        ? 'Emergencia sin atender'
+                        : count($alertas) . ' emergencias sin atender' }}
+                </x-slot>
 
-                    {{-- El navegador bloquea el audio hasta que la persona
-                         interactua con la pagina al menos una vez. Sin este
-                         boton el aviso seria mudo y nadie sabria por que. --}}
-                    <button type="button" x-show="!sonidoListo" x-on:click="activar()"
-                            class="rounded-lg bg-danger-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-danger-700">
-                        🔔 Activar sonido
-                    </button>
-                    <span x-show="sonidoListo" x-cloak
-                          class="text-xs font-medium text-danger-600 dark:text-danger-400">
-                        Sonido activo
+                <x-slot name="description">
+                    <span x-show="!sonidoListo">
+                        El navegador no deja sonar una alarma hasta que se pulsa aquí una vez.
                     </span>
-                </div>
+                    <span x-show="sonidoListo" x-cloak>Sonido activo en este equipo.</span>
+                </x-slot>
 
-                <div class="space-y-2">
+                <x-slot name="headerEnd">
+                    <x-filament::button size="sm" color="danger" x-show="!sonidoListo"
+                                        x-on:click="activar()">
+                        Activar sonido
+                    </x-filament::button>
+
+                    {{-- Probar sin esperar a una emergencia real: si no se oye,
+                         el volumen esta bajo y mas vale saberlo ahora. --}}
+                    <x-filament::button size="sm" color="gray" x-show="sonidoListo" x-cloak
+                                        x-on:click="pitar()">
+                        Probar sonido
+                    </x-filament::button>
+                </x-slot>
+
+                <div class="fi-ta-ctn divide-y divide-gray-200 dark:divide-white/10">
                     @foreach ($alertas as $a)
-                        <div class="rounded-lg bg-white p-3 shadow-sm dark:bg-gray-900">
+                        <div class="py-3">
                             <div class="flex flex-wrap items-baseline justify-between gap-2">
-                                <span class="font-semibold text-gray-950 dark:text-white">{{ $a['local'] }}</span>
-                                <span class="text-xs text-gray-500">{{ $a['hace'] }}</span>
+                                <span class="font-semibold text-gray-950 dark:text-white">
+                                    {{ $a['local'] }}
+                                </span>
+                                <span class="text-sm text-gray-500 dark:text-gray-400">
+                                    {{ $a['hace'] }}
+                                </span>
                             </div>
 
                             <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">
@@ -99,25 +116,28 @@
                                 @if ($a['motivo']) — {{ $a['motivo'] }} @endif
                             </p>
 
-                            <div class="mt-2 flex flex-wrap items-center gap-3 text-xs">
-                                <span class="rounded-full bg-danger-100 px-2 py-0.5 font-semibold uppercase text-danger-700 dark:bg-danger-900 dark:text-danger-300">
+                            <div class="mt-2 flex flex-wrap items-center gap-4 text-sm">
+                                <x-filament::badge color="danger">
                                     {{ $a['prioridad'] }}
-                                </span>
+                                </x-filament::badge>
 
                                 @if ($a['mapa'])
-                                    <a href="{{ $a['mapa'] }}" target="_blank" rel="noopener"
-                                       class="font-medium text-primary-600 hover:underline">Ver ubicación</a>
+                                    <x-filament::link href="{{ $a['mapa'] }}" target="_blank">
+                                        Ver ubicación
+                                    </x-filament::link>
                                 @else
                                     <span class="text-gray-400">Sin ubicación</span>
                                 @endif
 
-                                <a href="{{ \App\Filament\Resources\AlertasResource::getUrl('index') }}"
-                                   class="font-medium text-primary-600 hover:underline">Atender</a>
+                                <x-filament::link
+                                    href="{{ \App\Filament\Resources\AlertasResource::getUrl('index') }}">
+                                    Atender
+                                </x-filament::link>
                             </div>
                         </div>
                     @endforeach
                 </div>
-            </div>
+            </x-filament::section>
         @endif
     </div>
 </div>
