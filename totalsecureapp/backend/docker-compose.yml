@@ -31,6 +31,23 @@ services:
       # `upload_max_filesize = 2M` y el marcaje biometrico falla: una foto de
       # camara pesa mas que eso y PHP la descarta antes de que Laravel la vea.
       - ./docker/php/uploads.ini:/usr/local/etc/php/conf.d/zz-uploads.ini:ro
+      # Cuantas peticiones atiende PHP a la vez. La imagen trae 5, que se agotan
+      # con unas pocas tablets subiendo fotos y dejan el panel sin responder.
+      - ./docker/php/fpm-pool.conf:/usr/local/etc/php-fpm.d/zz-pool.conf:ro
+    # Sin esto, un php-fpm que acepta conexiones pero no responde se queda ahi
+    # para siempre: `restart: unless-stopped` solo actua si el proceso MUERE, y
+    # un proceso colgado no muere.
+    #
+    # La comprobacion se hace con PHP y no con `/dev/tcp`: el `sh` de esta imagen
+    # es dash, que no soporta esa extension de bash. Y no hay `nc`, `curl` ni
+    # `cgi-fcgi` instalados. Abrir el socket 9000 es lo unico que prueba que fpm
+    # sigue aceptando trabajo.
+    healthcheck:
+      test: ["CMD", "php", "/var/www/docker/php/healthcheck.php"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     environment:
       # ⚠️ Estaba en `local` con `APP_DEBUG: "true"`, y esto es produccion
       # expuesta en dos IP publicas. Con el modo depuracion encendido,
