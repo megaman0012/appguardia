@@ -10,10 +10,12 @@ import {
   FlatList,
   RefreshControl,
   Image,
+  TextInput,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { mensajeDeError, mensajeDeExcepcion } from '../utils/errores';
 import { getCurrentLocation } from '../utils/location';
 import { formatDateTime } from '../utils/format';
 import { COLORES } from '../utils/tema';
@@ -119,6 +121,7 @@ export const AccesoListScreen = ({ navigation }: { navigation: any }) => {
   });
   const [tab, setTab] = useState<Tab>('accesos');
   const [filtroTipo, setFiltroTipo] = useState<string>('todos');
+  const [busqueda, setBusqueda] = useState('');
   const [accesos, setAccesos] = useState<AccesoItem[]>([]);
   const [preregistros, setPreregistros] = useState<PreregistroItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,7 +152,7 @@ export const AccesoListScreen = ({ navigation }: { navigation: any }) => {
         }
       }
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Error al cargar datos');
+      Alert.alert('Error', mensajeDeExcepcion(error, 'Error al cargar datos'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -203,7 +206,7 @@ export const AccesoListScreen = ({ navigation }: { navigation: any }) => {
                 Alert.alert('Error', 'No se pudo registrar la salida');
               }
             } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.message || 'Error al registrar salida');
+              Alert.alert('Error', mensajeDeExcepcion(error, 'Error al registrar salida'));
             }
           },
         },
@@ -230,7 +233,7 @@ export const AccesoListScreen = ({ navigation }: { navigation: any }) => {
                 cargar();
               }
             } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.message || 'Error al cancelar');
+              Alert.alert('Error', mensajeDeExcepcion(error, 'Error al cancelar'));
             }
           },
         },
@@ -238,8 +241,41 @@ export const AccesoListScreen = ({ navigation }: { navigation: any }) => {
     );
   };
 
-  const accesosFiltrados =
-    filtroTipo === 'todos' ? accesos : accesos.filter((a) => a.ac_tipo === filtroTipo);
+  /*
+   * El buscador filtra sobre lo que ya está en pantalla, sin volver al
+   * servidor: la lista es la del día y cabe en memoria, así que responde
+   * mientras se escribe. Antes había que recorrer la lista a ojo para encontrar
+   * a alguien.
+   *
+   * Busca por documento, nombre, apellido y placa, que es como se pregunta por
+   * alguien en una garita: «el señor Pérez», «la cédula 09…», «el furgón ABC».
+   */
+  const normalizar = (s: string) =>
+    s
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+  const coincide = (a: AccesoItem, texto: string) => {
+    const persona = a.persona || a.acceso_persona;
+    const campos = [
+      persona?.ap_documento,
+      persona?.ap_nombres,
+      persona?.ap_apellidos,
+      a.vehiculo?.av_patente,
+    ];
+
+    return campos.some((c) => c && normalizar(String(c)).includes(texto));
+  };
+
+  const accesosFiltrados = (() => {
+    const porTipo =
+      filtroTipo === 'todos' ? accesos : accesos.filter((a) => a.ac_tipo === filtroTipo);
+
+    const texto = normalizar(busqueda.trim());
+
+    return texto === '' ? porTipo : porTipo.filter((a) => coincide(a, texto));
+  })();
 
   const renderAcceso = ({ item }: { item: AccesoItem }) => {
     const persona = item.persona || item.acceso_persona;
@@ -402,6 +438,26 @@ export const AccesoListScreen = ({ navigation }: { navigation: any }) => {
       </View>
 
       {tab === 'accesos' ? (
+        <View style={styles.buscadorWrap}>
+          <TextInput
+            style={styles.buscador}
+            placeholder="Buscar por cédula, nombre o placa"
+            value={busqueda}
+            onChangeText={setBusqueda}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {busqueda !== '' ? (
+            <TouchableOpacity style={styles.buscadorLimpiar} onPress={() => setBusqueda('')}>
+              <Text style={styles.buscadorLimpiarTexto}>✕</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : null}
+
+      {tab === 'accesos' ? (
         <View style={styles.filtrosWrap}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtrosRow}>
             <TouchableOpacity
@@ -519,6 +575,31 @@ const styles = StyleSheet.create({
   },
   dateBtnText: { fontSize: 18, color: COLORES.texto },
   dateLabel: { fontSize: 15, color: COLORES.texto, fontWeight: '600' },
+  buscadorWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
+  buscador: {
+    flex: 1,
+    backgroundColor: '#FFF',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORES.borde,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: COLORES.texto,
+  },
+  buscadorLimpiar: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  buscadorLimpiarTexto: {
+    fontSize: 16,
+    color: COLORES.textoSuave,
+  },
   filtrosWrap: { marginTop: 12 },
   filtrosRow: { paddingHorizontal: 20 },
   tipoChip: {

@@ -71,6 +71,17 @@ class AdminPanelProvider extends PanelProvider
              */
             ->brandLogo(fn (): string => asset('images/logo.png'))
             ->brandLogoHeight('2rem')
+
+            /*
+             * El icono de la pestaña del navegador.
+             *
+             * No estaba declarado, asi que Filament no ponia ninguno y el
+             * navegador caia en `/favicon.ico` de la raiz -- que estaba **vacio,
+             * 0 bytes** --, dejando a la vista el icono guardado de una version
+             * anterior del sitio. Por eso en la pestaña seguia apareciendo el
+             * logo viejo aunque el de la cabecera ya fuera el nuevo.
+             */
+            ->favicon(fn (): string => asset('images/favicon.ico'))
             /*
              * ⚠️ **No se declara `->login()` a proposito.** Este panel nunca uso
              * la pantalla de ingreso de Filament: `routes/web.php` tiene una

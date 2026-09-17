@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { mensajeDeError, mensajeDeExcepcion } from '../utils/errores';
 import { enmascararFecha, enmascararHora, horaEsValida } from '../utils/format';
 import { COLORES } from '../utils/tema';
 
@@ -69,7 +70,7 @@ export const PreregistroFormScreen = ({ navigation }: { navigation: any }) => {
         Alert.alert('Error', 'No se pudo crear el pre-registro');
       }
     } catch (error: any) {
-      const msg = error.response?.data?.message || 'Error al crear el pre-registro';
+      const msg = mensajeDeExcepcion(error, 'Error al crear el pre-registro');
       Alert.alert('Error', msg);
     } finally {
       setEnviando(false);

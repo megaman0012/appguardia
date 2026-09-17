@@ -172,6 +172,9 @@ export const API_ENDPOINTS = {
     LIST_BY_INST: '/inventario/listbyinst',
     LIST_SAVE: '/inventario/listsave',
     FINISH_SAVE: '/inventario/finishsave',
+    // La baja existe en la API desde siempre y la app no la exponia: es la que
+    // deja constancia formal de lo que el turno anterior no entrego.
+    REGISTRAR_BAJA: '/inventario/registrar-baja',
   },
   NOTIFICACION: {
     TOKEN_SAVE: '/token/save',

@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { mensajeDeError, mensajeDeExcepcion } from '../utils/errores';
 import { formatDateTime } from '../utils/format';
 import { getCurrentLocation } from '../utils/location';
 import { ahoraDelDispositivo, useIdempotencia } from '../utils/idempotencia';
@@ -65,7 +66,7 @@ export const AlertasScreen = ({ navigation }: { navigation: any }) => {
         setConsoleMode(data.console || 0);
       }
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Error al cargar alertas');
+      Alert.alert('Error', mensajeDeExcepcion(error, 'Error al cargar alertas'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -122,7 +123,7 @@ export const AlertasScreen = ({ navigation }: { navigation: any }) => {
     } catch (error: any) {
       Alert.alert(
         'No se pudo enviar',
-        error.response?.data?.message || 'Sin conexión. Vuelva a intentar.'
+        mensajeDeExcepcion(error, 'Sin conexión. Vuelva a intentar.')
       );
     } finally {
       setEnviando(false);

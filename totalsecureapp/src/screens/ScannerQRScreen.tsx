@@ -4,6 +4,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { mensajeDeError, mensajeDeExcepcion } from '../utils/errores';
 import { getCurrentLocation } from '../utils/location';
 import { COLORES } from '../utils/tema';
 
@@ -77,7 +78,7 @@ export const ScannerQRScreen = ({ navigation, route }: any) => {
         ]);
       }
     } catch (error: any) {
-      const msg = error.response?.data?.message || 'Error al registrar el marcador';
+      const msg = mensajeDeExcepcion(error, 'Error al registrar el marcador');
       Alert.alert('Error', msg, [{ text: 'OK', onPress: () => setScanned(false) }]);
     } finally {
       setProcesando(false);

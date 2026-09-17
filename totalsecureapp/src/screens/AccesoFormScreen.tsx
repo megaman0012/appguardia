@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { mensajeDeError, mensajeDeExcepcion } from '../utils/errores';
 import { getCurrentLocation } from '../utils/location';
 import { CameraCapture } from '../components/CameraCapture';
 import { COLORES } from '../utils/tema';
@@ -151,10 +152,10 @@ export const AccesoFormScreen = ({ navigation }: { navigation: any }) => {
       } else if (data && data.errors) {
         Alert.alert('Error', String(Object.values(data.errors)[0]));
       } else {
-        Alert.alert('Error', data?.message || 'No se pudo registrar el acceso');
+        Alert.alert('Error', mensajeDeError(data, 'No se pudo registrar el acceso'));
       }
     } catch (error: any) {
-      const msg = error.response?.data?.message || 'Error al registrar el acceso';
+      const msg = mensajeDeExcepcion(error, 'Error al registrar el acceso');
       Alert.alert('Error', msg);
     } finally {
       setEnviando(false);

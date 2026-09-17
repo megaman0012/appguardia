@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, ScrollView } from 'react-native';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { mensajeDeError, mensajeDeExcepcion } from '../utils/errores';
 import { COLORES } from '../utils/tema';
 
 export const PasswordResetScreen = ({ navigation, route }: { navigation: any; route: any }) => {
@@ -58,7 +59,7 @@ export const PasswordResetScreen = ({ navigation, route }: { navigation: any; ro
 
       const data = response.data;
       if (data && data.success) {
-        Alert.alert('Contraseña cambiada', data.message || 'Su contraseña fue actualizada correctamente.', [
+        Alert.alert('Contraseña cambiada', mensajeDeError(data, 'Su contraseña fue actualizada correctamente.'), [
           { text: 'OK', onPress: () => navigation.navigate('Login') },
         ]);
       } else {

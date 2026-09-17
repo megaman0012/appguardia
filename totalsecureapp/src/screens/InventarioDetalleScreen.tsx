@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { mensajeDeError, mensajeDeExcepcion } from '../utils/errores';
 import { getCurrentLocation } from '../utils/location';
 import { ahoraDelDispositivo, useIdempotencia } from '../utils/idempotencia';
 import { Encabezado } from '../components/Encabezado';
@@ -80,7 +81,7 @@ export const InventarioDetalleScreen = ({ navigation, route }: any) => {
         Alert.alert('Lista no disponible', 'La lista ya no está activa en este local.');
       }
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Error al cargar la lista');
+      Alert.alert('Error', mensajeDeExcepcion(error, 'Error al cargar la lista'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -138,10 +139,110 @@ export const InventarioDetalleScreen = ({ navigation, route }: any) => {
       } else if (data && data.errors) {
         Alert.alert('Error', String(Object.values(data.errors)[0]));
       } else {
-        Alert.alert('Error', data?.message || 'No se pudo guardar la recepción');
+        Alert.alert('Error', mensajeDeError(data, 'No se pudo guardar la recepción'));
       }
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Error al guardar la recepción');
+      Alert.alert('Error', mensajeDeExcepcion(error, 'Error al guardar la recepción'));
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  /**
+   * Deja constancia formal de lo que el turno anterior no entregó.
+   *
+   * Marcar «Falta» en la recepción registra el hecho, pero la baja es lo que
+   * queda como novedad de inventario con un motivo escrito y la ubicación desde
+   * donde se reportó. El endpoint existía en la API desde siempre y **la app no
+   * lo exponía**: no había forma de reportar un faltante desde la tablet.
+   */
+  const registrarBaja = async () => {
+    if (insCode === undefined) return;
+
+    const faltantes = productos.filter((p) => p.estado === 0);
+
+    if (faltantes.length === 0) {
+      Alert.alert(
+        'Sin faltantes',
+        'Marque como «Falta» lo que no recibió y vuelva a intentarlo.'
+      );
+      return;
+    }
+
+    Alert.prompt?.(
+      'Reportar faltantes',
+      `${faltantes.length} artículo(s). Escriba qué pasó:`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Reportar',
+          onPress: async (motivo?: string) => {
+            if (!motivo || motivo.trim() === '') {
+              Alert.alert('Falta el motivo', 'Escriba brevemente qué pasó.');
+              return;
+            }
+            await enviarBaja(faltantes, motivo.trim());
+          },
+        },
+      ],
+      'plain-text'
+    );
+
+    // `Alert.prompt` sólo existe en iOS. En Android se usa la nota del primer
+    // faltante como motivo, que es donde el guardia ya viene escribiendo qué
+    // pasó con cada cosa.
+    if (!Alert.prompt) {
+      const motivo = faltantes.map((f) => f.nota).filter(Boolean).join('; ').trim();
+
+      if (motivo === '') {
+        Alert.alert(
+          'Falta el motivo',
+          'Escriba en la nota de cada faltante qué pasó, y vuelva a intentarlo.'
+        );
+        return;
+      }
+
+      Alert.alert('Reportar faltantes', `Se reportarán ${faltantes.length} artículo(s).`, [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Reportar', onPress: () => enviarBaja(faltantes, motivo) },
+      ]);
+    }
+  };
+
+  const enviarBaja = async (faltantes: typeof productos, motivo: string) => {
+    setGuardando(true);
+    try {
+      let coords = { lat: '0', lng: '0' };
+      try {
+        coords = await getCurrentLocation();
+      } catch (e) {
+        // La ubicación no bloquea el reporte: el faltante ya ocurrió.
+      }
+
+      const { data } = await api.post(API_ENDPOINTS.INVENTARIO.REGISTRAR_BAJA, {
+        ins_code: insCode,
+        list_code: lp_id,
+        latitud: coords.lat,
+        longitud: coords.lng,
+        motivo,
+        productos: faltantes.map((p) => ({
+          id_producto: p.ipc_id,
+          cantidad: Number(p.cantidad) || 0,
+          nota: p.nota || '',
+        })),
+        client_uuid: uuidPara(`baja-${lp_id}`),
+        ocurrido_en: ahoraDelDispositivo(),
+      });
+
+      if (data?.success === false) {
+        Alert.alert('No se pudo reportar', mensajeDeError(data, 'Intente de nuevo.'));
+        return;
+      }
+
+      confirmar(`baja-${lp_id}`);
+      Alert.alert('Reportado', mensajeDeError(data, 'El faltante quedó registrado.'));
+    } catch (error: any) {
+      Alert.alert('Error', mensajeDeExcepcion(error, 'No se pudo reportar el faltante'));
     } finally {
       setGuardando(false);
     }
@@ -179,10 +280,10 @@ export const InventarioDetalleScreen = ({ navigation, route }: any) => {
                 { text: 'OK', onPress: () => navigation.goBack() },
               ]);
             } else {
-              Alert.alert('Error', data?.message || 'No se pudo finalizar');
+              Alert.alert('Error', mensajeDeError(data, 'No se pudo finalizar'));
             }
           } catch (error: any) {
-            Alert.alert('Error', error.response?.data?.message || 'Error al finalizar');
+            Alert.alert('Error', mensajeDeExcepcion(error, 'Error al finalizar'));
           } finally {
             setGuardando(false);
           }
@@ -267,6 +368,16 @@ export const InventarioDetalleScreen = ({ navigation, route }: any) => {
                   </Text>
                 )}
               </TouchableOpacity>
+              {/* Lo que no entregó el turno anterior: queda como novedad de
+                  inventario, con motivo y ubicación. */}
+              <TouchableOpacity
+                style={styles.bajaButton}
+                onPress={registrarBaja}
+                disabled={guardando}
+              >
+                <Text style={styles.bajaButtonText}>Reportar faltantes</Text>
+              </TouchableOpacity>
+
               {movId && (
                 <TouchableOpacity
                   style={styles.finishButton}
@@ -344,6 +455,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   saveButtonText: { color: COLORES.textoSobreMarca, fontSize: 16, fontWeight: '700' },
+  bajaButton: {
+    borderWidth: 1.5,
+    borderColor: COLORES.marca,
+    borderRadius: 10,
+    paddingVertical: 13,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  bajaButtonText: {
+    color: COLORES.marca,
+    fontSize: 15,
+    fontWeight: '700',
+  },
   finishButton: {
     backgroundColor: COLORES.exito,
     borderRadius: 8,

@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { mensajeDeError, mensajeDeExcepcion } from '../utils/errores';
 import { Encabezado } from '../components/Encabezado';
 import { COLORES } from '../utils/tema';
 
@@ -62,7 +63,7 @@ export const InventarioScreen = ({ navigation }: { navigation: any }) => {
         setListas(data.listas);
       }
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Error al cargar inventario');
+      Alert.alert('Error', mensajeDeExcepcion(error, 'Error al cargar inventario'));
     } finally {
       setLoading(false);
       setRefreshing(false);

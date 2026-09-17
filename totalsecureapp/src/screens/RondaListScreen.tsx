@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { mensajeDeError, mensajeDeExcepcion } from '../utils/errores';
 import { getCurrentLocation } from '../utils/location';
 import { formatDateTime } from '../utils/format';
 import { COLORES } from '../utils/tema';
@@ -43,7 +44,7 @@ export const RondaListScreen = ({ navigation }: { navigation: any }) => {
         setInicio(data.inicio || 0);
       }
     } catch (error: any) {
-      const msg = error.response?.data?.message || 'Error al cargar rondas';
+      const msg = mensajeDeExcepcion(error, 'Error al cargar rondas');
       Alert.alert('Error', msg);
     } finally {
       setLoading(false);
@@ -84,15 +85,15 @@ export const RondaListScreen = ({ navigation }: { navigation: any }) => {
       const response = await api.post(API_ENDPOINTS.RONDAS.GESTION, payload);
       const data = response.data;
       if (data && data.result === 'success') {
-        Alert.alert('Ronda', data.message || 'Operación exitosa');
+        Alert.alert('Ronda', mensajeDeError(data, 'Operación exitosa'));
         cargar();
       } else if (data && data.errors) {
         Alert.alert('Error', Object.values(data.errors)[0] as string);
       } else {
-        Alert.alert('Error', data?.message || 'No se pudo completar la operación');
+        Alert.alert('Error', mensajeDeError(data, 'No se pudo completar la operación'));
       }
     } catch (error: any) {
-      const msg = error.response?.data?.message || 'Error al gestionar la ronda';
+      const msg = mensajeDeExcepcion(error, 'Error al gestionar la ronda');
       Alert.alert('Error', msg);
     } finally {
       setAccion(false);

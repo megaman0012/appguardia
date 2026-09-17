@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { mensajeDeError, mensajeDeExcepcion } from '../utils/errores';
 import { formatDateTime } from '../utils/format';
 import { COLORES } from '../utils/tema';
 
@@ -65,7 +66,7 @@ export const NovedadListScreen = ({ navigation }: { navigation: any }) => {
         setNovedades(data.nvNovedad);
       }
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Error al cargar novedades');
+      Alert.alert('Error', mensajeDeExcepcion(error, 'Error al cargar novedades'));
     } finally {
       setLoading(false);
       setRefreshing(false);

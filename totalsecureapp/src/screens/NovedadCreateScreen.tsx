@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { mensajeDeError, mensajeDeExcepcion } from '../utils/errores';
 import { getCurrentLocation } from '../utils/location';
 import { CameraCapture } from '../components/CameraCapture';
 import { COLORES } from '../utils/tema';
@@ -59,16 +60,16 @@ export const NovedadCreateScreen = ({ navigation }: { navigation: any }) => {
       });
       const data = response.data;
       if (data && data.result === 'success') {
-        Alert.alert('Éxito', data.message || 'Novedad cargada', [
+        Alert.alert('Éxito', mensajeDeError(data, 'Novedad cargada'), [
           { text: 'OK', onPress: () => navigation.goBack() },
         ]);
       } else if (data && data.errors) {
         Alert.alert('Error', String(Object.values(data.errors)[0]));
       } else {
-        Alert.alert('Error', data?.message || 'No se pudo guardar la novedad');
+        Alert.alert('Error', mensajeDeError(data, 'No se pudo guardar la novedad'));
       }
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Error al guardar la novedad');
+      Alert.alert('Error', mensajeDeExcepcion(error, 'Error al guardar la novedad'));
     } finally {
       setEnviando(false);
     }

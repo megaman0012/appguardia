@@ -11,6 +11,7 @@ import {
 import { useAuth, Institucion } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { mensajeDeError, mensajeDeExcepcion } from '../utils/errores';
 import { COLORES } from '../utils/tema';
 
 export const SeleccionInstitucionScreen = ({ navigation }: { navigation: any }) => {
@@ -31,7 +32,7 @@ export const SeleccionInstitucionScreen = ({ navigation }: { navigation: any }) 
     } catch (error: any) {
       console.error('Error cargando instituciones:', error);
       const msg =
-        error.response?.data?.message || 'No se pudieron cargar las instituciones';
+        mensajeDeExcepcion(error, 'No se pudieron cargar las instituciones');
       Alert.alert('Error', msg);
     } finally {
       setLoading(false);

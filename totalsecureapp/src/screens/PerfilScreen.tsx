@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView, Switch } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
@@ -23,25 +23,7 @@ export const PerfilScreen = ({ navigation }: { navigation: any }) => {
 
   // Quien no active esto no recibe avisos de turnos por cubrir. Es a propósito:
   // si se le avisara a todos, en dos semanas nadie miraría los avisos.
-  const [aceptaExtras, setAceptaExtras] = useState<boolean>(!!user?.usu_acepta_extras);
   const [mostrarCodigo, setMostrarCodigo] = useState(false);
-  const [guardandoExtras, setGuardandoExtras] = useState(false);
-
-  const cambiarExtras = async (valor: boolean) => {
-    setGuardandoExtras(true);
-    setAceptaExtras(valor);
-    try {
-      const { data } = await api.post(API_ENDPOINTS.VACANTES.ACEPTAR_EXTRAS, { acepta: valor });
-      setAceptaExtras(!!data?.acepta_extras);
-    } catch (error: any) {
-      // Se vuelve al valor anterior: mostrar el interruptor encendido cuando el
-      // servidor no lo registró haría que el guardia espere avisos que no llegan.
-      setAceptaExtras(!valor);
-      Alert.alert('Error', 'No se pudo guardar la preferencia. Intente de nuevo.');
-    } finally {
-      setGuardandoExtras(false);
-    }
-  };
 
   const nombres = user?.nombres || user?.usu_nombres || 'Usuario';
   const email = user?.email || user?.usu_email || '';
@@ -117,22 +99,11 @@ export const PerfilScreen = ({ navigation }: { navigation: any }) => {
         ) : null}
       </View>
 
-      <View style={styles.card}>
-        <View style={styles.switchRow}>
-          <View style={styles.switchTexto}>
-            <Text style={styles.switchTitulo}>Quiero cubrir turnos extra</Text>
-            <Text style={styles.switchAyuda}>
-              Al activarlo verá los turnos que quedaron sin cubrir y podrá postularse.
-              Postularse no le asigna el turno: lo confirma el supervisor.
-            </Text>
-          </View>
-          <Switch
-            value={aceptaExtras}
-            onValueChange={cambiarExtras}
-            disabled={guardandoExtras}
-          />
-        </View>
-      </View>
+      {/*
+        El interruptor «Quiero cubrir turnos extra» vivia aca, al final del
+        perfil, y se movio a «Turnos disponibles»: es donde se usa, y donde el
+        guardia va a buscar precisamente eso. Aca quedaba lejos de su efecto.
+      */}
 
       <TouchableOpacity style={styles.logoutButton} onPress={cerrarSesion}>
         <Text style={styles.logoutText}>Cerrar sesión</Text>

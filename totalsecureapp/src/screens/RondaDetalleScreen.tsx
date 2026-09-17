@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { mensajeDeError, mensajeDeExcepcion } from '../utils/errores';
 import { getCurrentLocation } from '../utils/location';
 import { formatDateTime } from '../utils/format';
 import { CameraCapture } from '../components/CameraCapture';
@@ -52,7 +53,7 @@ export const RondaDetalleScreen = ({ navigation, route }: any) => {
         setDetalle(data.rdNovedades);
       }
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Error al cargar detalle');
+      Alert.alert('Error', mensajeDeExcepcion(error, 'Error al cargar detalle'));
     } finally {
       setLoading(false);
     }
@@ -98,15 +99,15 @@ export const RondaDetalleScreen = ({ navigation, route }: any) => {
       });
       const data = response.data;
       if (data && data.result === 'success') {
-        Alert.alert('Ronda', data.message || 'Observación cargada');
+        Alert.alert('Ronda', mensajeDeError(data, 'Observación cargada'));
         setObservacion('');
         setPhoto(null);
         cargar();
       } else {
-        Alert.alert('Error', data?.message || 'No se pudo guardar');
+        Alert.alert('Error', mensajeDeError(data, 'No se pudo guardar'));
       }
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Error al guardar observación');
+      Alert.alert('Error', mensajeDeExcepcion(error, 'Error al guardar observación'));
     } finally {
       setEnviando(false);
     }

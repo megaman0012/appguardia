@@ -11,6 +11,7 @@ import {
 import { useAuth, Perfil } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS, APP_NAME } from '../utils/constants';
+import { mensajeDeError, mensajeDeExcepcion } from '../utils/errores';
 import { RootStackScreenProps } from '../navigation/AppNavigator';
 import { COLORES } from '../utils/tema';
 
@@ -47,7 +48,7 @@ export const ProfileSelectionScreen = ({
         );
 
         if (!data?.perfil) {
-          Alert.alert('Error', data?.message || 'No se pudo procesar el perfil');
+          Alert.alert('Error', mensajeDeError(data, 'No se pudo procesar el perfil'));
           return;
         }
 

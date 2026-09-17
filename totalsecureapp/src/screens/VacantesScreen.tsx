@@ -8,10 +8,12 @@ import {
   StyleSheet,
   FlatList,
   RefreshControl,
+  Switch,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { mensajeDeError, mensajeDeExcepcion } from '../utils/errores';
 import { ahoraDelDispositivo, useIdempotencia } from '../utils/idempotencia';
 import { COLORES } from '../utils/tema';
 
@@ -57,6 +59,34 @@ export const VacantesScreen = ({ navigation }: { navigation: any }) => {
   const [vista, setVista] = useState<'disponibles' | 'mis-turnos'>('disponibles');
   const [aceptaExtras, setAceptaExtras] = useState(true);
   const [mensaje, setMensaje] = useState<string | null>(null);
+  const [guardandoExtras, setGuardandoExtras] = useState(false);
+
+  /*
+   * El interruptor de «quiero cubrir turnos extra» vive acá y no en Perfil.
+   *
+   * Estaba al final del perfil, lejos de su efecto: el guardia entraba a
+   * «Turnos disponibles», no veía nada y tenía que adivinar que la causa era
+   * una casilla en otra pantalla. Acá se ve el interruptor y el resultado de
+   * activarlo en el mismo lugar.
+   */
+  const cambiarExtras = async (valor: boolean) => {
+    setGuardandoExtras(true);
+    setAceptaExtras(valor);
+    try {
+      const { data } = await api.post(API_ENDPOINTS.VACANTES.ACEPTAR_EXTRAS, { acepta: valor });
+      setAceptaExtras(!!data?.acepta_extras);
+      if (data?.acepta_extras) {
+        cargar();
+      }
+    } catch (error: any) {
+      // Se vuelve al valor anterior: dejarlo encendido cuando el servidor no lo
+      // registró haría que el guardia espere convocatorias que no van a llegar.
+      setAceptaExtras(!valor);
+      Alert.alert('Error', mensajeDeExcepcion(error, 'No se pudo guardar la preferencia.'));
+    } finally {
+      setGuardandoExtras(false);
+    }
+  };
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [enviando, setEnviando] = useState<number | null>(null);
@@ -78,7 +108,7 @@ export const VacantesScreen = ({ navigation }: { navigation: any }) => {
       const propios = await api.post(API_ENDPOINTS.VACANTES.MIS_PROXIMOS_TURNOS, { dias: 14 });
       setMisTurnos(Array.isArray(propios.data?.turnos) ? propios.data.turnos : []);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'No se pudieron cargar los turnos disponibles');
+      Alert.alert('Error', mensajeDeExcepcion(error, 'No se pudieron cargar los turnos disponibles'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -103,12 +133,12 @@ export const VacantesScreen = ({ navigation }: { navigation: any }) => {
 
       if (data?.success) {
         confirmar(`postular-${vacante.tv_id}`);
-        Alert.alert('Listo', data.message || 'Su postulación fue registrada.');
+        Alert.alert('Listo', mensajeDeError(data, 'Su postulación fue registrada.'));
       } else {
-        Alert.alert('No se pudo', data?.message || 'Ese turno ya no está disponible.');
+        Alert.alert('No se pudo', mensajeDeError(data, 'Ese turno ya no está disponible.'));
       }
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'No se pudo enviar la postulación');
+      Alert.alert('Error', mensajeDeExcepcion(error, 'No se pudo enviar la postulación'));
     } finally {
       setEnviando(null);
       cargar();
@@ -120,7 +150,7 @@ export const VacantesScreen = ({ navigation }: { navigation: any }) => {
     try {
       await api.post(API_ENDPOINTS.VACANTES.RETIRAR, { tv_id: vacante.tv_id });
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'No se pudo retirar la postulación');
+      Alert.alert('Error', mensajeDeExcepcion(error, 'No se pudo retirar la postulación'));
     } finally {
       setEnviando(null);
       cargar();
@@ -143,10 +173,10 @@ export const VacantesScreen = ({ navigation }: { navigation: any }) => {
 
       Alert.alert(
         data?.success ? 'Aviso enviado' : 'No se pudo',
-        data?.message || 'Intente de nuevo.'
+        mensajeDeError(data, 'Intente de nuevo.')
       );
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'No se pudo enviar el aviso');
+      Alert.alert('Error', mensajeDeExcepcion(error, 'No se pudo enviar el aviso'));
     } finally {
       setEnviando(null);
       cargar();
@@ -192,6 +222,18 @@ export const VacantesScreen = ({ navigation }: { navigation: any }) => {
           <Text style={styles.backText}>‹ Volver</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Turnos disponibles</Text>
+      </View>
+
+      {/* El interruptor, arriba de todo: es lo que habilita el resto de la pantalla. */}
+      <View style={styles.switchRow}>
+        <View style={styles.switchTexto}>
+          <Text style={styles.switchTitulo}>Quiero cubrir turnos extra</Text>
+          <Text style={styles.switchAyuda}>
+            Al activarlo verá los turnos que quedaron sin cubrir y podrá postularse.
+            Postularse no le asigna el turno: lo confirma el supervisor.
+          </Text>
+        </View>
+        <Switch value={aceptaExtras} onValueChange={cambiarExtras} disabled={guardandoExtras} />
       </View>
 
       <View style={styles.tabs}>
@@ -259,11 +301,8 @@ export const VacantesScreen = ({ navigation }: { navigation: any }) => {
       ) : !aceptaExtras ? (
         <View style={styles.center}>
           <Text style={styles.emptyText}>
-            {mensaje || 'Active "quiero cubrir turnos extra" en su perfil.'}
+            {mensaje || 'Active «Quiero cubrir turnos extra» para ver los turnos disponibles.'}
           </Text>
-          <TouchableOpacity style={styles.linkBtn} onPress={() => navigation.navigate('Perfil')}>
-            <Text style={styles.linkText}>Ir a mi perfil</Text>
-          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -334,6 +373,29 @@ const styles = StyleSheet.create({
   backBtn: { marginRight: 12 },
   backText: { fontSize: 16, color: COLORES.marca },
   title: { fontSize: 20, fontWeight: 'bold', color: COLORES.texto, flex: 1 },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORES.borde,
+  },
+  switchTexto: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  switchTitulo: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORES.texto,
+  },
+  switchAyuda: {
+    fontSize: 12.5,
+    color: COLORES.textoSuave,
+    marginTop: 3,
+  },
   tabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: COLORES.borde },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 3, borderBottomColor: 'transparent' },
   tabActiva: { borderBottomColor: COLORES.marca },

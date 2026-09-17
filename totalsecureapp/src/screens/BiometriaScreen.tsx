@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../utils/constants';
+import { mensajeDeError, mensajeDeExcepcion } from '../utils/errores';
 import { getCurrentLocation, Coords } from '../utils/location';
 import { CameraCapture } from '../components/CameraCapture';
 import { Encabezado } from '../components/Encabezado';
@@ -173,10 +174,10 @@ export const BiometriaScreen = ({ navigation, route }: { navigation: any; route?
           { text: 'OK', onPress: continuar },
         ]);
       } else {
-        Alert.alert('Error', data?.message || 'No se pudo guardar la marcación');
+        Alert.alert('Error', mensajeDeError(data, 'No se pudo guardar la marcación'));
       }
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Error al guardar la marcación');
+      Alert.alert('Error', mensajeDeExcepcion(error, 'Error al guardar la marcación'));
     } finally {
       setEnviando(false);
     }
