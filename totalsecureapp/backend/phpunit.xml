@@ -20,7 +20,7 @@
          API pasaba los tests mientras en produccion respondia 500 con Carbon 3.
          Un entorno de pruebas que no se parece al de produccion no prueba
          produccion. -->
-    <server name="TOKEN_EXPIRE_IN" value="3600"/>
+    <server name="TOKEN_EXPIRE_IN" value="2592000"/>
   </php>
   <source>
     <include>

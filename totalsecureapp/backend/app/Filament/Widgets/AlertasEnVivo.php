@@ -53,7 +53,17 @@ class AlertasEnVivo extends Widget
 
     protected static ?int $sort = -10;
 
-    protected int | string | array $columnSpan = 'full';
+    /*
+     * Media columna, no el ancho completo.
+     *
+     * A ancho completo empujaba el resto del tablero hacia abajo y la tarjeta
+     * quedaba con una franja vacia enorme a la derecha. Media columna deja al
+     * lado la tarjeta de usuario, que es como estaba antes y como se veia bien.
+     */
+    protected int | string | array $columnSpan = [
+        'default' => 'full',   // en movil no hay dos columnas
+        'md' => 1,
+    ];
 
     /*
      * El refresco lo hace la vista con `wire:poll.15s="comprobar"`, que ademas
@@ -101,6 +111,21 @@ class AlertasEnVivo extends Widget
             $this->ultimoVisto = $mayor;
             $this->dispatch('emergencia-nueva');
         }
+    }
+
+    /**
+     * Dispara el aviso como si acabara de entrar una emergencia.
+     *
+     * Existe para poder comprobar el circuito ENTERO --servidor despacha,
+     * navegador recibe, suena-- sin tener que mandar una alerta de verdad desde
+     * una tablet. El boton «Probar sonido» solo prueba el audio del navegador;
+     * este prueba lo que realmente fallaba.
+     *
+     * No toca ningun dato: solo emite el evento.
+     */
+    public function probarAviso(): void
+    {
+        $this->dispatch('emergencia-nueva');
     }
 
     public function getAlertas(): array

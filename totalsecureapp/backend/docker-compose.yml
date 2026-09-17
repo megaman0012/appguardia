@@ -72,7 +72,18 @@ services:
       DB_DATABASE: ${DB_DATABASE:-coredt360}
       DB_USERNAME: ${DB_USERNAME:-totalsecure}
       DB_PASSWORD: ${DB_PASSWORD:?Definir DB_PASSWORD en .env}
-      TOKEN_EXPIRE_IN: 3600
+      # ⚠️ Esto PISA al `.env`: lo que manda es este valor.
+      #
+      # Estaba en 3600 -- UNA HORA -- y Sanctum hace cumplir el `expires_at` de
+      # cada token, asi que la sesion de la app caducaba de verdad: el guardia
+      # recibia un 401, la app borraba la sesion y lo devolvia al login **en
+      # medio de lo que estuviera haciendo**. Con turnos de 12 h, una docena de
+      # veces por turno. En la base habia 25 de 27 tokens ya vencidos.
+      #
+      # 30 dias: la app vive en la tablet DEL PUESTO, no en un telefono
+      # personal, y el marcaje sigue validando la geocerca aunque la sesion este
+      # abierta.
+      TOKEN_EXPIRE_IN: 2592000
       TOKEN_REFRESH_EXPIRE_IN: 3600
     depends_on:
       db:

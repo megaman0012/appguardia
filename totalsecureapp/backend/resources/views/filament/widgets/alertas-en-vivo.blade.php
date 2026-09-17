@@ -24,6 +24,28 @@
                 // bastaba con navegar a otra pantalla para quedarse en silencio
                 // sin notarlo.
                 if (localStorage.getItem('alertas-sonido') === '1') this.preparar();
+
+                /*
+                 * ⚠️ Se escucha con `Livewire.on()`, el API explicito, y no solo
+                 * con `x-on:...window`.
+                 *
+                 * El servidor despachaba el evento correctamente --comprobado--
+                 * y aun asi no sonaba: el atajo de Alpine depende de que el
+                 * evento llegue como evento del DOM en `window`, y eso no
+                 * ocurria de forma fiable dentro de un widget que Livewire
+                 * vuelve a dibujar en cada refresco. `Livewire.on` lo recibe
+                 * siempre.
+                 *
+                 * Se deja tambien el `x-on:` de respaldo: si uno de los dos
+                 * camina, suena.
+                 */
+                document.addEventListener('livewire:init', () => {
+                    window.Livewire.on('emergencia-nueva', () => this.pitar());
+                });
+
+                if (window.Livewire) {
+                    window.Livewire.on('emergencia-nueva', () => this.pitar());
+                }
             },
 
             preparar() {
@@ -49,7 +71,10 @@
 
                 const t0 = this.audio.currentTime;
 
-                [0, 0.35, 0.7].forEach((retraso, i) => {
+                // Cinco tonos y volumen alto: una alarma tiene que oirse en una
+                // oficina con ruido, no ser una notificacion discreta. El
+                // usuario reporto que al volumen anterior (0.3) apenas se oia.
+                [0, 0.35, 0.7, 1.05, 1.4].forEach((retraso, i) => {
                     const osc = this.audio.createOscillator();
                     const vol = this.audio.createGain();
 
@@ -57,7 +82,7 @@
                     osc.frequency.value = i % 2 === 0 ? 880 : 660;
 
                     vol.gain.setValueAtTime(0.0001, t0 + retraso);
-                    vol.gain.exponentialRampToValueAtTime(0.3, t0 + retraso + 0.02);
+                    vol.gain.exponentialRampToValueAtTime(0.9, t0 + retraso + 0.02);
                     vol.gain.exponentialRampToValueAtTime(0.0001, t0 + retraso + 0.28);
 
                     osc.connect(vol).connect(this.audio.destination);
@@ -104,6 +129,15 @@
                     <x-filament::button size="sm" color="gray"
                                         x-show="sonidoListo" x-cloak x-on:click="pitar()">
                         Probar sonido
+                    </x-filament::button>
+
+                    {{-- Prueba el circuito COMPLETO: el servidor despacha el
+                         aviso igual que cuando entra una emergencia real. Si
+                         este suena, la alarma de verdad va a sonar. --}}
+                    <x-filament::button size="sm" color="warning"
+                                        x-show="sonidoListo" x-cloak
+                                        wire:click="probarAviso">
+                        Probar aviso completo
                     </x-filament::button>
                 </div>
             </div>

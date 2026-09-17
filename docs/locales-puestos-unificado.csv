@@ -30,7 +30,7 @@ ins_code;local;puesto;cliente
 117;Cementerio General;Sala Piedad 1;jbgye
 ;CEMENTERIO GENERAL;Sala Solidaria;jbgye
 143;Cementerio General;Salas Samaritana;jbgye
-110;Centro de Negocios el Terminal;PUESTO 1;jbgye
+69;Centro de Negocios el Terminal;PUESTO 1;jbgye
 ;CENTRO RECREACIONAL;Control de acceso;jbgye
 64;CHAM;puesto 1;jbgye
 ;CHILENITA;puesto 1;CHILENITA
@@ -67,7 +67,7 @@ ins_code;local;puesto;cliente
 ;GARZOCENTRO;ALA NORTE;jbgye
 ;GARZOCENTRO;ALA SUR;jbgye
 ;GARZOCENTRO;PATIO COMIDAS;jbgye
-128;GARZOCENTRO;puesto 1;jbgye
+63;GARZOCENTRO;puesto 1;jbgye
 ;H. LUIS VERNAZA;CADENA DE EMERGENCIA;jbgye
 ;H. LUIS VERNAZA;CONSULTA EXTERNA;jbgye
 ;H. LUIS VERNAZA;GARITA # 1 INFORMACION;jbgye
