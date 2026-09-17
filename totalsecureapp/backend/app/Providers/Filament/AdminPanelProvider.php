@@ -142,6 +142,29 @@ class AdminPanelProvider extends PanelProvider
              * son usuarios internos y pocos, asi que el costo de consultar mas
              * seguido es bajo.
              */
+            /*
+             * La alarma de emergencias, en TODAS las paginas.
+             *
+             * ⚠️ El widget del tablero solo se monta en el tablero, asi que una
+             * emergencia que entraba mientras alguien trabajaba en Usuarios o en
+             * Turnos **no sonaba**: no habia nada montado que la detectara. Con
+             * el render hook, el componente viaja con el panel entero.
+             */
+            ->renderHook(
+                \Filament\View\PanelsRenderHook::BODY_END,
+                /*
+                 * Se monta por CLASE y no por alias: este proyecto viene de
+                 * Laravel 8 y no tiene activo el autodescubrimiento de
+                 * componentes de Livewire en `App\Livewire`, asi que
+                 * `@livewire('aviso-de-emergencia')` fallaba con
+                 * «Unable to find component» y **tumbaba todas las paginas del
+                 * panel**.
+                 */
+                fn (): string => \Livewire\Livewire::mount(
+                    \App\Livewire\AvisoDeEmergencia::class
+                ),
+            )
+
             ->databaseNotifications()
             ->databaseNotificationsPolling('10s')
 

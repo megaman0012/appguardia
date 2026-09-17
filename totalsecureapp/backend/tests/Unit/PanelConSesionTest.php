@@ -116,4 +116,39 @@ class PanelConSesionTest extends TestCase
             );
         }
     }
+
+    /*
+     * ---------------------------------------------------------------
+     * La alarma de emergencia tiene que estar en TODAS las paginas.
+     *
+     * ⚠️ El widget del tablero solo se monta en el tablero, asi que una
+     * emergencia que entraba mientras alguien trabajaba en Usuarios o en Turnos
+     * **no sonaba**: no habia nada montado que la detectara. Los botones de
+     * prueba funcionaban porque se pulsaban estando en el tablero, lo que hacia
+     * parecer que todo andaba.
+     * ---------------------------------------------------------------
+     */
+    public function test_la_alarma_esta_en_todas_las_paginas_del_panel(): void
+    {
+        foreach (['/admin', '/admin/users', '/admin/alertas'] as $ruta) {
+            $html = $this->get($ruta)->getContent();
+
+            $this->assertStringContainsString(
+                'alarma()',
+                $html,
+                "La alarma de emergencia no esta montada en {$ruta}: una emergencia "
+                . 'que entre mientras se trabaja en esa pantalla no sonaria.'
+            );
+        }
+    }
+
+    public function test_la_alarma_pide_activarse_una_vez(): void
+    {
+        // Sin esto quedaria muda para siempre: el navegador no reproduce audio
+        // hasta que la persona interactua con la pagina.
+        $this->assertStringContainsString(
+            'Activar alarma de emergencias',
+            $this->get('/admin')->getContent()
+        );
+    }
 }
