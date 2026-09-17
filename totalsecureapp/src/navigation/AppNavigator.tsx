@@ -22,7 +22,12 @@ export type RootStackParamList = {
   NovedadCreate: undefined;
   Alertas: undefined;
   Inventario: undefined;
-  InventarioDetalle: { lp_id: number | string; lp_nombre: string };
+  InventarioDetalle: {
+    lp_id: number | string;
+    lp_nombre: string;
+    /** Recepción sin cerrar de esta lista, si la hay: permite finalizarla. */
+    mov_abierto?: number | null;
+  };
   /**
    * `alIniciarJornada` marca la marcación de entrada a la que se llega justo
    * después de elegir el local: de ahí se sigue al menú, no se vuelve atrás.

@@ -66,10 +66,10 @@ export const NovedadCreateScreen = ({ navigation }: { navigation: any }) => {
       } else if (data && data.errors) {
         Alert.alert('Error', String(Object.values(data.errors)[0]));
       } else {
-        Alert.alert('Error', mensajeDeError(data, 'No se pudo guardar la novedad'));
+        Alert.alert('Error', mensajeDeError(data, 'No se pudo guardar la registro'));
       }
     } catch (error: any) {
-      Alert.alert('Error', mensajeDeExcepcion(error, 'Error al guardar la novedad'));
+      Alert.alert('Error', mensajeDeExcepcion(error, 'Error al guardar la registro'));
     } finally {
       setEnviando(false);
     }
@@ -81,7 +81,7 @@ export const NovedadCreateScreen = ({ navigation }: { navigation: any }) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backText}>‹ Volver</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Nueva novedad</Text>
+        <Text style={styles.title}>Nuevo registro</Text>
       </View>
 
       <TextInput
@@ -118,7 +118,7 @@ export const NovedadCreateScreen = ({ navigation }: { navigation: any }) => {
         {enviando ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.saveButtonText}>Guardar novedad</Text>
+          <Text style={styles.saveButtonText}>Guardar registro</Text>
         )}
       </TouchableOpacity>
     </ScrollView>

@@ -71,6 +71,49 @@ class InventarioController extends Controller
                 return $lista;
             });
 
+        /*
+         * Que listas tiene este guardia con una recepcion SIN CERRAR.
+         *
+         * ⚠️ Sin esto la app no tenia forma de saberlo: dejaba llenar el acta
+         * entera y recien al guardar respondia «Ya existe una recepción
+         * registrada para esta lista», sin decir cual ni como resolverlo. Y como
+         * el ETL de v1 dejo 47 ciclos abiertos de hace meses, habia guardias
+         * bloqueados **sin haber hecho nada en esta version**.
+         *
+         * «Abierta» es no tener una devolucion posterior, la misma regla que usa
+         * `saveListMov` para rechazar. Se calcula aqui para que la app pueda
+         * ofrecer cerrarla en vez de chocar contra el rechazo.
+         */
+        $abiertas = MovimientoCabecera::where('mc_ins_code', $request->ins_code)
+            ->where('mc_usuario_id', $us->id)
+            ->where('mc_tipo', MovimientoCabecera::TIPO_RECEPCION)
+            ->where('mc_estado', '!=', MovimientoCabecera::ESTADO_CANCELADO)
+            ->whereNotExists(function ($q) use ($request, $us) {
+                $q->select(DB::raw(1))
+                    ->from('inv_movimiento_cabecera as d')
+                    ->where('d.mc_tipo', MovimientoCabecera::TIPO_DEVOLUCION)
+                    ->where('d.mc_estado', '!=', MovimientoCabecera::ESTADO_CANCELADO)
+                    ->where('d.mc_ins_code', $request->ins_code)
+                    ->where('d.mc_usuario_id', $us->id)
+                    ->whereColumn('d.mc_lista_id', 'inv_movimiento_cabecera.mc_lista_id')
+                    ->whereColumn('d.mc_fecha', '>=', 'inv_movimiento_cabecera.mc_fecha');
+            })
+            ->get(['mc_id', 'mc_lista_id', 'mc_fecha'])
+            ->keyBy('mc_lista_id');
+
+        $listas = $listas->map(function ($lista) use ($abiertas) {
+            $abierta = $abiertas->get($lista->li_id);
+
+            // La app usa esto para ofrecer «Finalizar devolución» en vez de
+            // dejar registrar una recepcion que va a ser rechazada.
+            $lista->recepcion_abierta = $abierta ? [
+                'mov_id' => $abierta->mc_id,
+                'desde'  => $abierta->mc_fecha,
+            ] : null;
+
+            return $lista;
+        });
+
         return response()->json(['listas' => $listas]);
     }
 

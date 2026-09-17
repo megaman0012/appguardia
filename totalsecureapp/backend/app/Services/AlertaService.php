@@ -133,8 +133,37 @@ class AlertaService
         return DB::transaction(function () use ($alerta, $usuarioId, $observacion) {
             $detalle = $alerta->asignacionActual;
 
+            /*
+             * ⚠️ Antes esto lanzaba «La alerta no tiene asignación activa» y
+             * **dejaba la emergencia imposible de cerrar para siempre**.
+             *
+             * El caso no es raro: `asignarASupervisor()` no encuentra a nadie
+             * cuando el local no tiene supervisor vinculado --y varios no lo
+             * tienen--, asi que la alerta queda en «pendiente» sin detalle. Que
+             * la configuracion este incompleta no puede volver ineliminable una
+             * emergencia; al contrario, es justo cuando alguien de Consola tiene
+             * que poder cerrarla a mano.
+             *
+             * Se crea la asignacion en el momento, a nombre de quien cierra: asi
+             * queda escrito quien se hizo cargo, que es la informacion que
+             * faltaba.
+             */
             if (!$detalle) {
-                throw new \Exception('La alerta no tiene asignación activa');
+                $detalle = AlertaDetalle::create([
+                    'ad_al_code' => $alerta->al_code,
+                    'ad_usuario_asignado' => $usuarioId,
+                    'ad_prioridad' => $alerta->al_prioridad,
+                    'ad_estado' => 'asignada',
+                    'ad_fecha_asignacion' => now(),
+                    'ad_created_user' => $usuarioId,
+                ]);
+
+                AlertaHistorial::registrar(
+                    $alerta->al_code,
+                    'asignada',
+                    $usuarioId,
+                    'Asignada al cerrarla: el local no tenía supervisor vinculado'
+                );
             }
 
             $detalle->marcarResuelta($observacion);

@@ -39,13 +39,22 @@ interface ItemConteo {
 }
 
 export const InventarioDetalleScreen = ({ navigation, route }: any) => {
-  const { lp_id, lp_nombre } = route.params;
+  const { lp_id, lp_nombre, mov_abierto } = route.params;
   const { institucion } = useAuth();
   const [productos, setProductos] = useState<ItemConteo[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [guardando, setGuardando] = useState(false);
-  const [movId, setMovId] = useState<string | null>(null);
+  /*
+   * Si la lista llega con una recepción sin cerrar, se arranca con ella: así el
+   * botón «Finalizar devolución» aparece de entrada. Antes sólo salía cuando la
+   * recepción se acababa de registrar en esa misma sesión, de modo que una
+   * abierta de días atrás -- o heredada de la v1 -- no se podía cerrar desde la
+   * app y dejaba al guardia bloqueado sin salida.
+   */
+  const [movId, setMovId] = useState<string | null>(
+    mov_abierto ? String(mov_abierto) : null
+  );
   const { uuidPara, confirmar } = useIdempotencia();
 
   const insCode = institucion?.ins_code;

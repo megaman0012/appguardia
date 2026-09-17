@@ -31,6 +31,22 @@ class AlertasEnVivo extends Widget
 {
     use AcotaPorAlcance;
 
+    /**
+     * El codigo de alerta mas alto que este navegador ya vio.
+     *
+     * ⚠️ La deteccion de «alerta nueva» se hace **en el servidor**, no en
+     * JavaScript. El primer intento comparaba en el navegador los nodos del DOM
+     * entre refrescos, y eso no funcionaba: el widget se dibuja solo cuando hay
+     * alertas, asi que **la primera vez que aparece es dentro de un ciclo de
+     * Livewire** -- y ahi `@push('scripts')` ya no llega al layout, con lo que la
+     * funcion que debia sonar no existia. Justo en el unico momento que
+     * importaba.
+     *
+     * Con la cuenta en una propiedad del componente, el servidor sabe cuando hay
+     * algo nuevo y **despacha un evento**; el navegador solo tiene que oirlo.
+     */
+    public ?int $ultimoVisto = null;
+
     protected string $view = 'filament.widgets.alertas-en-vivo';
 
     protected static ?int $sort = -10;
@@ -54,6 +70,33 @@ class AlertasEnVivo extends Widget
      *
      * @return array<int, array<string, mixed>>
      */
+    /**
+     * Lo que corre en cada refresco: busca, y si hay algo nuevo, avisa.
+     */
+    public function comprobar(): void
+    {
+        $alertas = $this->getAlertas();
+
+        if ($alertas === []) {
+            return;
+        }
+
+        $mayor = max(array_column($alertas, 'code'));
+
+        // En la primera carga NO suena: entrar al panel con una alerta abierta
+        // de hace horas dispararia la alarma cada vez que alguien inicia sesion.
+        if ($this->ultimoVisto === null) {
+            $this->ultimoVisto = $mayor;
+
+            return;
+        }
+
+        if ($mayor > $this->ultimoVisto) {
+            $this->ultimoVisto = $mayor;
+            $this->dispatch('emergencia-nueva');
+        }
+    }
+
     public function getAlertas(): array
     {
         $locales = $this->localesEnAlcance();

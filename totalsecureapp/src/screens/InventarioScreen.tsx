@@ -35,6 +35,12 @@ export interface ListaInventario {
   li_id: number | string;
   li_nombre: string;
   li_descripcion?: string;
+  /**
+   * Si esta lista tiene una recepción sin cerrar, viene con el id del
+   * movimiento y desde cuándo. La app lo usa para ofrecer cerrarla en vez de
+   * dejar registrar una nueva que el servidor va a rechazar.
+   */
+  recepcion_abierta?: { mov_id: number; desde: string } | null;
   productos: Array<{
     ipc_id: number | string;
     ipc_nombre: string;
@@ -100,6 +106,9 @@ export const InventarioScreen = ({ navigation }: { navigation: any }) => {
                 navigation.navigate('InventarioDetalle', {
                   lp_id: item.li_id,
                   lp_nombre: item.li_nombre,
+                  // Se arrastra el movimiento abierto para que el detalle pueda
+                  // ofrecer «Finalizar devolución» de entrada.
+                  mov_abierto: item.recepcion_abierta?.mov_id ?? null,
                 })
               }
               activeOpacity={0.7}
@@ -112,6 +121,21 @@ export const InventarioScreen = ({ navigation }: { navigation: any }) => {
                 {item.productos?.length || 0}{' '}
                 {(item.productos?.length || 0) === 1 ? 'producto' : 'productos'}
               </Text>
+
+              {/*
+                Avisa ANTES de entrar, no al guardar.
+
+                Con una recepción sin cerrar el servidor rechaza cualquier
+                recepción nueva, y antes eso se descubría después de llenar el
+                acta entera: «Ya existe una recepción registrada para esta
+                lista», sin decir cuál ni desde cuándo.
+              */}
+              {item.recepcion_abierta ? (
+                <Text style={styles.itemAviso}>
+                  Recepción sin cerrar desde{' '}
+                  {String(item.recepcion_abierta.desde).slice(0, 10)} · toque para finalizarla
+                </Text>
+              ) : null}
             </TouchableOpacity>
           )}
         />
@@ -137,5 +161,11 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 17, fontWeight: '700', color: COLORES.texto },
   itemDesc: { fontSize: 14, color: COLORES.textoSuave, marginTop: 4 },
   itemCount: { fontSize: 13, color: COLORES.marca, marginTop: 8, fontWeight: '700' },
+  itemAviso: {
+    marginTop: 6,
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: COLORES.marca,
+  },
   emptyText: { textAlign: 'center', color: COLORES.textoSuave, marginTop: 40, fontSize: 16 },
 });

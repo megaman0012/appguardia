@@ -121,7 +121,91 @@ class AlertasResource extends Resource
                     ->url(fn($record) => "https://www.google.com/maps?q={$record->al_lat},{$record->al_lng}")
                     ->openUrlInNewTab()
                     ->icon('heroicon-o-map')
-                    ->color('primary'),
+                    ->color('primary')
+                    // La app manda 0/0 cuando no hubo lectura de GPS: el enlace
+                    // llevaria al golfo de Guinea.
+                    ->visible(fn ($record) => abs((float) $record->al_lat) > 0.0001
+                        || abs((float) $record->al_lng) > 0.0001),
+
+                /*
+                 * Cerrar la emergencia, que es lo que faltaba.
+                 *
+                 * ⚠️ Las alertas se quedaban en «en atencion» para siempre: el
+                 * panel las listaba y **no habia ninguna forma de cambiarles el
+                 * estado**, aunque `AlertaService::atenderAlerta()` existiera
+                 * desde el principio. Nadie lo llamaba.
+                 *
+                 * El circuito real es: el guardia aprieta el boton, Consola
+                 * llama al punto y averigua que paso, y cierra dejando escrito
+                 * el resultado. Por eso el comentario es obligatorio: una
+                 * emergencia cerrada sin decir que paso no se distingue de una
+                 * que nadie atendio.
+                 */
+                Actions\Action::make('finalizar')
+                    ->label('Finalizar')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->visible(fn (Alertas $record) => PerfilPanel::puedeOperar()
+                        && in_array($record->al_estado_alerta, ['pendiente', 'en_atencion'], true))
+                    ->form([
+                        Forms\Components\Textarea::make('observacion')
+                            ->label('¿Qué pasó?')
+                            ->required()
+                            ->rows(3)
+                            ->maxLength(1000)
+                            ->helperText('Queda en el historial de la alerta, con su hora y quién la cerró.'),
+                    ])
+                    ->action(function (Alertas $record, array $data) {
+                        try {
+                            app(\App\Services\AlertaService::class)
+                                ->atenderAlerta($record, (int) \Session::get('usuID'), $data['observacion']);
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Emergencia finalizada')
+                                ->success()->send();
+                        } catch (\Throwable $e) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('No se pudo finalizar')
+                                ->body($e->getMessage())
+                                ->danger()->send();
+                        }
+                    }),
+
+                /*
+                 * Falsa alarma: se cancela, no se finaliza.
+                 *
+                 * Separarlas importa para medir: una emergencia real atendida y
+                 * un boton apretado sin querer no pueden contar como lo mismo.
+                 */
+                Actions\Action::make('cancelar')
+                    ->label('Falsa alarma')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('gray')
+                    ->visible(fn (Alertas $record) => PerfilPanel::puedeOperar()
+                        && in_array($record->al_estado_alerta, ['pendiente', 'en_atencion'], true))
+                    ->requiresConfirmation()
+                    ->form([
+                        Forms\Components\Textarea::make('motivo')
+                            ->label('Motivo')
+                            ->required()
+                            ->rows(2)
+                            ->maxLength(500),
+                    ])
+                    ->action(function (Alertas $record, array $data) {
+                        try {
+                            app(\App\Services\AlertaService::class)
+                                ->cancelarAlerta($record, (int) \Session::get('usuID'), $data['motivo']);
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Marcada como falsa alarma')
+                                ->success()->send();
+                        } catch (\Throwable $e) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('No se pudo cancelar')
+                                ->body($e->getMessage())
+                                ->danger()->send();
+                        }
+                    }),
             ])
             ->bulkActions([
                 Descarga::enLote('alertas'),

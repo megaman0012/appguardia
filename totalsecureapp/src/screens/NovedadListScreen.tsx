@@ -9,6 +9,7 @@ import {
   FlatList,
   RefreshControl,
   Image,
+  TextInput,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -42,6 +43,13 @@ export const NovedadListScreen = ({ navigation }: { navigation: any }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [dias, setDias] = useState(1);
   const [soloMias, setSoloMias] = useState(true);
+  const [busqueda, setBusqueda] = useState('');
+  /*
+   * Cuál está abierta. La lista mostraba la observación recortada y la foto en
+   * miniatura, sin forma de ver el registro completo: el guardia no podía leer
+   * lo que él mismo había escrito si pasaba de dos renglones.
+   */
+  const [abierta, setAbierta] = useState<number | null>(null);
 
   const insCode = institucion?.ins_code;
 
@@ -52,6 +60,7 @@ export const NovedadListScreen = ({ navigation }: { navigation: any }) => {
       d.getDate()
     ).padStart(2, '0')}`;
     try {
+      setAbierta(null);
       const response = await api.post(API_ENDPOINTS.NOVEDAD.LIST_BY_DATE, {
         date: fecha,
         ins_code: insCode,
@@ -77,16 +86,43 @@ export const NovedadListScreen = ({ navigation }: { navigation: any }) => {
     cargar();
   }, [cargar]);
 
+  /*
+   * El buscador filtra lo que ya está en pantalla, sin volver al servidor:
+   * responde mientras se escribe y funciona igual sin señal.
+   */
+  const normalizar = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  const texto = normalizar(busqueda.trim());
+  const listaFiltrada =
+    texto === ''
+      ? novedades
+      : novedades.filter(
+          (n) =>
+            normalizar(n.nv_observacion || '').includes(texto) ||
+            normalizar(n.nv_autor || '').includes(texto)
+        );
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backText}>‹ Volver</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Novedades</Text>
+        <Text style={styles.title}>Bitácora</Text>
       </View>
 
       <View style={styles.filtros}>
+        <TextInput
+          style={styles.buscador}
+          placeholder="Buscar en los registros"
+          value={busqueda}
+          onChangeText={setBusqueda}
+          autoCapitalize="none"
+          autoCorrect={false}
+          clearButtonMode="while-editing"
+        />
+
         <View style={styles.filtroFila}>
           {RANGOS.map((r) => (
             <TouchableOpacity
@@ -132,7 +168,7 @@ export const NovedadListScreen = ({ navigation }: { navigation: any }) => {
         </View>
       ) : (
         <FlatList
-          data={novedades}
+          data={listaFiltrada}
           keyExtractor={(item) => String(item.nv_id)}
           contentContainerStyle={styles.list}
           refreshControl={
@@ -140,21 +176,60 @@ export const NovedadListScreen = ({ navigation }: { navigation: any }) => {
           }
           ListEmptyComponent={
             <Text style={styles.emptyText}>
-              {dias === 1 ? 'No hay novedades registradas hoy' : 'No hay novedades en el período'}
+              {busqueda.trim() !== ''
+                ? 'Nada coincide con la búsqueda'
+                : dias === 1
+                  ? 'No hay registros de hoy'
+                  : 'No hay registros en el período'}
             </Text>
           }
-          renderItem={({ item }) => (
-            <View style={styles.item}>
-              <Text style={styles.itemDate}>
-                {formatDateTime(item.nv_fecha_hora)}
-                {!soloMias && item.nv_autor ? `  ·  ${item.nv_autor}` : ''}
-              </Text>
-              <Text style={styles.itemObs}>{item.nv_observacion}</Text>
-              {item.nv_foto ? (
-                <Image source={{ uri: item.nv_foto }} style={styles.itemPhoto} resizeMode="cover" />
-              ) : null}
-            </View>
-          )}
+          renderItem={({ item }) => {
+            const desplegada = abierta === item.nv_id;
+
+            return (
+              <TouchableOpacity
+                style={styles.item}
+                activeOpacity={0.75}
+                onPress={() => setAbierta(desplegada ? null : item.nv_id)}
+              >
+                <Text style={styles.itemDate}>
+                  {formatDateTime(item.nv_fecha_hora)}
+                  {!soloMias && item.nv_autor ? `  ·  ${item.nv_autor}` : ''}
+                </Text>
+
+                <Text style={styles.itemObs} numberOfLines={desplegada ? undefined : 2}>
+                  {item.nv_observacion}
+                </Text>
+
+                {item.nv_foto ? (
+                  <Image
+                    source={{ uri: item.nv_foto }}
+                    style={desplegada ? styles.itemPhotoGrande : styles.itemPhoto}
+                    resizeMode={desplegada ? 'contain' : 'cover'}
+                  />
+                ) : null}
+
+                {desplegada ? (
+                  <View style={styles.detalle}>
+                    {item.nv_autor ? (
+                      <Text style={styles.detalleLinea}>Registró: {item.nv_autor}</Text>
+                    ) : null}
+                    {item.nv_lat && item.nv_lng
+                      && (Math.abs(Number(item.nv_lat)) > 0.0001
+                        || Math.abs(Number(item.nv_lng)) > 0.0001) ? (
+                      <Text style={styles.detalleLinea}>
+                        Ubicación: {Number(item.nv_lat).toFixed(5)}, {Number(item.nv_lng).toFixed(5)}
+                      </Text>
+                    ) : (
+                      <Text style={styles.detalleLinea}>Sin ubicación registrada</Text>
+                    )}
+                  </View>
+                ) : (
+                  <Text style={styles.verMas}>Toque para ver el detalle</Text>
+                )}
+              </TouchableOpacity>
+            );
+          }}
         />
       )}
     </View>
@@ -180,6 +255,41 @@ const styles = StyleSheet.create({
   filtroFila: {
     flexDirection: 'row',
     marginBottom: 8,
+  },
+  buscador: {
+    backgroundColor: '#FFF',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORES.borde,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    fontSize: 15,
+    color: COLORES.texto,
+    marginBottom: 10,
+  },
+  itemPhotoGrande: {
+    width: '100%',
+    height: 260,
+    borderRadius: 8,
+    marginTop: 8,
+    backgroundColor: '#EEE',
+  },
+  detalle: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: COLORES.borde,
+  },
+  detalleLinea: {
+    fontSize: 12.5,
+    color: COLORES.textoSuave,
+    marginBottom: 2,
+  },
+  verMas: {
+    marginTop: 6,
+    fontSize: 12,
+    color: COLORES.textoSuave,
+    fontStyle: 'italic',
   },
   chip: {
     paddingHorizontal: 14,
