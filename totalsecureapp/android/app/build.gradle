@@ -126,8 +126,8 @@ android {
         //
         // `android/` esta versionado, asi que esto NO se toma de
         // `app.json`: hay que cambiarlo aca y alla.
-        versionCode 5
-        versionName "1.0.4"
+        versionCode 6
+        versionName "1.0.5"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
