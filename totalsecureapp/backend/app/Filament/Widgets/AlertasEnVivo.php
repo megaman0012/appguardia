@@ -24,8 +24,10 @@ use Illuminate\Support\Facades\DB;
  * Audio API en vez de servir un archivo: no hay que desplegar ningún MP3 ni
  * depende de que la ruta exista.
  *
- * Se dibuja **sólo cuando hay algo**: un widget permanente en rojo se vuelve
- * parte del decorado y deja de mirarse a los dos días.
+ * La tarjeta se dibuja siempre --hace falta para poder dejar el sonido activado
+ * ANTES de que haya una emergencia, y para comprobar que se oye-- pero la lista
+ * roja de alertas solo aparece cuando hay alguna: un bloque de emergencia
+ * permanente se vuelve parte del decorado y deja de mirarse a los dos dias.
  */
 class AlertasEnVivo extends Widget
 {

@@ -139,4 +139,51 @@ class AlertasEnVivoTest extends TestCase
         $this->assertSame('Garita Norte', $a['local']);
         $this->assertSame('Guardia Uno', $a['guardia']);
     }
+
+    /*
+     * ---------------------------------------------------------------
+     * Que el widget SE DIBUJE, no solo que la consulta devuelva datos.
+     *
+     * ⚠️ Los tests de arriba pasaban mientras el panel mostraba el widget roto:
+     * comprobaban `getAlertas()`, que es PHP puro, y nunca renderizaban la
+     * vista. El boton de sonido no aparecia porque la plantilla usaba
+     * `<x-filament::section>`, **que no existe en esta version de Filament** --
+     * el componente fallaba y se llevaba por delante su contenido.
+     *
+     * Dos veces se dio por arreglado sin comprobarlo. Esto lo comprueba.
+     * ---------------------------------------------------------------
+     */
+
+    public function test_el_widget_se_dibuja_sin_reventar(): void
+    {
+        \Livewire\Livewire::test(AlertasEnVivo::class)->assertSuccessful();
+    }
+
+    /** El boton tiene que estar aunque NO haya emergencias: si no, no hay forma
+     *  de dejar el sonido listo de antemano ni de comprobar que se oye. */
+    public function test_el_boton_de_sonido_esta_aunque_no_haya_alertas(): void
+    {
+        $html = \Livewire\Livewire::test(AlertasEnVivo::class)->html();
+
+        $this->assertStringContainsString('Activar sonido', $html);
+    }
+
+    public function test_el_widget_escucha_el_aviso_del_servidor(): void
+    {
+        $html = \Livewire\Livewire::test(AlertasEnVivo::class)->html();
+
+        // Sin esto el servidor avisaria a nadie.
+        $this->assertStringContainsString('emergencia-nueva', $html);
+        $this->assertStringContainsString('wire:poll', $html);
+    }
+
+    public function test_una_emergencia_aparece_en_el_html(): void
+    {
+        $this->alerta();
+
+        $html = \Livewire\Livewire::test(AlertasEnVivo::class)->html();
+
+        $this->assertStringContainsString('Garita Norte', $html);
+        $this->assertStringContainsString('Guardia Uno', $html);
+    }
 }

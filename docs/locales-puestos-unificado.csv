@@ -1,0 +1,173 @@
+ins_code;local;puesto;cliente
+;ASILO BIEN PUBLICO;ASILO BIEN PUBLICO;
+;ASILO BIEN PUBLICO;Control de acceso;
+;BDS-MACHALA;puesto 1;loteria
+65;C.C. PLAZA VERNAZA;puesto 1;jbgye
+126;C.C.TERMINAL;Galarmobil;jbgye
+69;C.C.TERMINAL;puesto 1;jbgye
+149;CASA DEL DR. ISLA MOCOLI;ISLA MOCOLI;semedic
+;CC. LAS AMERICAS;CONDOMINIO;jbgye
+;CC. LAS AMERICAS;GARITA;jbgye
+;CC. PLAZA ORELLANA;PARQUEADERO ACCESO;jbgye
+;CC. TERMINAL;Galarmobil;
+;CC. TERMINAL;TERRENO VALDIO;jbgye
+;CEMENTERIO GENERAL;Edificio ADM Sala de Velaciones;jbgye
+134;Cementerio General;Parque Seco;jbgye
+;CEMENTERIO GENERAL;Parqueo Sala de Velaciones;jbgye
+;CEMENTERIO GENERAL;Puerta #1;jbgye
+139;Cementerio General;Puerta 10;jbgye
+138;Cementerio General;Puerta 13;jbgye
+137;Cementerio General;Puerta 15;jbgye
+141;Cementerio General;Puerta 6;jbgye
+140;Cementerio General;Puerta 8;jbgye
+142;Cementerio General;Puerta1;jbgye
+48;Cementerio General;puesto 1;jbgye
+;CEMENTERIO GENERAL;Sala Especial y Puerta #3;jbgye
+136;Cementerio General;Sala Esperanza;jbgye
+;CEMENTERIO GENERAL;Sala Exclusiva;jbgye
+;CEMENTERIO GENERAL;Sala Oratoria;jbgye
+135;Cementerio General;Sala Piedad;jbgye
+117;Cementerio General;Sala Piedad 1;jbgye
+;CEMENTERIO GENERAL;Sala Solidaria;jbgye
+143;Cementerio General;Salas Samaritana;jbgye
+110;Centro de Negocios el Terminal;PUESTO 1;jbgye
+;CENTRO RECREACIONAL;Control de acceso;jbgye
+64;CHAM;puesto 1;jbgye
+;CHILENITA;puesto 1;CHILENITA
+122;Ciudad Deportiva;Garita Principal;jbgye
+77;CIUDAD DEPORTIVA;puesto 1;jbgye
+123;Clinica Km 20 Via a la Costa;PUESTO 1;semedic
+162;COLEGIO PARTICULAR EMAUS - COPEM;PUESTO 1;jbgye
+109;Complejo Hospitalario Alejandro Mann;Garita de Supervisores;jbgye
+51;CONDOMINIO AROSEMENA;puesto 1;jbgye
+73;COPA-ATO-QUITO;PUESTO 1;COPA
+156;COPA CARGA;CARGA;COPA
+45;COPA PAX;PAX;COPA
+94;CORPAC CUENCA;PUESTO 1;CORPAC
+155;DHL AEROPUERTO GYE;AEROPUERTO GYE;DHL
+90;DHL AGENCIA COURIER;AGENCIA COURIER;DHL
+30;DHL AMBATO;DHL AMBATO;DHL
+38;DHL-ATO-GYE;ATO-GYE;DHL
+84;DHL ATO UIO;ATO UIO;DHL
+31;DHL CUENCA;DHL CUENCA;DHL
+32;DHL EXPRESS;DHL EXPRESS;DHL
+60;DHL FISICA UIO;FISICA UIO;DHL
+92;DHL GARITA PTA;GARITA PTA;DHL
+29;DHL MANTA;DHL MANTA;DHL
+95;DHL MANTA CENTRO;MANTA CENTRO;DHL
+154;DHL MECANO;DHL MECANO;DHL
+;DHL MECANOS;puesto 1;DHL
+125;DHL Mekano;DHL Mekano;DHL
+33;DHL SUPPLY CHAIN;SUPPLY CHAIN;DHL
+50;ECUACENTAIR HANGAR;ECUACENTAIR HANGAR;ECUACENTAIR
+;ED. JOSE M. SAENZ;Ascensor privado;jbgye
+;ED. JOSE M. SAENZ;Control de acceso;jbgye
+44;EMSA-ATO-GYE;ATO-GYE;EMSA
+;GARZOCENTRO;ALA CENTRO;jbgye
+;GARZOCENTRO;ALA NORTE;jbgye
+;GARZOCENTRO;ALA SUR;jbgye
+;GARZOCENTRO;PATIO COMIDAS;jbgye
+128;GARZOCENTRO;puesto 1;jbgye
+;H. LUIS VERNAZA;CADENA DE EMERGENCIA;jbgye
+;H. LUIS VERNAZA;CONSULTA EXTERNA;jbgye
+;H. LUIS VERNAZA;GARITA # 1 INFORMACION;jbgye
+;H. LUIS VERNAZA;INGRESO PEATONAL COLABORADORES;jbgye
+;H. LUIS VERNAZA;INGRESO VEHICULAR;jbgye
+;H. LUIS VERNAZA;INGRESO Y SALIDA  VEHICULAR CLINICA;jbgye
+;H. LUIS VERNAZA;PUERTA PRINCIPAL  CLINICA SOTOMAYOR;jbgye
+;H. LUIS VERNAZA;RO NDA GENERAL CONSULTA EXTERNA;jbgye
+;H. LUIS VERNAZA;RONDA GENERAL;jbgye
+;HOGAR CALDERON AYLUARDO;Control de acceso;jbgye
+;HOGAR CALDERON AYLUARDO;GARITA;jbgye
+49;HOGAR CORAZON DE JESUS;puesto 1;jbgye
+;HOGAR CORAZON JESUS;GARITA;jbgye
+;HOGAR CORAZON JESUS;PUERTA #15;jbgye
+107;Hospital Alfredo Paulson;Clinica Privada;jbgye
+104;Hospital Alfredo Paulson;Consulta Externa;jbgye
+105;HOSPITAL ALFREDO PAULSON;EMERGENCIAS;jbgye
+106;Hospital Alfredo Paulson;Hall principal;jbgye
+108;Hospital Alfredo Paulson;Ingreso Peatonal;jbgye
+129;Hospital Alfredo Paulson;Parqueadero;jbgye
+130;Hospital Luis Vernaza;Emergencia Garita 7;jbgye
+116;Hospital Luis Vernaza;Externa Gama 7;jbgye
+114;Hospital Luis Vernaza;Externa - Posterior;jbgye
+131;Hospital Luis Vernaza;Gama 4;jbgye
+132;Hospital Luis Vernaza;Garita 2 - Timbradores;jbgye
+115;Hospital Luis Vernaza;Garita 3 -Ingreso Peatonal;jbgye
+112;Hospital Luis Vernaza;Garita Emergencia Clinica Sotomayor;jbgye
+133;Hospital Luis Vernaza;Garita Supervisores;jbgye
+113;Hospital Luis Vernaza;Garita Vehicular Gama 33;jbgye
+111;Hospital Luis Vernaza;Vernaza  Garita 1 ingreso peatonal;jbgye
+103;Hospital Roberto Gilbert;Entrada a Consulta Externa;jbgye
+101;Hospital Roberto Gilbert;Entrada a Emergencia;jbgye
+100;Hospital Roberto Gilbert;Ingreso a Cuidados Cristianos;jbgye
+99;Hospital Roberto Gilbert;Ingreso a Torniquetes;jbgye
+97;Hospital Roberto Gilbert;Ingreso Peatonal;jbgye
+98;Hospital Roberto Gilbert;Ingreso principal al Hall de informacion;jbgye
+102;Hospital Roberto Gilbert;Ingreso y Salida Vehicular;jbgye
+146;HOSPITAL SEMEDIC;EMERGENCIA;semedic
+144;HOSPITAL SEMEDIC;LOBBY;semedic
+148;HOSPITAL SEMEDIC;PARQUEO;semedic
+145;HOSPITAL SEMEDIC;PLUMA;semedic
+147;HOSPITAL SEMEDIC;TORNIQUETE;semedic
+151;INC;CONSULTA EXTERNA;jbgye
+152;INC;EMERGENCIA;jbgye
+150;INC;GARITA VEHICULAR;jbgye
+153;JBG UNIDAD MEDICA UIO;puesto 1;jbgye
+52;JBGYE PANTEON METROPOLITANO;PANTEON METROPOLITANO;
+54;JBGYE U.E SANTA LUISA MARILLAC;LUISA MARILLAC;jbgye
+34;LA FABRIL AMBATO;AMBATO;la fabril
+93;LA FABRIL GARITA BASCULA;GARITA BASCULA;la fabril
+26;LA FABRIL GARITA DETERGENTE 2;GARITA DETERGENTE 2;la fabril
+35;LA FABRIL IBARRA;FABRIL IBARRA;la fabril
+27;LA FABRIL LA CONDESA;LA CONDESA;la fabril
+89;LA FABRIL MANTA GARITA PRINCIPAL;GARITA PRINCIPAL;la fabril
+25;LA FABRIL PESCA MANABITA;PESCA MANABITA;la fabril
+36;LA FABRIL QUITO;FABRIL QUITO;la fabril
+23;LA FABRIL RESIDENCIA VIA AEROPUERTO;VIA AEROPUERTO;la fabril
+37;LA FABRIL STO. DOMINGO;STO. DOMINGO;la fabril
+24;LA FABRIL TRANSMONSERRATE;FABRIL TRANSMONSERRATE;la fabril
+;LOTERIA MATRIZ;GARITA PRINCIPAL 1;loteria
+;LOTERIA MATRIZ;GARTA # 2;loteria
+96;MASAIR ATO UIO;ATO UIO;masair
+;NEUROCIENCIAS;CONSULTA EXTERNA;
+;NEUROCIENCIAS;CONTROL GARITA PRINCIPAL;
+;OFICINA CENTRAL;Ascensor privado;jbgye
+;OFICINA CENTRAL;CONSULTA EXTERNA;jbgye
+;OFICINA CENTRAL;Control accesos Ascensor;jbgye
+79;OFICINA CENTRAL;puesto 1;jbgye
+22;Oficina Garzota;garita;tpg
+67;oficina Matriz;puesto 1;loteria
+;PANTEON METROPOLITANO;GARITA;jbgye
+121;Panteon Metropolitano Via a la Costa;GARITA 3;jbgye
+120;Panteon Metropolitano Via a la Costa;Garita Principal;jbgye
+;PDS 09 DE OCTUBRE 427;puesto 1;loteria
+;PDS 09 DE OCTUBRE BOULEVART;puesto 1;loteria
+158;PDS 9 OCT BOULEVARD;puesto 1;loteria
+127;PDS Albotec;puesto 1;loteria
+157;PDS BOYACa;puesto 1;loteria
+159;PDS CHILE Y LUQUE;puesto 1;loteria
+;PDS PLAZA DE LA SUERTE;puesto 1;loteria
+;PDS-PORTETE;puesto 1;loteria
+28;PDS PORTOVIEJO;puesto 1;loteria
+119;Plaza Ceibos;Cerca de las Escaleras;jbgye
+70;PLAZA CEIBOS;puesto 1;jbgye
+74;PLAZA ORELLANA;puesto 1;jbgye
+62;QATAR-ATO-QUITO;puesto 1;QATAR
+53;RECREACIONAL SUR;puesto 1;jbgye
+118;Sagrado Corazon de Jesus;Bajo de comunicador;jbgye
+;SANTISTEVAN;GARITA;jbgye
+82;SWISSPORT CARGA;CARGA;SWISSPORT
+83;SWISSPORT COURIER;COURIER;SWISSPORT
+80;SWISSPORT MATRIZ;MATRIZ;SWISSPORT
+61;SWISSPORT MONITOREO;MONITOREO;SWISSPORT
+81;SWISSPORT ZONA TRANSFERENCIA;ZONA TRANSFERENCIA;SWISSPORT
+;TERRENO LA ROCA;puesto 1;jbgye
+85;TOTAL SECURITY GYE;GARITA 1;TPG
+86;TOTAL SECURITY UIO;SECURITY UIO;TPG
+78;U.E DOMINGO DE SANTISTEVAN;puesto 1;jbgye
+87;U.E. FREIRE STABILE;puesto 1;jbgye
+76;U.E MERCEDES CALDERON;puesto 1;jbgye
+88;U.E. NARCISA DE JESUS;puesto 1;jbgye
+160;UNIDAD EDUCATIVA INMACULADA CONCEPCIÓN;puesto 1;jbgye
+161;UNIDAD EDUCATIVA SAN ESTEBAN;puesto 1;jbgye
