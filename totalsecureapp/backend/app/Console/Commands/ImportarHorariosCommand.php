@@ -44,7 +44,7 @@ class ImportarHorariosCommand extends Command
                             {--mes=9 : Mes al que pertenecen los dias 7..30}
                             {--ejecutar : Sin esto solo informa}
                             {--csv= : Vuelca a CSV lo que no se pudo cruzar}
-                            {--mapa= : CSV proyecto,ins_code que dice a que local va cada proyecto}';
+                            {--mapa= : CSV proyecto,puesto,ins_code que dice a que local va cada puesto}';
 
     protected $description = 'Importa la malla mensual de turnos desde el Excel de horarios';
 
@@ -102,8 +102,9 @@ class ImportarHorariosCommand extends Command
 
             $nomenclatura = [];
             $proyecto = '(sin nombre)';
+            $puesto = '';
 
-            foreach ($filas as $fila) {
+            foreach ($filas as $indiceFila => $fila) {
                 $textos = array_map(
                     fn ($c) => is_string($c) ? mb_strtoupper(trim($c)) : '',
                     $fila
@@ -111,7 +112,10 @@ class ImportarHorariosCommand extends Command
 
                 // Una tabla de nomenclatura: vale para lo que viene despues.
                 if (in_array('NOMENCLATURA', $textos, true)) {
-                    $nomenclatura = array_merge($nomenclatura, $this->leerNomenclatura($filas, $fila));
+                    $nomenclatura = array_merge(
+                        $nomenclatura,
+                        $this->leerNomenclatura($filas, $indiceFila)
+                    );
                     continue;
                 }
 
@@ -122,6 +126,13 @@ class ImportarHorariosCommand extends Command
                         $proyecto = trim($fila[$k + 1]);
                     }
                     continue;
+                }
+
+                // La columna de puestos solo se rellena en la primera fila de
+                // cada grupo: las siguientes heredan el puesto anterior.
+                $celdaPuesto = $fila[$colNombres - 2] ?? null;
+                if (is_string($celdaPuesto) && trim($celdaPuesto) !== '') {
+                    $puesto = trim($celdaPuesto);
                 }
 
                 $nombres = $fila[$colNombres] ?? null;
@@ -154,7 +165,21 @@ class ImportarHorariosCommand extends Command
                  * locales**. Esa tabla dice a que locales tiene acceso, no donde
                  * trabaja, asi que no sirve para asignar un turno.
                  */
-                $insCode = $mapa[$this->clave($proyecto)] ?? null;
+                /*
+                 * El mapa se busca primero por PROYECTO + PUESTO y solo despues
+                 * por proyecto a secas.
+                 *
+                 * ⚠️ Es lo que hace que el turno sea util: un proyecto como
+                 * «CEMENTERIO GENERAL» o «H. LUIS VERNAZA» agrupa una docena de
+                 * locales --una por puerta o garita-- y el marcaje solo se
+                 * vincula con un turno **del mismo `ins_code`**
+                 * (`TurnoService::buscarTurnoParaMarcaje`). Un turno cargado en
+                 * el local equivocado deja al guardia como ausente aunque haya
+                 * marcado.
+                 */
+                $insCode = $mapa[$this->clave($proyecto . ' ' . $puesto)]
+                    ?? $mapa[$this->clave($proyecto)]
+                    ?? null;
                 if ($insCode === null) {
                     $sinLocal[] = [$zona, $persona, $proyecto];
                     continue;
@@ -306,16 +331,25 @@ class ImportarHorariosCommand extends Command
      *
      * @return array<string, array{0:string,1:string}> marca => [inicio, fin]
      */
-    private function leerNomenclatura(array $filas, array $filaCabecera): array
+    /**
+     * Lee la tabla de nomenclatura que empieza en la fila `$indice`.
+     *
+     * ⚠️ Recibe el INDICE y no la fila. Antes buscaba su posicion con
+     * `array_search($filaCabecera, $filas, true)`, y eso fallaba: la comparacion
+     * estricta de arrays no encuentra la fila cuando hay celdas con tipos
+     * distintos, asi que la tabla se descartaba y **todas las marcas de esa hoja
+     * quedaban sin horario**. Se veia como «CENTRO · D: 137 celdas sin
+     * nomenclatura» aunque la tabla estuviera ahi.
+     */
+    private function leerNomenclatura(array $filas, int $indice): array
     {
+        $filaCabecera = $filas[$indice] ?? [];
+
         $col = null;
         foreach ($filaCabecera as $j => $c) {
             if (is_string($c) && mb_strtoupper(trim($c)) === 'NOMENCLATURA') { $col = $j; break; }
         }
         if ($col === null) return [];
-
-        $indice = array_search($filaCabecera, $filas, true);
-        if ($indice === false) return [];
 
         $tabla = [];
         for ($i = $indice + 1; $i < min($indice + 16, count($filas)); $i++) {
@@ -429,6 +463,8 @@ class ImportarHorariosCommand extends Command
 
         $iP = array_search('proyecto', $cab, true);
         $iC = array_search('ins_code', $cab, true);
+        $iU = array_search('puesto', $cab, true);
+
         if ($iP === false || $iC === false) {
             fclose($f);
             $this->warn('El mapa necesita las columnas proyecto e ins_code.');
@@ -437,10 +473,23 @@ class ImportarHorariosCommand extends Command
 
         $mapa = [];
         while (($fila = fgetcsv($f)) !== false) {
-            if (!isset($fila[$iP], $fila[$iC]) || trim((string) $fila[$iC]) === '') {
+            if (!isset($fila[$iP], $fila[$iC])) {
                 continue;
             }
-            $mapa[$this->clave($fila[$iP])] = (int) $fila[$iC];
+
+            $code = trim((string) $fila[$iC]);
+
+            // «DESCARTAR» marca lo que el cliente dijo que no existe como local.
+            if ($code === '' || !ctype_digit($code)) {
+                continue;
+            }
+
+            $puesto = $iU !== false ? trim((string) ($fila[$iU] ?? '')) : '';
+
+            $mapa[$this->clave($fila[$iP] . ' ' . $puesto)] = (int) $code;
+
+            // Un proyecto con un solo puesto tambien se busca por su nombre solo.
+            $mapa[$this->clave($fila[$iP])] ??= (int) $code;
         }
         fclose($f);
 

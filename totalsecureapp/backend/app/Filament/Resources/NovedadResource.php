@@ -38,9 +38,23 @@ class NovedadResource extends Resource
     // Filament arma con esto las migas, el boton «Crear …» y el aviso de
     // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
     // «Producto Catalogos» o «User Has Biometrias».
-    protected static ?string $modelLabel = 'novedad';
-    protected static ?string $pluralModelLabel = 'novedades';
-    protected static ?string $navigationLabel = 'Novedades';
+    /*
+     * Se llama «Bitacora» aunque el modelo y la tabla sigan siendo `novedad`.
+     *
+     * Habia DOS modulos para lo mismo: `BitacoraResource` sobre la tabla
+     * `bitacora` --misma estructura exacta: usuario, local, observacion, foto,
+     * fecha, coordenadas-- y este sobre `novedad`. La bitacora estaba **vacia,
+     * 0 filas**, su controlador de la API no tenia ni rutas registradas, y la
+     * app movil nunca la uso. Todo lo real vive en `novedad`.
+     *
+     * Asi que se quito el recurso duplicado y este toma el nombre que la
+     * operacion usa. **No se renombro la tabla a proposito**: eso obligaria a
+     * tocar el modelo, la API que ya usan las tablets y los registros que ya
+     * existen, sin ganar nada -- el nombre que ve la gente es este.
+     */
+    protected static ?string $modelLabel = 'registro de bitácora';
+    protected static ?string $pluralModelLabel = 'registros de bitácora';
+    protected static ?string $navigationLabel = 'Bitácora';
     protected static ?int $navigationSort = 5;
     protected static ?string $model = Novedad::class;
 
