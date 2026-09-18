@@ -9,6 +9,49 @@ producción y no se hizo.
 
 ---
 
+## Estado al 2026-09-17 (cierre de la jornada)
+
+`main` = `migracion-laravel-filament` = **eea8942**, ambas en GitHub. Árbol
+limpio. **541 tests en verde.** Producción: Laravel 13.31, `production`, debug
+apagado, contenedor `healthy`.
+
+### Cerrado en estas jornadas
+
+| | |
+|---|---|
+| SEC-00 | Toma de cuentas, por la API **y** por el portal |
+| CONT-01 | Respaldo diario, probado restaurando |
+| SEC-05 | Fuga entre clientes (rondas y marcadores) |
+| — | Botón de pánico: avisaba a nadie → ahora suena en todo el panel |
+| — | El QR que no salía, las novedades sin foto, la hora del pre-registro |
+| — | 130 + 51 locales, 182 puestos, **558 turnos** |
+| — | 5 fallos de infraestructura: 500 del panel, límite de subida, sesión de 1 h, workers, timeouts |
+| APK | **1.0.7** (versionCode 8), firmado y verificado dentro del bundle |
+
+### Abierto, y por qué
+
+**Esperando una decisión externa:**
+- **HTTPS (SEC-01).** El único crítico que queda. `docker-compose.prod.yml` con
+  certbot está listo; falta el dominio. Hasta entonces la biometría de 880
+  personas viaja sin cifrar y el APK mantiene `usesCleartextTraffic`.
+- **Copia del respaldo fuera del servidor (CONT-02).** El script ya tiene el paso
+  (`DESTINO_EXTERNO`) y avisa en cada corrida; falta a qué máquina copiar.
+
+**Esperando un dato de la operación:**
+- **147 de 269 personas** de la malla no cruzan por nombre. Con un listado de
+  cédulas, el cruce sería exacto.
+- **41 filas de `docs/mapa-proyectos.csv`** sin `ins_code` (~300 celdas de turno).
+  Referencia en `docs/locales-disponibles.csv`.
+- Revisar en el panel los **51 locales creados**: los que no correspondan se
+  desactivan.
+
+**Deuda técnica, nada urgente:** miniaturas de fotos (21,5 MB por página en
+Accesos), worker de cola (hoy `sync`), las 57 tablas sin documentar,
+`v1_analisis` fuera de todo compose, `openapi.yaml` sin contrastar, y migrar
+`InvMovimientoDetalleResource` a `PerfilPanel::localesVisibles()`.
+
+---
+
 ## Bloque 0 — Seguridad. Va primero porque está expuesto a internet
 
 ### 0.1 ✅ Toma de cualquier cuenta (SEC-00) — CERRADO (2026-09-15)
