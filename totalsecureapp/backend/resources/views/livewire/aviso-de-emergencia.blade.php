@@ -1,45 +1,45 @@
 {{--
     La alarma de emergencia, presente en TODAS las paginas del panel.
 
-    Se inyecta por `PanelsRenderHook::BODY_END`, asi que sigue vigilando aunque
-    se este en Usuarios, Turnos o Accesos -- que es donde se pasa el tiempo. El
-    widget del tablero solo existe en el tablero, y ahi estaba el problema: una
-    emergencia que entraba mientras se trabajaba en otra pantalla no sonaba.
+    Se inyecta por `PanelsRenderHook::BODY_END`. El widget del tablero solo
+    existe en el tablero, y ahi estaba el problema original: una emergencia que
+    entraba mientras se trabajaba en Usuarios o Turnos no tenia nada montado que
+    la detectara.
 
-    ⚠️ **`keep-alive` no es opcional aca.** Sin ese modificador, Livewire
-    descarta el 95% de los sondeos cuando la pestana esta en segundo plano
-    (`throttleWhile(theTabIsInTheBackground() && theDirectiveIsMissingKeepAlive)`
-    en su bundle). A 15 s eso es una comprobacion cada cinco minutos de media, y
-    el panel de un operador esta de fondo casi todo el tiempo -- que es
-    exactamente cuando una emergencia importa.
+    ⚠️ **`keep-alive` no es opcional.** Sin ese modificador Livewire descarta el
+    95% de los sondeos con la pestaña en segundo plano -- que es donde vive el
+    panel de un operador.
 
-    La logica de audio vive en `partials/alarma-de-emergencia-js`, compartida con
-    el widget del tablero.
+    El motor (audio, titulo parpadeante, oyente del evento) esta en
+    `partials/alarma-de-emergencia-js`. Aca solo va la pantalla.
 --}}
 <div
     wire:poll.15s.keep-alive="comprobar"
     x-data="alarmaDeEmergencia()"
-    x-init="escucharEmergencias()"
-    x-on:emergencia-nueva.window="dispararAlarma()"
+    x-init="iniciar()"
 >
-    {{-- Mientras el navegador no este dejando sonar se pide en cualquier
-         pagina. `listo` sale del estado real del AudioContext, asi que este
-         boton reaparece solo si el audio se suspende: antes se escondia para
-         siempre en cuanto `localStorage` decia que ya se habia activado, y la
-         alarma quedaba muda sin que nadie lo supiera. --}}
+    {{-- ⚠️ Banner, no un boton chico en una esquina.
+
+         El aviso anterior era un boton de 2 cm abajo a la derecha, y con el
+         panel sin SPA reaparecia en cada carga de pagina: se volvio parte del
+         paisaje y nadie lo pulsaba. Si el audio esta bloqueado, la alarma **no
+         va a sonar**, y eso tiene que estorbar. --}}
     <div x-show="!listo" x-cloak
-         style="position:fixed; right:1rem; bottom:1rem; z-index:50;">
+         style="position:fixed; left:0; right:0; bottom:0; z-index:50;
+                background:#b91c1c; color:#fff; padding:.55rem 1rem;
+                display:flex; align-items:center; justify-content:center; gap:1rem;
+                font-size:.82rem; font-weight:600;
+                box-shadow:0 -4px 12px rgba(0,0,0,.25);">
+        <span>🔇 El sonido de emergencias está bloqueado por el navegador.</span>
         <button type="button" x-on:click="activar()"
-                style="background:#b91c1c; color:#fff; border:0; border-radius:.6rem;
-                       padding:.6rem .9rem; font-weight:700; font-size:.8rem;
-                       box-shadow:0 4px 12px rgba(0,0,0,.25); cursor:pointer;">
-            🔔 Activar alarma de emergencias
+                style="background:#fff; color:#b91c1c; border:0; border-radius:.4rem;
+                       padding:.35rem .8rem; font-weight:700; cursor:pointer;">
+            Activar y probar
         </button>
     </div>
 
-    {{-- Aviso flotante cuando suena: el sonido solo no dice que pasa ni donde
-         mirar. Se dibuja aunque el audio este bloqueado -- una emergencia que no
-         suena tiene que verse. --}}
+    {{-- El cartel se dibuja aunque el audio este bloqueado: una emergencia que
+         no suena tiene que verse. --}}
     <div x-show="sonando" x-cloak
          style="position:fixed; left:50%; top:1rem; transform:translateX(-50%);
                 z-index:60; background:#b91c1c; color:#fff; border-radius:.75rem;
@@ -50,13 +50,6 @@
             <span x-text="$wire.abiertas"></span> sin atender ·
             <a href="{{ \App\Filament\Resources\AlertasResource::getUrl('index') }}"
                style="color:#fff; text-decoration:underline;">Ver alertas</a>
-        </div>
-        <div x-show="!listo" x-cloak
-             style="font-weight:500; font-size:.75rem; margin-top:.4rem;">
-            El navegador tiene el sonido bloqueado ·
-            <button type="button" x-on:click="activar()"
-                    style="background:none; border:0; color:#fff; text-decoration:underline;
-                           cursor:pointer; font:inherit;">Activar</button>
         </div>
     </div>
 </div>

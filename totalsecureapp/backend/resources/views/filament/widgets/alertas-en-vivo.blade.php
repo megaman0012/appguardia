@@ -21,8 +21,7 @@
          comprobaciones con la pestana en segundo plano. --}}
     <div
         x-data="alarmaDeEmergencia()"
-        x-init="escucharEmergencias()"
-        x-on:emergencia-nueva.window="dispararAlarma()"
+        x-init="iniciar()"
         wire:poll.15s.keep-alive="comprobar"
     >
         <x-filament::card>
@@ -39,7 +38,7 @@
                     </p>
                     <p class="text-sm text-gray-500 dark:text-gray-400">
                         <span x-show="!listo">
-                            El navegador tiene el sonido bloqueado. Pulse «Activar sonido»: sin un clic previo no deja sonar una alarma.
+                            El navegador tiene el sonido bloqueado. Se desbloquea solo al hacer clic en cualquier parte de la página; el botón sirve para comprobar que se oye.
                         </span>
                         <span x-show="listo" x-cloak>
                             Sonido activo en este equipo.
@@ -58,7 +57,7 @@
                     </x-filament::button>
 
                     <x-filament::button size="sm" color="gray"
-                                        x-show="listo" x-cloak x-on:click="sirena()">
+                                        x-show="listo" x-cloak x-on:click="probar()">
                         Probar sonido
                     </x-filament::button>
 

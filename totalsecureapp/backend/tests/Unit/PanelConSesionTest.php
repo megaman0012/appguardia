@@ -169,36 +169,81 @@ class PanelConSesionTest extends TestCase
     }
 
     /**
-     * El aviso visual no puede depender de que el audio funcione.
+     * ⚠️ **El audio se desbloquea con CUALQUIER interaccion, no con un boton.**
      *
-     * La version anterior salia por `return` al principio si el AudioContext no
-     * estaba listo, asi que cuando el navegador tenia el sonido bloqueado **no
-     * se dibujaba nada**: ni sonido ni cartel. Una emergencia que no suena tiene
-     * que verse.
+     * Es la correccion de fondo de por que la alarma seguia muda. El permiso de
+     * audio del navegador es **por documento**, y este panel **no usa SPA**: cada
+     * clic en el menu es una carga completa de pagina, asi que el permiso se
+     * pierde entero. Con el diseño anterior habia que pulsar «Activar alarma» en
+     * cada pagina que se abriera; en la practica la alarma estaba armada casi
+     * nunca, y el boton --escondido por `localStorage`-- hacia creer que si.
+     *
+     * Si alguien quita estos oyentes, la alarma vuelve a depender de que el
+     * operador encuentre y pulse un boton en cada pantalla. Volveria a estar
+     * muda, y otra vez sin sintoma.
      */
-    public function test_el_cartel_de_emergencia_no_depende_del_audio(): void
+    public function test_el_audio_se_desbloquea_con_cualquier_interaccion(): void
     {
         $html = $this->get('/admin/users')->getContent();
 
-        $pos = strpos($html, 'dispararAlarma() {');
-        $this->assertNotFalse($pos, 'no se encontro la funcion de la alarma');
-
-        $cuerpo = substr($html, $pos, 260);
-
-        $this->assertStringContainsString(
-            'this.sonando = true;',
-            $cuerpo,
-            'el cartel tiene que ponerse antes de intentar sonar, no despues'
-        );
+        foreach (['pointerdown', 'keydown', 'touchstart'] as $evento) {
+            $this->assertStringContainsString(
+                $evento,
+                $html,
+                "Sin el oyente de '{$evento}' el audio solo se desbloquea con el boton dedicado, "
+                . 'y sin SPA eso hay que repetirlo en cada carga de pagina.'
+            );
+        }
     }
 
-    public function test_la_alarma_pide_activarse_una_vez(): void
+    /**
+     * El aviso tiene que llegar por una via que no dependa de ningun permiso.
+     *
+     * El panel de un operador vive en una pestaña de fondo. El titulo
+     * parpadeante es lo unico que se ve desde ahi, y no pide permiso a nadie:
+     * si el audio esta bloqueado, es lo unico que queda.
+     */
+    public function test_hay_aviso_que_no_depende_del_audio(): void
     {
-        // Sin esto quedaria muda para siempre: el navegador no reproduce audio
-        // hasta que la persona interactua con la pagina.
-        $this->assertStringContainsString(
-            'Activar alarma de emergencias',
-            $this->get('/admin')->getContent()
-        );
+        $html = $this->get('/admin/users')->getContent();
+
+        $this->assertStringContainsString('parpadearTitulo', $html,
+            'sin el titulo parpadeante, una emergencia con el audio bloqueado no se percibe');
+
+        $this->assertStringContainsString('🚨 EMERGENCIA', $html,
+            'el cartel tiene que estar aunque no suene');
+    }
+
+    /**
+     * Un solo motor y un solo oyente, no uno por componente.
+     *
+     * Livewire redibuja el widget en cada sondeo y cada navegacion recrea los
+     * componentes. Con la logica dentro del `x-data` se acumulaban AudioContexts
+     * y oyentes de `emergencia-nueva`, y la alarma acababa sonando encima de si
+     * misma.
+     */
+    public function test_el_motor_de_la_alarma_es_unico(): void
+    {
+        $html = $this->get('/admin/users')->getContent();
+
+        $this->assertStringContainsString('window.__alarmaTS = window.__alarmaTS ||', $html);
+        $this->assertStringContainsString('if (! window.__alarmaTSEnganchada)', $html);
+    }
+
+    /**
+     * Si el audio esta bloqueado, tiene que estorbar.
+     *
+     * El aviso anterior era un boton de 2 cm abajo a la derecha que ademas se
+     * escondia en cuanto `localStorage` decia que ya se habia activado alguna
+     * vez -- aunque el navegador tuviera el sonido bloqueado en ese momento.
+     * Se volvio parte del paisaje. Ahora es un banner al pie, y el estado sale
+     * del contexto de audio real, no de `localStorage`.
+     */
+    public function test_avisa_cuando_el_sonido_esta_bloqueado(): void
+    {
+        $html = $this->get('/admin')->getContent();
+
+        $this->assertStringContainsString('El sonido de emergencias está bloqueado', $html);
+        $this->assertStringContainsString('Activar y probar', $html);
     }
 }

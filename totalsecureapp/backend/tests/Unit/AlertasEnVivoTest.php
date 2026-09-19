@@ -168,13 +168,27 @@ class AlertasEnVivoTest extends TestCase
         $this->assertStringContainsString('Activar sonido', $html);
     }
 
-    public function test_el_widget_escucha_el_aviso_del_servidor(): void
+    /**
+     * El widget se engancha al motor compartido, y sondea sin dormirse.
+     *
+     * ⚠️ Antes esto comprobaba que el propio widget registrara
+     * `Livewire.on('emergencia-nueva')`. **Ya no lo hace, y es a proposito:** el
+     * oyente estaba copiado aca y en el componente global, asi que Livewire
+     * --que redibuja el widget en cada sondeo-- iba acumulando oyentes y la
+     * alarma sonaba encima de si misma. Ahora hay uno solo, en
+     * `partials/alarma-de-emergencia-js`, y `PanelConSesionTest` lo verifica
+     * sobre la pagina entera, que es donde de verdad vive.
+     *
+     * Lo que si tiene que estar aca es el enganche al motor y el `keep-alive`:
+     * sin ese modificador Livewire descarta el 95% de los sondeos con la pestaña
+     * en segundo plano.
+     */
+    public function test_el_widget_se_engancha_al_motor_compartido(): void
     {
         $html = \Livewire\Livewire::test(AlertasEnVivo::class)->html();
 
-        // Sin esto el servidor avisaria a nadie.
-        $this->assertStringContainsString('emergencia-nueva', $html);
-        $this->assertStringContainsString('wire:poll', $html);
+        $this->assertStringContainsString('alarmaDeEmergencia()', $html);
+        $this->assertStringContainsString('wire:poll.15s.keep-alive', $html);
     }
 
     public function test_una_emergencia_aparece_en_el_html(): void
