@@ -9,141 +9,190 @@ th{background:#f2f2f2}
 code{background:#f4f4f4;padding:1px 3px;font-family:DejaVu Sans Mono,monospace;font-size:8.5pt}
 pre{background:#f7f7f7;padding:8px;border-left:3px solid #C0172C}
 blockquote{border-left:3px solid #C0172C;margin-left:0;padding-left:12px;color:#444;background:#fcf6f7}
-</style></head><body><h1 id="informe-de-auditoria-total-secure-app-dt360-core">Informe de auditoria — Total Secure App (DT360 Core)</h1>
-<p><strong>Fecha:</strong> 2026-09-15 · <strong>Version:</strong> 2.0 (con las correcciones aplicadas)
-<strong>Ruta:</strong> <code>/home/server-dt/Documentos/totalsecureapp</code></p>
+</style></head><body><h1 id="informe-de-auditoria--total-secure-app-dt360-core">Informe de
+auditoria — Total Secure App (DT360 Core)</h1>
+<p><strong>Fecha:</strong> 2026-09-19 · <strong>Version:</strong> 2.1
+(estado tras las correcciones) <strong>Ruta:</strong>
+<code>/home/server-dt/Documentos/totalsecureapp</code></p>
+<blockquote>
+<p><strong>Historia de este documento.</strong> La <strong>v1.0</strong>
+(2026-09-15, por la manana) fue la auditoria inicial: cuatro hallazgos
+criticos, ningun cambio aplicado. La <strong>v2.0</strong> (2026-09-15,
+por la tarde) registro que tres de los cuatro ya estaban cerrados, pero
+dejo varias secciones describiendo el sistema como estaba por la manana.
+Esta <strong>v2.1</strong> corrige esas contradicciones e incorpora el
+trabajo del 16 y 17 de septiembre.</p>
+</blockquote>
 <hr />
 <h2 id="resumen-ejecutivo">Resumen ejecutivo</h2>
-<p>Sistema de gestion operativa de guardias de seguridad: accesos, rondas,
-biometria, inventario y alertas, con aplicacion movil Android. <strong>Es el sistema
-mas grande del servidor</strong> (57 tablas, 880 usuarios, 4,5 GB en disco) y el
-<strong>unico alcanzable desde internet</strong>.</p>
-<p>Esta bien construido: Laravel modular, Sanctum y spatie/permission (las
-librerias correctas, no invenciones), PostgreSQL limitado a <code>127.0.0.1</code>,
-secretos con fail-fast, y la <strong>mejor documentacion del servidor</strong> — incluido un
-<code>LEEME-apk.txt</code> que publica la huella del certificado y explica por que una
-version del APK no debe repartirse.</p>
-<h2 id="correccion-de-la-version-10-el-hallazgo-ya-corregido">⚠️ Correccion de la version 1.0 (el hallazgo, ya corregido)</h2>
-<p>La documentacion de la API ruta por ruta destapo <strong>una toma de cuentas</strong> que la
-primera pasada no vio: <code>POST /api/procesar_paswchg</code> es publico y <strong>cambia la
-contrasena de cualquier usuario sin validar ningun token</strong>. Basta el <code>user_id</code>,
-que es un entero secuencial.</p>
-<p>Eso desplaza la prioridad: <strong>por delante incluso de activar HTTPS</strong>.</p>
-<p>La primera pasada reviso configuracion, exposicion, Docker y secretos. Lo que
-no reviso fue el codigo de cada controlador.</p>
-<h2 id="el-problema-ahora-en-dos-frentes">El problema, ahora en dos frentes</h2>
-<p><strong>Primero: cualquiera puede tomar cualquier cuenta.</strong> <code>POST /api/procesar_paswchg</code>
-no exige autenticacion y no comprueba el token de recuperacion que el propio
-sistema emite. Una peticion con <code>{"user_id":1,"password":"...","password2":"..."}</code>
-cambia la contrasena de ese usuario. Y <code>POST /api/solicitud_paswchg</code>, tambien
-publico, <strong>devuelve el token y el <code>user_id</code> en la respuesta</strong>.</p>
-<p><strong>Segundo: datos biometricos de 880 personas viajan por internet sin cifrar.</strong> Tres
-hechos verificados que se refuerzan: el sistema responde en
-<code>http://181.198.245.50:3031</code> (302), el backend se configura con esa URL sin
-TLS, y la app movil <strong>desactiva explicitamente</strong> la proteccion de Android
-contra trafico en claro (<code>usesCleartextTraffic: true</code>).</p>
-<p>Una contrasena filtrada se cambia. Una huella o un rostro, no.</p>
-<p><strong>Y no hay ningun respaldo.</strong> Ni de la base, ni de los secretos, ni del
-keystore que firma la aplicacion — sin el cual no se pueden publicar
-actualizaciones nunca mas.</p>
-<p><strong>Lo notable:</strong> la solucion al hallazgo critico <strong>ya esta escrita en el
-proyecto</strong>. <code>docker-compose.prod.yml</code> define nginx 1.27 con certbot y puertos
-80/443, y <code>DESPLIEGUE-DOMINIO.md</code> documenta el procedimiento. Solo falta
-activarlo.</p>
+<p>Sistema de gestion operativa de guardias de seguridad: accesos,
+rondas, biometria, inventario y alertas, con aplicacion movil Android.
+<strong>Es el sistema mas grande del servidor</strong> (57 tablas, 880
+usuarios, 4,5 GB en disco) y el <strong>unico alcanzable desde
+internet</strong>.</p>
+<p>Esta bien construido: Laravel 13 modular, Sanctum y spatie/permission
+(las librerias correctas, no invenciones), PostgreSQL limitado a
+<code>127.0.0.1</code>, secretos con fail-fast, y la <strong>mejor
+documentacion del servidor</strong> — incluido un
+<code>LEEME-apk.txt</code> que publica la huella del certificado y
+explica por que una version del APK no debe repartirse.</p>
+<p><strong>De los cuatro hallazgos criticos de la v1.0, tres estan
+cerrados y verificados.</strong> El que queda —la falta de HTTPS— no
+esta detenido por una dificultad tecnica: la configuracion con certbot
+ya esta escrita y probada en <code>docker-compose.prod.yml</code>.
+<strong>Falta que se libere un dominio.</strong></p>
 <h2 id="estado-general">Estado general</h2>
-<p>🟡 <strong>EN CORRECCION</strong> — actualizado el 2026-09-15, al cierre de la jornada.</p>
-<p>De los cuatro hallazgos criticos, <strong>tres estan resueltos y verificados</strong>:</p>
+<p>🟡 <strong>EN CORRECCION</strong> — actualizado el 2026-09-19.</p>
 <table>
 <thead>
-<tr>
+<tr class="header">
 <th></th>
 <th>Hallazgo</th>
 <th>Estado</th>
 </tr>
 </thead>
 <tbody>
-<tr>
+<tr class="odd">
 <td>SEC-00</td>
 <td>Toma de cuentas por <code>procesar_paswchg</code></td>
-<td>✅ <strong>CERRADO</strong> — y tambien la misma via en el portal web</td>
+<td>✅ <strong>CERRADO</strong> (2026-09-15) — y tambien la misma via en
+el portal web</td>
 </tr>
-<tr>
+<tr class="even">
 <td>CONT-01</td>
-<td>Sin respaldo</td>
-<td>✅ <strong>HECHO</strong> — diario a las 03:00, probado restaurando</td>
+<td>Sin respaldo de base, secretos ni keystore</td>
+<td>✅ <strong>HECHO</strong> (2026-09-15) — diario a las 03:00, probado
+restaurando</td>
 </tr>
-<tr>
+<tr class="odd">
 <td>SEC-05</td>
 <td>Fuga entre instituciones (T-30)</td>
-<td>✅ <strong>CERRADO</strong> — era real: detalle de rondas y marcadores</td>
+<td>✅ <strong>CERRADO</strong> (2026-09-15) — era real: detalle de
+rondas y marcadores</td>
 </tr>
-<tr>
+<tr class="even">
 <td>SEC-01</td>
 <td>Biometria sin cifrar por internet</td>
-<td>🔴 <strong>ABIERTO</strong> — a la espera de liberar el dominio</td>
+<td>🔴 <strong>ABIERTO</strong> — espera que se libere el dominio</td>
 </tr>
-<tr>
+<tr class="odd">
 <td>CONT-02</td>
 <td>Keystore sin copia fuera del servidor</td>
-<td>🟠 <strong>PARCIAL</strong> — respaldado, pero en el mismo servidor</td>
+<td>🟠 <strong>PARCIAL</strong> — respaldado, pero en el mismo
+servidor</td>
 </tr>
 </tbody>
 </table>
-<p>Lo que queda como critico es <strong>la falta de HTTPS</strong>, y esta detenido por una
-dependencia externa al equipo tecnico: no hay dominio asignado todavia. El
-<code>docker-compose.prod.yml</code> con certbot sigue listo para el dia que se libere.</p>
-<p>CONT-02 esta a medias por la misma clase de motivo: el respaldo existe y se
-verifico, pero <strong>no hay todavia un destino fuera de este servidor</strong> donde
-copiarlo. El script ya tiene el paso preparado (<code>DESTINO_EXTERNO</code>) y avisa en
-cada corrida mientras siga vacio.</p>
+<h2 id="el-riesgo-que-queda">El riesgo que queda</h2>
+<p><strong>Datos biometricos de 880 personas viajan por internet sin
+cifrar.</strong> Tres hechos verificados que se refuerzan: el sistema
+responde en <code>http://181.198.245.50:3031</code> (302), el backend se
+configura con esa URL sin TLS (<code>APP_URL</code> en
+<code>docker-compose.yml</code>), y la app movil <strong>desactiva
+explicitamente</strong> la proteccion de Android contra trafico en claro
+(<code>usesCleartextTraffic: true</code> en <code>app.json</code>).</p>
+<p>Una contrasena filtrada se cambia. Una huella o un rostro, no.</p>
+<p><strong>Lo notable:</strong> la solucion <strong>ya esta escrita en
+el proyecto</strong>. <code>docker-compose.prod.yml</code> define nginx
+1.27 con certbot y puertos 80/443, y <code>DESPLIEGUE-DOMINIO.md</code>
+documenta el procedimiento. Solo falta el dominio.</p>
+<p><strong>Y en segundo lugar, el keystore.</strong> El respaldo diario
+lo incluye y se verifico comparando su SHA-256, pero <strong>la copia
+queda en este mismo servidor</strong>. Perder la maquina es perder la
+identidad de la aplicacion: sin ese archivo no se puede publicar ninguna
+actualizacion mas, y no hay forma de revocarlo. El script ya tiene el
+paso de copia externa (<code>DESTINO_EXTERNO</code>, linea 76 de
+<code>backend/scripts/respaldo.sh</code>) y avisa en cada corrida
+mientras siga vacio; <strong>falta decidir a que maquina
+copiar.</strong></p>
+<h2 id="que-se-corrigio-desde-la-version-10">Que se corrigio desde la
+version 1.0</h2>
+<p><strong>El 15 de septiembre</strong>, los tres criticos cerrados
+(SEC-00, CONT-01, SEC-05), mas cinco bugs funcionales con su causa raiz
+localizada: el boton de panico que no avisaba a nadie, el QR que no
+salia en el PDF, las novedades de la web que se guardaban sin foto, la
+hora del preregistro imposible de escribir, y la disponibilidad para
+turnos extra sin control en el panel.</p>
+<p><strong>El 16 y 17 de septiembre</strong>, un repaso de
+infraestructura (cinco fallos: el 500 del panel, el limite de subida, la
+sesion que caducaba en una hora, los workers y los timeouts que se
+contradecian), la carga de <strong>182 puestos y 558 turnos</strong>, y
+el <strong>APK 1.0.7</strong> (versionCode 8), firmado con el keystore
+de produccion y verificado dentro del bundle.</p>
+<p><strong>541 tests en verde</strong> en la ultima corrida registrada
+(2026-09-17).</p>
 <h2 id="arquitectura">Arquitectura</h2>
-<p>Laravel 13 modular (Acceso, Administracion, MobileApp, PortalApi) + PHP 8.3 +
-PostgreSQL 16 + nginx, mas app React Native/Expo. Contenedor MariaDB suelto con
-la base heredada V1.</p>
+<p>Laravel 13 modular (Acceso, Administracion, MobileApp, PortalApi) +
+PHP 8.3 + PostgreSQL 16 + nginx, mas app React Native/Expo (SDK 57).
+Contenedor MariaDB suelto con la base heredada V1.</p>
 <h2 id="codigo">Codigo</h2>
-<p>No se evaluo linea por linea. Las decisiones de dependencias son correctas:
-Sanctum para tokens, spatie/laravel-permission para roles, dompdf para PDF. La
-modularizacion permite que la API movil evolucione sin arrastrar al portal.</p>
+<p>No se evaluo linea por linea. Las decisiones de dependencias son
+correctas: Sanctum para tokens, spatie/laravel-permission para roles,
+dompdf para PDF. La modularizacion permite que la API movil evolucione
+sin arrastrar al portal.</p>
 <h2 id="docker">Docker</h2>
-<p>Correcto en lo esencial: base solo local, fail-fast en <code>DB_PASSWORD</code>,
-healthcheck con <code>service_healthy</code>. Debilidad: bind mounts del codigo fuente en
-produccion.</p>
-<p><strong>Hallazgo positivo verificado:</strong> el comentario del compose documenta un
-incidente previo —<code>APP_DEBUG=true</code> en produccion filtrando la contrasena de la
-base por las trazas de Ignition— y <strong>hoy esta corregido</strong>: <code>APP_ENV=production</code>,
-<code>APP_DEBUG=false</code>.</p>
+<p>Correcto en lo esencial: base solo local, fail-fast en
+<code>DB_PASSWORD</code>, healthcheck con <code>service_healthy</code>.
+Debilidad: bind mounts del codigo fuente en produccion.</p>
+<p><strong>Hallazgo positivo verificado:</strong> el comentario del
+compose documenta un incidente previo —<code>APP_DEBUG=true</code> en
+produccion filtrando la contrasena de la base por las trazas de
+Ignition— y <strong>hoy esta corregido</strong>:
+<code>APP_ENV=production</code>, <code>APP_DEBUG=false</code>.</p>
 <h2 id="base-de-datos">Base de datos</h2>
-<p>PostgreSQL 16, 57 tablas, correctamente limitada a <code>127.0.0.1</code>. 880 usuarios,
-12.664 biometrias, 9.769 accesos, 8.667 rondas. <strong>Las 57 tablas no estan
-documentadas una por una</strong>: es el trabajo pendiente mas grande.</p>
+<p>PostgreSQL 16, 57 tablas, correctamente limitada a
+<code>127.0.0.1</code>. 880 usuarios, 12.664 biometrias, 9.769 accesos,
+8.667 rondas. <strong>Las 57 tablas no estan documentadas una por
+una</strong>: es el trabajo pendiente mas grande.</p>
 <h2 id="seguridad">Seguridad</h2>
-<p><strong>2 criticos</strong>, 2 altos, 4 medios. El primero es la toma de cuentas; el segundo,
-la exposicion sin cifrar.</p>
-<p>Lo que <strong>si</strong> esta bien resuelto: el login (Hash::check, estado, gestion y rol
-antes de emitir el token), el webhook de WhatsApp (<code>hash_equals</code> y 404 sin
-token configurado — la mejor implementacion del servidor), y que solo 4 de 55
+<p><strong>1 critico abierto</strong> (SEC-01, la exposicion sin
+cifrar), 2 altos y 3 medios. El otro critico de seguridad —la toma de
+cuentas— se cerro el 15 de septiembre por las dos vias, la API y el
+portal web.</p>
+<p>Lo que <strong>si</strong> esta bien resuelto: el login
+(<code>Hash::check</code>, estado, gestion y rol antes de emitir el
+token), el webhook de WhatsApp (<code>hash_equals</code> y 404 sin token
+configurado — la mejor implementacion del servidor), y que solo 4 de 55
 rutas sean publicas.</p>
 <h2 id="documentacion">Documentacion</h2>
-<p><strong>La mas completa del servidor.</strong> Trece documentos previos, seis fases de
-historia de construccion, especificacion OpenAPI, guias de despliegue y
-migracion. <code>LEEME-apk.txt</code> es un ejemplo de documentacion operativa util:
-explica no solo que instalar sino <strong>que NO instalar y por que</strong>.</p>
+<p><strong>La mas completa del servidor.</strong> Trece documentos
+previos, seis fases de historia de construccion, especificacion OpenAPI,
+guias de despliegue y migracion. <code>LEEME-apk.txt</code> es un
+ejemplo de documentacion operativa util: explica no solo que instalar
+sino <strong>que NO instalar y por que</strong>.</p>
 <h2 id="backup">Backup</h2>
-<p>🔴 <strong>Inexistente</strong>, con cuatro elementos irrecuperables: base principal, base
-V1, secretos y <strong>keystore de firma</strong>.</p>
+<p>✅ <strong>Diario y probado</strong>, desde el 2026-09-15.
+<code>backend/scripts/respaldo.sh</code> corre a las 03:00 por el
+crontab del dueno del repositorio y cubre los cuatro elementos
+irrecuperables: la base PostgreSQL (formato custom, para poder restaurar
+una sola tabla), la MariaDB de la V1, los secretos con
+<code>APP_KEY</code> y el <strong>keystore de firma</strong>. Paquete
+diario de ~7 MB, 14 dias de retencion; las fotos van aparte por
+<code>rsync</code> incremental. Verificado restaurando el indice del
+dump y comparando el SHA-256 del keystore. Procedimiento en
+<code>backend/scripts/RESPALDO.md</code>.</p>
+<p>🟠 <strong>La salvedad:</strong> todo queda en este mismo servidor.
+Ver CONT-02.</p>
 <h2 id="operacion">Operacion</h2>
-<p>Unico sistema expuesto a internet. Sin monitoreo. Healthcheck solo en la base.</p>
+<p>Unico sistema expuesto a internet. Sin monitoreo. <strong>Healthcheck
+en la base (<code>pg_isready</code>) y en el backend</strong>
+(<code>docker/php/healthcheck.php</code>, desde el 2026-09-17);
+<strong>nginx sigue sin uno.</strong></p>
 <h2 id="mobile">Mobile</h2>
-<p>🟢 <strong>Documentado completo.</strong> App <code>com.dt360.coreapp</code> 1.0.2 (versionCode 3),
-React Native/Expo, cinco permisos sensibles, firmada con certificado propio de
-huella publicada.</p>
-<p><strong>Dato operativo relevante:</strong> hasta la version 1.0.2 <strong>el boton de EMERGENCIA
-no existia</strong> en la aplicacion de los guardias. Conviene confirmar que todas las
-tablets fueron actualizadas.</p>
+<p>🟢 <strong>Documentado completo.</strong> App
+<code>com.dt360.coreapp</code> <strong>1.0.7 (versionCode 8)</strong>,
+React Native/Expo SDK 57, cinco permisos sensibles, firmada con el
+keystore de produccion y con la huella del certificado publicada.</p>
+<p><strong>Dato operativo relevante:</strong> hasta la version 1.0.2
+<strong>el boton de EMERGENCIA no existia</strong> en la aplicacion de
+los guardias, y <strong>la 1.0.2 tampoco puede recuperar
+contrasenas</strong> (manda el contrato viejo, anterior al cierre de
+SEC-00). Hay que censar que version tiene cada tablet y actualizarlas a
+la 1.0.7.</p>
 <h2 id="riesgos">Riesgos</h2>
 <table>
 <thead>
-<tr>
+<tr class="header">
 <th>Riesgo</th>
 <th>Probabilidad</th>
 <th>Impacto</th>
@@ -151,43 +200,43 @@ tablets fueron actualizadas.</p>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>~~Toma de cualquier cuenta~~</td>
+<tr class="odd">
+<td><del>Toma de cualquier cuenta</del></td>
 <td>—</td>
 <td>—</td>
 <td>✅ cerrada el 2026-09-15, por las dos vias</td>
 </tr>
-<tr>
+<tr class="even">
 <td><strong>Interceptacion de biometria y credenciales</strong></td>
 <td><strong>media-alta</strong></td>
 <td><strong>muy alto</strong></td>
 <td><strong>muy alta</strong> — internet, sin TLS</td>
 </tr>
-<tr>
+<tr class="odd">
+<td><strong>Perdida del keystore</strong></td>
+<td>media</td>
+<td><strong>muy alto</strong></td>
+<td><strong>alta</strong> — la unica copia esta en este servidor</td>
+</tr>
+<tr class="even">
 <td>Perdida total de datos</td>
 <td>baja</td>
 <td><strong>muy alto</strong></td>
 <td>media — hay respaldo diario, pero en el mismo servidor</td>
 </tr>
-<tr>
-<td><strong>Perdida del keystore</strong></td>
-<td>media</td>
-<td><strong>muy alto</strong></td>
-<td><strong>alta</strong> — sin copia; imposibilita actualizar la app</td>
-</tr>
-<tr>
-<td>Tablets sin boton de panico</td>
+<tr class="odd">
+<td>Tablets sin boton de panico o sin recuperacion de clave</td>
 <td>media</td>
 <td>alto</td>
-<td>media — si alguna sigue por debajo de 1.0.2</td>
+<td>media — si alguna sigue por debajo de 1.0.7</td>
 </tr>
-<tr>
-<td>~~Fuga entre instituciones~~</td>
+<tr class="even">
+<td><del>Fuga entre instituciones</del></td>
 <td>—</td>
 <td>—</td>
 <td>✅ verificada y cerrada el 2026-09-15</td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>v1_analisis</code> fuera de control</td>
 <td>media</td>
 <td>medio</td>
@@ -196,145 +245,185 @@ tablets fueron actualizadas.</p>
 </tbody>
 </table>
 <h2 id="inconsistencias">Inconsistencias</h2>
-<h3 id="inc-01-despliegue-con-https-preparado-y-sin-activar">INC-01 — Despliegue con HTTPS preparado y sin activar 🔴</h3>
-<p><strong>Configuracion prevista:</strong> <code>docker-compose.prod.yml</code> con nginx 1.27, certbot y
-puertos 80/443; <code>DESPLIEGUE-DOMINIO.md</code> documenta el procedimiento.
-<strong>Realidad:</strong> corre <code>docker-compose.yml</code> con nginx:alpine en el 3031, sin TLS.
-<strong>Impacto:</strong> <strong>critico</strong>. La solucion al mayor riesgo del sistema existe y no
-se uso.</p>
-<h3 id="inc-02-contenedor-v1_analisis-fuera-de-todo-compose">INC-02 — Contenedor <code>v1_analisis</code> fuera de todo compose</h3>
-<p>MariaDB 10.4 creado el 2026-09-07, sin proyecto compose. No se recrea, <strong>no
-entra en ningun respaldo</strong>, y no aparece en los archivos del proyecto.
-<strong>Impacto:</strong> medio.</p>
-<h3 id="inc-03-openapiyaml-posiblemente-desactualizado">INC-03 — <code>openapi.yaml</code> posiblemente desactualizado</h3>
-<p>Del 2026-09-07; los APK son del 08 y 09. No se contrasto contra las rutas
-reales. <strong>Recomendacion:</strong> usar <code>php artisan route:list</code> como referencia.</p>
-<h3 id="inc-04-las-variables-del-compose-pisan-al-env">INC-04 — Las variables del compose pisan al <code>.env</code></h3>
-<p>Documentado por el propio proyecto. Se registra porque <strong>es una trampa que
-cuesta horas</strong>: cambiar el <code>.env</code> no surte efecto.</p>
-<h3 id="inc-05-repomix-outputxml-en-el-proyecto">INC-05 — <code>repomix-output.xml</code> en el proyecto</h3>
-<p>1,2 MB de volcado de codigo. No es documentacion y se desactualiza solo.</p>
+<h3
+id="inc-01--despliegue-con-https-preparado-y-sin-activar-red_circle">INC-01
+— Despliegue con HTTPS preparado y sin activar 🔴</h3>
+<p><strong>Configuracion prevista:</strong>
+<code>docker-compose.prod.yml</code> con nginx 1.27, certbot y puertos
+80/443; <code>DESPLIEGUE-DOMINIO.md</code> documenta el procedimiento.
+<strong>Realidad:</strong> corre <code>docker-compose.yml</code> con
+nginx:alpine en el 3031, sin TLS. <strong>Impacto:</strong>
+<strong>critico</strong>. La solucion al mayor riesgo del sistema existe
+y no se uso. <strong>Bloqueado por la falta de dominio, no por trabajo
+tecnico.</strong></p>
+<h3 id="inc-02--contenedor-v1_analisis-fuera-de-todo-compose">INC-02 —
+Contenedor <code>v1_analisis</code> fuera de todo compose</h3>
+<p>MariaDB 10.4 creado el 2026-09-07, sin proyecto compose. No se recrea
+y no aparece en los archivos del proyecto. <strong>Ya entra en el
+respaldo diario</strong> desde el 2026-09-15, que lo trata como caso
+aparte justamente por esto. <strong>Impacto:</strong> medio.</p>
+<h3 id="inc-03--openapiyaml-posiblemente-desactualizado">INC-03 —
+<code>openapi.yaml</code> posiblemente desactualizado</h3>
+<p>Del 2026-09-07; el APK vigente es del 17. No se contrasto contra las
+rutas reales. <strong>Recomendacion:</strong> usar
+<code>php artisan route:list</code> como referencia.</p>
+<h3 id="inc-04--las-variables-del-compose-pisan-al-env">INC-04 — Las
+variables del compose pisan al <code>.env</code></h3>
+<p>Documentado por el propio proyecto. Se registra porque <strong>es una
+trampa que cuesta horas</strong>: cambiar el <code>.env</code> no surte
+efecto.</p>
+<h3 id="inc-05--repomix-outputxml-en-el-proyecto">INC-05 —
+<code>repomix-output.xml</code> en el proyecto</h3>
+<p>1,2 MB de volcado de codigo, del 2026-09-08. No es documentacion, se
+desactualiza solo, y <strong>pertenece a <code>root</code></strong> en
+un repositorio que debe ser todo del usuario que opera el servidor.</p>
 <h2 id="documentacion-faltante">Documentacion faltante</h2>
 <ul>
-<li><strong>Manual de usuario y manual de administrador</strong>: requieren credenciales de
-  prueba y una sesion dedicada. No se generaron para no inventar
-  funcionalidades ni navegar produccion.</li>
+<li><strong>Manual de usuario y manual de administrador</strong>:
+requieren credenciales de prueba y una sesion dedicada. No se generaron
+para no inventar funcionalidades ni navegar produccion.</li>
 <li><strong>Las 57 tablas</strong>, una por una.</li>
-<li><strong>Verificacion del aislamiento entre instituciones</strong> (T-30).</li>
 </ul>
 <h2 id="recomendaciones">Recomendaciones</h2>
 <table>
 <thead>
-<tr>
+<tr class="header">
 <th>ID</th>
 <th>Hallazgo</th>
 <th>Categoria</th>
 <th>Severidad</th>
-<th>Recomendacion</th>
+<th>Estado y recomendacion</th>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>SEC-00</td>
-<td>✅ <strong>RESUELTO</strong> — <code>procesar_paswchg</code> publico y sin validar token</td>
-<td>Seguridad</td>
-<td>🔴 CRITICO</td>
-<td>Hecho: codigo con <code>random_bytes</code>, guardado hasheado, con caducidad, de un solo uso y comparado con <code>hash_equals</code>; ya no vuelve en la respuesta. <strong>El portal web tenia el mismo agujero</strong> y tambien se cerro</td>
-</tr>
-<tr>
+<tr class="odd">
 <td>SEC-01</td>
 <td>Biometria y credenciales por internet sin cifrar</td>
 <td>Seguridad</td>
 <td>🔴 CRITICO</td>
-<td><strong>Activar HTTPS.</strong> Ya esta preparado en <code>docker-compose.prod.yml</code>. Luego quitar <code>usesCleartextTraffic</code> y recompilar el APK</td>
+<td><strong>ABIERTO. Activar HTTPS</strong> en cuanto haya dominio; ya
+esta preparado en <code>docker-compose.prod.yml</code>. Luego quitar
+<code>usesCleartextTraffic</code> y recompilar el APK</td>
 </tr>
-<tr>
-<td>CONT-01</td>
-<td>✅ <strong>RESUELTO</strong> — Sin respaldo de base, secretos ni keystore</td>
-<td>Continuidad</td>
-<td>🔴 CRITICO</td>
-<td>Hecho: <code>scripts/respaldo.sh</code> diario a las 03:00, con los cuatro elementos. Verificado restaurando el indice del dump y comparando el SHA-256 del keystore</td>
-</tr>
-<tr>
+<tr class="even">
 <td>CONT-02</td>
 <td>Keystore sin copia fuera del servidor</td>
 <td>Continuidad</td>
 <td>🔴 CRITICO</td>
-<td>Copia en almacen de secretos. Sin el, <strong>no hay mas actualizaciones de la app</strong></td>
+<td><strong>ABIERTO.</strong> El script ya tiene el paso
+(<code>DESTINO_EXTERNO</code>); falta decidir el destino. Sin el
+keystore, <strong>no hay mas actualizaciones de la app</strong></td>
 </tr>
-<tr>
+<tr class="odd">
 <td>SEC-02</td>
 <td>Bind mounts de codigo en produccion</td>
 <td>Seguridad</td>
 <td>🟠 ALTO</td>
-<td>Imagen con <code>COPY</code> para produccion</td>
+<td>Abierto. Imagen con <code>COPY</code> para produccion</td>
 </tr>
-<tr>
-<td>SEC-05</td>
-<td>✅ <strong>RESUELTO</strong> — Aislamiento entre instituciones sin verificar</td>
-<td>Seguridad</td>
-<td>🟡 MEDIO</td>
-<td>Se verifico y <strong>habia fuga</strong>: el detalle de rondas y los marcadores de local filtraban solo por el parametro de la URL. Un Supervisor leia rondas de otro cliente y <strong>editaba las coordenadas de sus QR</strong>. Cerrado, con 12 tests</td>
-</tr>
-<tr>
+<tr class="even">
 <td>MOV-01</td>
-<td>Tablets posiblemente sin boton de panico</td>
+<td>Tablets sin censar</td>
 <td>Operacion</td>
 <td>🟡 MEDIO</td>
-<td>Censar versiones; actualizar a 1.0.2</td>
+<td>Abierto. Censar versiones y actualizar a <strong>1.0.7</strong>: por
+debajo de 1.0.2 no hay boton de panico, y la 1.0.2 no recupera
+contrasenas</td>
 </tr>
-<tr>
+<tr class="odd">
 <td>INC-02</td>
-<td><code>v1_analisis</code> fuera de control</td>
+<td><code>v1_analisis</code> fuera de todo compose</td>
 <td>Operacion</td>
 <td>🟡 MEDIO</td>
-<td>Definir si la migracion concluyo; respaldar y apagar</td>
+<td>Abierto. Definir si la migracion concluyo y apagarlo. Ya se
+respalda</td>
 </tr>
-<tr>
+<tr class="even">
 <td>OPS-01</td>
-<td>Backend y nginx sin healthcheck</td>
+<td>Healthchecks</td>
 <td>Operacion</td>
 <td>🟡 MEDIO</td>
-<td>Agregarlos</td>
+<td><strong>PARCIAL.</strong> Base y backend ya tienen; <strong>falta
+nginx</strong></td>
 </tr>
-<tr>
-<td>INC-03</td>
-<td><code>openapi.yaml</code> a verificar</td>
-<td>Documentacion</td>
-<td>🔵 BAJO</td>
-<td>Contrastar con <code>route:list</code></td>
-</tr>
-<tr>
-<td>GES-01</td>
-<td>Repositorio sin remoto</td>
-<td>Gestion</td>
-<td>🟡 MEDIO</td>
-<td>Publicar; el keystore exige ademas custodia aparte</td>
-</tr>
-<tr>
+<tr class="odd">
 <td>DOC-01</td>
 <td>57 tablas sin documentar</td>
 <td>Documentacion</td>
 <td>🟡 MEDIO</td>
-<td>Sesion dedicada</td>
+<td>Abierto. Sesion dedicada</td>
+</tr>
+<tr class="even">
+<td>INC-03</td>
+<td><code>openapi.yaml</code> a verificar</td>
+<td>Documentacion</td>
+<td>🔵 BAJO</td>
+<td>Abierto. Contrastar con <code>route:list</code></td>
+</tr>
+<tr class="odd">
+<td>SEC-00</td>
+<td>✅ <strong>RESUELTO</strong> — <code>procesar_paswchg</code> publico
+y sin validar token</td>
+<td>Seguridad</td>
+<td>🔴 CRITICO</td>
+<td>Hecho: codigo con <code>random_bytes</code>, guardado hasheado, con
+caducidad, de un solo uso y comparado con <code>hash_equals</code>; ya
+no vuelve en la respuesta. <strong>El portal web tenia el mismo
+agujero</strong> y tambien se cerro</td>
+</tr>
+<tr class="even">
+<td>CONT-01</td>
+<td>✅ <strong>RESUELTO</strong> — Sin respaldo de base, secretos ni
+keystore</td>
+<td>Continuidad</td>
+<td>🔴 CRITICO</td>
+<td>Hecho: <code>scripts/respaldo.sh</code> diario a las 03:00, con los
+cuatro elementos. Verificado restaurando el indice del dump y comparando
+el SHA-256 del keystore</td>
+</tr>
+<tr class="odd">
+<td>SEC-05</td>
+<td>✅ <strong>RESUELTO</strong> — Aislamiento entre instituciones sin
+verificar</td>
+<td>Seguridad</td>
+<td>🟡 MEDIO</td>
+<td>Se verifico y <strong>habia fuga</strong>: el detalle de rondas y
+los marcadores de local filtraban solo por el parametro de la URL. Un
+Supervisor leia rondas de otro cliente y <strong>editaba las coordenadas
+de sus QR</strong>. Cerrado, con 12 tests</td>
+</tr>
+<tr class="even">
+<td>GES-01</td>
+<td>✅ <strong>RESUELTO</strong> — Repositorio sin remoto</td>
+<td>Gestion</td>
+<td>🟡 MEDIO</td>
+<td>Publicado en GitHub (<code>megaman0012/appguardia</code>). El
+keystore <strong>no</strong> se publica: <code>.gitignore</code> excluye
+<code>/apk/</code> y <code>*.jks</code>, y su custodia aparte sigue
+pendiente (CONT-02)</td>
 </tr>
 </tbody>
 </table>
 <h2 id="prioridad-recomendada">Prioridad recomendada</h2>
-<ol>
-<li><strong>SEC-00 — cerrar la toma de cuentas.</strong> Hoy cualquiera en internet puede
-   hacerse con la cuenta administrativa de un sistema con 12.664 biometrias.
-   Va por delante de todo lo demas, incluido HTTPS: de nada sirve cifrar el
-   canal si la puerta esta abierta.</li>
-<li><strong>CONT-02 — copiar el keystore fuera del servidor.</strong> Toma minutos y su
-   perdida es irreversible.</li>
-<li><strong>SEC-01 — activar HTTPS.</strong> Ya esta preparado en <code>docker-compose.prod.yml</code>.</li>
-<li><strong>CONT-01 — respaldo.</strong> El sistema con mas datos del servidor no tiene
-   ninguno.</li>
-<li><strong>MOV-01 — censo de tablets.</strong> Una app de guardias sin boton de panico es un
-   riesgo operativo directo.</li>
-<li><strong>SEC-05 / T-30 — aislamiento entre instituciones.</strong></li>
-<li>SEC-02, INC-02, OPS-01 y el resto.</li>
+<ol type="1">
+<li><strong>SEC-01 — activar HTTPS.</strong> Es el unico critico de
+seguridad que queda y el trabajo tecnico ya esta hecho. <strong>Depende
+de que se libere el dominio</strong>, asi que lo accionable hoy es
+pedirlo.</li>
+<li><strong>CONT-02 — copiar el respaldo y el keystore fuera del
+servidor.</strong> Toma minutos una vez decidida la maquina de destino,
+y su perdida es irreversible.</li>
+<li><strong>MOV-01 — censo de tablets</strong> y actualizacion a 1.0.7.
+Una app de guardias sin boton de panico es un riesgo operativo
+directo.</li>
+<li><strong>OPS-01 — healthcheck de nginx</strong>, que es lo unico que
+falta de ese punto.</li>
+<li><strong>SEC-02</strong>, <strong>INC-02</strong>,
+<strong>DOC-01</strong>, <strong>INC-03</strong> y el resto.</li>
 </ol>
 <hr />
-<p><em>Ningun cambio fue aplicado durante esta auditoria.</em></p></body></html>
+<p><em>Version 1.0: ningun cambio fue aplicado durante la auditoria. A
+partir de la v2.0 este documento registra las correcciones ya
+desplegadas; el detalle de cada una, con su causa raiz, esta en
+<code>ROADMAP.md</code>.</em></p>
+</body></html>

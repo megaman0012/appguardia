@@ -9,6 +9,11 @@ producción y no se hizo.
 
 ---
 
+## Estado al 2026-09-19
+
+Documentación de auditoría regenerada y coherente con el sistema (ver 0.1). Sin
+cambios en código ni en producción. Lo abierto sigue siendo lo de abajo.
+
 ## Estado al 2026-09-17 (cierre de la jornada)
 
 `main` = `migracion-laravel-filament` = **eea8942**, ambas en GitHub. Árbol
@@ -85,9 +90,24 @@ documentadas: `usu_password == Hash::make($password)` nunca era cierta (bcrypt
 sala distinto cada vez), y la que comparaba el hash contra el texto plano
 diciendo «no puede ser el usuario» quería comparar contra la cédula.
 
-**Pendiente derivado:** `INFORME_AUDITORIA.md` y `docs/05_SEGURIDAD/` siguen
-marcando SEC-00 como crítico abierto, con sus PDF y DOCX ya generados. Hay que
-regenerarlos.
+**Pendiente derivado — CERRADO el 2026-09-19.** Los entregables se regeneraron.
+El diagnóstico previo era impreciso: los `.md` ya se habían actualizado el 15-sep
+(commit `6d3edfb`), pero **quedaron contradiciéndose a sí mismos** — el resumen
+ejecutivo y la lista de prioridades seguían describiendo SEC-00 y la falta de
+respaldo en presente, debajo de una tabla que los daba por cerrados. Eso es peor
+que estar desactualizado: el lector no sabe a cuál de las dos mitades creerle.
+
+Corregido, y de paso puesto al día con el 16 y 17 de septiembre (APK 1.0.7, no
+1.0.2; healthcheck del backend; GES-01 cerrado al publicar en GitHub).
+
+**El conversor quedó guardado en `docs/generar-documentos.sh`**, que antes se
+hacía a mano. Tres trampas que vale la pena no volver a descubrir: el PDF sale
+del **dompdf del backend** porque en este servidor no hay ningún motor de PDF
+instalado; el contenedor **no ve la raíz del monorepo** (solo se monta
+`backend/`), así que el HTML pasa por `storage/app/docgen/`; y **a DejaVu le
+faltan los emoji de severidad** (🔴🟠🟡🔵🟢 y ✅), que salían como un hueco —18 en
+el informe—, así que la rama del PDF los sustituye por un círculo `U+25CF` del
+color que toca. El `.html` y el `.docx` conservan el emoji original.
 
 ### 0.1-bis (diagnóstico original, para referencia)
 

@@ -10,230 +10,358 @@ code{background:#f4f4f4;padding:1px 3px;font-family:DejaVu Sans Mono,monospace;f
 pre{background:#f7f7f7;padding:8px;border-left:3px solid #C0172C}
 blockquote{border-left:3px solid #C0172C;margin-left:0;padding-left:12px;color:#444;background:#fcf6f7}
 </style></head><body><h1 id="analisis-de-seguridad">Analisis de seguridad</h1>
-<p>Revision del <strong>2026-09-15</strong>. Ningun cambio aplicado.</p>
-<p>⚠️ <strong>Contexto:</strong> es el <strong>unico sistema del servidor expuesto a internet</strong> y el
-que mas datos personales sensibles almacena: <strong>12.664 registros biometricos</strong>
-de 880 usuarios.</p>
-<h2 id="revision-ampliada-del-2026-09-15-segunda-pasada">⚠️ Revision ampliada del 2026-09-15 (segunda pasada)</h2>
-<p>Al documentar la API ruta por ruta aparecio <strong>una toma de cuentas</strong>: un
-endpoint publico que cambia la contrasena de cualquier usuario sin validar
-ningun token. No se habia detectado en la primera pasada, que reviso
-configuracion y exposicion pero no el codigo de cada controlador.</p>
+<p>Revision del <strong>2026-09-15</strong>, actualizada el
+<strong>2026-09-19</strong> con las correcciones ya desplegadas. Lo que
+sigue abierto queda marcado como tal, y con el motivo.</p>
+<p>⚠️ <strong>Contexto:</strong> es el <strong>unico sistema del
+servidor expuesto a internet</strong> y el que mas datos personales
+sensibles almacena: <strong>12.664 registros biometricos</strong> de 880
+usuarios.</p>
+<h2 id="warning-revision-ampliada-del-2026-09-15-segunda-pasada">⚠️
+Revision ampliada del 2026-09-15 (segunda pasada)</h2>
+<p>Al documentar la API ruta por ruta aparecio <strong>una toma de
+cuentas</strong>: un endpoint publico que cambia la contrasena de
+cualquier usuario sin validar ningun token. No se habia detectado en la
+primera pasada, que reviso configuracion y exposicion pero no el codigo
+de cada controlador.</p>
+<p><strong>Ese hallazgo (SEC-00) esta cerrado desde el mismo
+2026-09-15</strong>, por las dos vias: la API y el portal web. El
+detalle esta abajo; se conserva el diagnostico original porque explica
+que hay que revisar en una proxima pasada.</p>
 <h2 id="resumen">Resumen</h2>
 <table>
 <thead>
-<tr>
+<tr class="header">
 <th>Severidad</th>
-<th>Cantidad</th>
+<th>Abiertos</th>
+<th>Cerrados</th>
+<th>Detalle</th>
 </tr>
 </thead>
 <tbody>
-<tr>
+<tr class="odd">
 <td>🔴 CRITICO</td>
-<td><strong>1</strong> (eran 2; SEC-00 cerrado el 2026-09-15)</td>
+<td><strong>1</strong></td>
+<td>1</td>
+<td>Abierto: SEC-01 (sin HTTPS). Cerrado: SEC-00</td>
 </tr>
-<tr>
+<tr class="even">
 <td>🟠 ALTO</td>
 <td>2</td>
+<td>—</td>
+<td>SEC-02, SEC-03</td>
 </tr>
-<tr>
+<tr class="odd">
 <td>🟡 MEDIO</td>
-<td>4</td>
+<td>1</td>
+<td>2</td>
+<td>Abierto: SEC-06. Cerrados: SEC-04, SEC-05</td>
 </tr>
-<tr>
+<tr class="even">
 <td>🔵 BAJO</td>
 <td>1</td>
+<td>—</td>
+<td>SEC-07</td>
 </tr>
-<tr>
+<tr class="odd">
 <td>⚪ INFORMATIVO</td>
-<td>3</td>
+<td>2</td>
+<td>—</td>
+<td>SEC-08, SEC-09</td>
 </tr>
 </tbody>
 </table>
-<h2 id="critico">🔴 CRITICO</h2>
-<h3 id="sec-00-resuelto-el-2026-09-15-toma-de-cuentas-sin-autenticacion-ni-token">SEC-00 — ✅ RESUELTO el 2026-09-15 — Toma de cuentas sin autenticacion ni token</h3>
+<p><strong>El unico critico abierto es SEC-01</strong>, y no esta
+detenido por trabajo tecnico: la configuracion con certbot ya existe en
+<code>docker-compose.prod.yml</code>. Falta que se libere un
+dominio.</p>
+<h2 id="red_circle-critico">🔴 CRITICO</h2>
+<h3
+id="sec-00--white_check_mark-resuelto-el-2026-09-15--toma-de-cuentas-sin-autenticacion-ni-token">SEC-00
+— ✅ RESUELTO el 2026-09-15 — Toma de cuentas sin autenticacion ni
+token</h3>
 <blockquote>
-<p><strong>Estado: cerrado.</strong> El codigo ahora se genera con <code>random_bytes</code>, se guarda
-hasheado, vence a los 30 minutos, sirve una sola vez, se invalida al quinto
-intento fallido y se compara con <code>hash_equals</code>. Ya no vuelve en la respuesta, y
-esta responde lo mismo exista o no la cedula. <strong>El portal web tenia el mismo
-agujero</strong> (<code>POST /acceso/procesar_cambiopass</code> tomaba el <code>user_id</code> del
-formulario) y tambien se cerro: ahora el usuario autorizado vive en la sesion.
-15 tests lo cubren, incluidos los dos que reproducen el agujero original.</p>
-<p>⚠️ Efecto operativo: <strong>el autoservicio de recuperacion queda sin efecto hasta
-que se configure un canal de entrega</strong> (SMTP o WhatsApp) en <code>/admin/configuracion</code>.
-Mientras tanto el supervisor cambia la clave desde el panel.</p>
+<p><strong>Estado: cerrado.</strong> El codigo ahora se genera con
+<code>random_bytes</code>, se guarda hasheado, vence a los 30 minutos,
+sirve una sola vez, se invalida al quinto intento fallido y se compara
+con <code>hash_equals</code>. Ya no vuelve en la respuesta, y esta
+responde lo mismo exista o no la cedula. <strong>El portal web tenia el
+mismo agujero</strong> (<code>POST /acceso/procesar_cambiopass</code>
+tomaba el <code>user_id</code> del formulario) y tambien se cerro: ahora
+el usuario autorizado vive en la sesion. 15 tests lo cubren, incluidos
+los dos que reproducen el agujero original.</p>
+<p>⚠️ Efecto operativo: <strong>el autoservicio de recuperacion queda
+sin efecto hasta que se configure un canal de entrega</strong> (SMTP o
+WhatsApp) en <code>/admin/configuracion</code>. Mientras tanto el
+supervisor cambia la clave desde el panel.</p>
 </blockquote>
 <p>El hallazgo original, para referencia:</p>
-<p><strong>Evidencia.</strong> <code>POST /api/procesar_paswchg</code> tiene middleware <code>['api']</code>, sin
-autenticacion (confirmado en <code>php artisan route:list --json</code>). Su controlador,
+<p><strong>Evidencia.</strong> <code>POST /api/procesar_paswchg</code>
+tiene middleware <code>['api']</code>, sin autenticacion (confirmado en
+<code>php artisan route:list --json</code>). Su controlador,
 <code>Modules/MobileApp/Http/Controllers/LoginController.php</code>:</p>
 <pre><code>$user_id   = $request-&gt;user_id;
 $password  = $request-&gt;password;
 $rsUsuario = users::find($user_id);
 // ... valida solo el FORMATO de la contrasena ...
 $rsUsuario-&gt;usu_password   = $password;
-$rsUsuario-&gt;remember_token = "";
-$rsUsuario-&gt;save();
-</code></pre>
-<p><strong>El <code>remember_token</code> que emite <code>solicitud_cambiopass</code> nunca se comprueba.</strong>
-Basta <code>user_id</code> y la contrasena nueva.</p>
-<p><strong>Impacto.</strong> Cualquiera que alcance el endpoint —y <strong>el sistema responde desde
-internet</strong>— toma control de <strong>cualquiera de las 880 cuentas</strong>, incluidas las
-administrativas, con una sola peticion. Los <code>user_id</code> son enteros secuenciales.</p>
-<p>Desde una cuenta administrativa se alcanzan <strong>12.664 registros biometricos</strong>,
-9.769 accesos y 8.667 rondas: datos personales sensibles que no se pueden
-cambiar si se filtran.</p>
-<p><strong>Agravante.</strong> <code>POST /api/solicitud_paswchg</code>, tambien publico, <strong>devuelve el
-token y el <code>user_id</code> en la respuesta</strong>, y lo genera con
-<code>rand(1000, 10000000)</code> — no criptografico. Aunque se corrigiera la validacion,
-esto por si solo permitiria el ataque.</p>
-<p><strong>Atenuante.</strong> El modelo <code>users</code> cifra la contrasena al guardar (evento
-<code>saving</code> → <code>Hash::make</code>), asi que <strong>no se guardan en claro</strong>. Limita el dano
-posterior, no la toma de la cuenta.</p>
+$rsUsuario-&gt;remember_token = &quot;&quot;;
+$rsUsuario-&gt;save();</code></pre>
+<p><strong>El <code>remember_token</code> que emite
+<code>solicitud_cambiopass</code> nunca se comprueba.</strong> Basta
+<code>user_id</code> y la contrasena nueva.</p>
+<p><strong>Impacto.</strong> Cualquiera que alcance el endpoint —y
+<strong>el sistema responde desde internet</strong>— toma control de
+<strong>cualquiera de las 880 cuentas</strong>, incluidas las
+administrativas, con una sola peticion. Los <code>user_id</code> son
+enteros secuenciales.</p>
+<p>Desde una cuenta administrativa se alcanzan <strong>12.664 registros
+biometricos</strong>, 9.769 accesos y 8.667 rondas: datos personales
+sensibles que no se pueden cambiar si se filtran.</p>
+<p><strong>Agravante.</strong> <code>POST /api/solicitud_paswchg</code>,
+tambien publico, <strong>devuelve el token y el <code>user_id</code> en
+la respuesta</strong>, y lo genera con <code>rand(1000, 10000000)</code>
+— no criptografico. Aunque se corrigiera la validacion, esto por si solo
+permitiria el ataque.</p>
+<p><strong>Atenuante.</strong> El modelo <code>users</code> cifra la
+contrasena al guardar (evento <code>saving</code> →
+<code>Hash::make</code>), asi que <strong>no se guardan en
+claro</strong>. Limita el dano posterior, no la toma de la cuenta.</p>
 <blockquote>
-<p>No se ejecuto la prueba: habria cambiado la contrasena de un usuario real en
-produccion. La evidencia de codigo y el middleware vacio son concluyentes.</p>
+<p>No se ejecuto la prueba: habria cambiado la contrasena de un usuario
+real en produccion. La evidencia de codigo y el middleware vacio son
+concluyentes.</p>
 </blockquote>
-<p><strong>Recomendacion — es lo primero de todo el proyecto, por delante de HTTPS:</strong></p>
-<ol>
-<li>Validar el <code>remember_token</code> contra el usuario y su vigencia.</li>
-<li>Generarlo con <code>random_bytes</code>, no con <code>rand()</code>.</li>
-<li><strong>No devolverlo</strong> en la respuesta de <code>solicitud_paswchg</code>.</li>
-<li>Invalidarlo tras el primer uso.</li>
+<p><strong>Lo que se recomendo entonces, y se aplico
+integro:</strong></p>
+<ol type="1">
+<li>Validar el <code>remember_token</code> contra el usuario y su
+vigencia. ✅</li>
+<li>Generarlo con <code>random_bytes</code>, no con <code>rand()</code>.
+✅</li>
+<li><strong>No devolverlo</strong> en la respuesta de
+<code>solicitud_paswchg</code>. ✅</li>
+<li>Invalidarlo tras el primer uso. ✅</li>
 </ol>
-<p>Mientras no se corrija, <strong>cerrar el acceso publico a esas dos rutas</strong> es una
-mitigacion inmediata y valida.</p>
-<h3 id="sec-01-biometria-y-credenciales-viajando-por-internet-en-http-plano">SEC-01 — Biometria y credenciales viajando por internet en HTTP plano</h3>
+<p>Se fue mas alla en dos puntos: la respuesta es <strong>identica
+exista o no la cedula</strong> (para que el endpoint no sirva para
+averiguar quien esta registrado), y el codigo <strong>se invalida al
+quinto intento fallido</strong>. La mitigacion de emergencia que se
+habia propuesto —cerrar las dos rutas en nginx— no hizo falta.</p>
+<p>⚠️ <strong>Consecuencia para las tablets:</strong> el APK
+<strong>1.0.2 ya no puede recuperar contrasenas</strong>, porque manda
+el contrato viejo (<code>user_id</code>) y recibe error. Hay que
+actualizarlas a la 1.0.7.</p>
+<h3
+id="sec-01--biometria-y-credenciales-viajando-por-internet-en-http-plano">SEC-01
+— Biometria y credenciales viajando por internet en HTTP plano</h3>
 <p><strong>Evidencia, en tres piezas que se refuerzan:</strong></p>
-<ol>
+<ol type="1">
 <li><strong>El sistema responde desde internet.</strong> Comprobado:
-   <code>curl http://181.198.245.50:3031/</code> → <strong>HTTP 302</strong>. No es exposicion de red
-   local: es la internet publica.</li>
-<li><strong>El backend se configura con esa IP publica sobre HTTP</strong>:
-   <code>APP_URL: http://181.198.245.50:3031</code> en <code>docker-compose.yml</code>. Sin TLS.</li>
-<li><strong>La aplicacion movil habilita trafico sin cifrar de forma explicita</strong>:
-   <code>app.json</code> declara <code>"usesCleartextTraffic": true</code>. Android bloquea HTTP por
-   defecto desde la version 9; aqui se desactivo esa proteccion a proposito.</li>
+<code>curl http://181.198.245.50:3031/</code> → <strong>HTTP
+302</strong>. No es exposicion de red local: es la internet
+publica.</li>
+<li><strong>El backend se configura con esa IP publica sobre
+HTTP</strong>: <code>APP_URL: http://181.198.245.50:3031</code> en
+<code>docker-compose.yml</code>. Sin TLS.</li>
+<li><strong>La aplicacion movil habilita trafico sin cifrar de forma
+explicita</strong>: <code>app.json</code> declara
+<code>"usesCleartextTraffic": true</code>. Android bloquea HTTP por
+defecto desde la version 9; aqui se desactivo esa proteccion a
+proposito.</li>
 </ol>
-<p><strong>Impacto:</strong> todo lo que intercambian las tablets de los guardias y el servidor
-viaja <strong>legible para cualquiera en el camino</strong>: contrasenas, tokens de sesion,
-registros de acceso, ubicaciones de ronda y <strong>datos biometricos</strong>. Quien
-comparta la red de un guardia —el wifi de un edificio vigilado, por ejemplo—
-puede leerlo y modificarlo.</p>
-<p>La biometria agrava el problema: una contrasena filtrada se cambia; <strong>una huella
-o un rostro, no</strong>.</p>
-<p><strong>Recomendacion:</strong> TLS. Existe <code>docker-compose.prod.yml</code> con nginx 1.27 y
-<strong>certbot</strong> ya previstos (puertos 80 y 443), y <code>DESPLIEGUE-DOMINIO.md</code>
-documenta el despliegue con dominio. <strong>La solucion ya esta preparada en el
-proyecto y no se activo.</strong> Una vez con HTTPS, quitar <code>usesCleartextTraffic</code> y
-recompilar el APK.</p>
-<h2 id="alto">🟠 ALTO</h2>
-<h3 id="sec-02-el-codigo-fuente-se-monta-dentro-de-los-contenedores">SEC-02 — El codigo fuente se monta dentro de los contenedores</h3>
-<p><strong>Evidencia:</strong> <code>docker-compose.yml</code> monta <code>./:/var/www</code> en <strong>backend y nginx</strong>.</p>
-<p><strong>Impacto:</strong> los contenedores ejecutan lo que haya en el disco del host, no una
-imagen inmutable. Un cambio en el directorio altera produccion sin
-reconstruir ni dejar registro. Y el contenedor puede escribir sobre el codigo:
-ante una vulnerabilidad de ejecucion remota, el atacante modifica el fuente
-directamente.</p>
+<p><strong>Impacto:</strong> todo lo que intercambian las tablets de los
+guardias y el servidor viaja <strong>legible para cualquiera en el
+camino</strong>: contrasenas, tokens de sesion, registros de acceso,
+ubicaciones de ronda y <strong>datos biometricos</strong>. Quien
+comparta la red de un guardia —el wifi de un edificio vigilado, por
+ejemplo— puede leerlo y modificarlo.</p>
+<p>La biometria agrava el problema: una contrasena filtrada se cambia;
+<strong>una huella o un rostro, no</strong>.</p>
+<p><strong>Recomendacion:</strong> TLS. Existe
+<code>docker-compose.prod.yml</code> con nginx 1.27 y
+<strong>certbot</strong> ya previstos (puertos 80 y 443), y
+<code>DESPLIEGUE-DOMINIO.md</code> documenta el despliegue con dominio.
+<strong>La solucion ya esta preparada en el proyecto y no se
+activo.</strong> Una vez con HTTPS, quitar
+<code>usesCleartextTraffic</code> y recompilar el APK.</p>
+<h2 id="orange_circle-alto">🟠 ALTO</h2>
+<h3
+id="sec-02--el-codigo-fuente-se-monta-dentro-de-los-contenedores">SEC-02
+— El codigo fuente se monta dentro de los contenedores</h3>
+<p><strong>Evidencia:</strong> <code>docker-compose.yml</code> monta
+<code>./:/var/www</code> en <strong>backend y nginx</strong>.</p>
+<p><strong>Impacto:</strong> los contenedores ejecutan lo que haya en el
+disco del host, no una imagen inmutable. Un cambio en el directorio
+altera produccion sin reconstruir ni dejar registro. Y el contenedor
+puede escribir sobre el codigo: ante una vulnerabilidad de ejecucion
+remota, el atacante modifica el fuente directamente.</p>
 <p>En un sistema expuesto a internet, pesa mas que en uno interno.</p>
-<p><strong>Recomendacion:</strong> imagen con el codigo copiado (<code>COPY</code>) para produccion.</p>
-<h3 id="sec-03-keystore-de-firma-dentro-del-proyecto">SEC-03 — Keystore de firma dentro del proyecto</h3>
-<p><strong>Evidencia:</strong> <code>apk/totalsecureapp-release.jks</code>, permisos <code>600</code>.</p>
+<p><strong>Recomendacion:</strong> imagen con el codigo copiado
+(<code>COPY</code>) para produccion.</p>
+<h3 id="sec-03--keystore-de-firma-dentro-del-proyecto">SEC-03 — Keystore
+de firma dentro del proyecto</h3>
+<p><strong>Evidencia:</strong>
+<code>apk/totalsecureapp-release.jks</code>, permisos
+<code>600</code>.</p>
 <p><code>SECRET DETECTADO — NO DOCUMENTAR VALOR.</code></p>
-<p><strong>Impacto:</strong> ese archivo <strong>es</strong> la identidad de la aplicacion. Quien lo obtenga
-puede firmar un APK que las tablets aceptaran como actualizacion legitima, y
-no hay forma de revocarlo: habria que publicar la app con otra identidad y
-reinstalarla en todos los dispositivos.</p>
-<p><strong>Atenuantes, verificados:</strong> permisos correctos (<code>600</code>);
-<code>LEEME-keystore.txt</code> documenta su manejo; y <strong>el <code>.gitignore</code> SI lo excluye</strong>
-(<code>/apk/</code> y <code>*.jks</code>). El propio <code>.gitignore</code> registra que fue una correccion
-consciente:</p>
+<p><strong>Impacto:</strong> ese archivo <strong>es</strong> la
+identidad de la aplicacion. Quien lo obtenga puede firmar un APK que las
+tablets aceptaran como actualizacion legitima, y no hay forma de
+revocarlo: habria que publicar la app con otra identidad y reinstalarla
+en todos los dispositivos.</p>
+<p><strong>Atenuantes, verificados:</strong> permisos correctos
+(<code>600</code>); <code>LEEME-keystore.txt</code> documenta su manejo;
+y <strong>el <code>.gitignore</code> SI lo excluye</strong>
+(<code>/apk/</code> y <code>*.jks</code>). El propio
+<code>.gitignore</code> registra que fue una correccion consciente:</p>
 <blockquote>
-<p><em>"<code>*.apk</code> cubria el APK pero NO el keystore (...) <code>git add -A</code> publicaba la
-clave de firma en GitHub. Un keystore filtrado..."</em></p>
+<p><em>"<code>*.apk</code> cubria el APK pero NO el keystore (...)
+<code>git add -A</code> publicaba la clave de firma en GitHub. Un
+keystore filtrado..."</em></p>
 </blockquote>
-<p>O sea que el riesgo de publicarlo por git <strong>ya esta cerrado</strong>. Lo que queda es
-el riesgo de perderlo.</p>
-<p><strong>Recomendacion:</strong> sacarlo del directorio del proyecto a un almacen de
-secretos, y conservar copia fuera del servidor. Sin el keystore <strong>no se pueden
-publicar actualizaciones</strong>, asi que perderlo es tan grave como filtrarlo.</p>
-<h2 id="medio">🟡 MEDIO</h2>
-<h3 id="sec-04-sin-respaldo-automatico-verificado">SEC-04 — Sin respaldo automatico verificado</h3>
-<p>No se encontro cron ni timer para este proyecto. Con 57 tablas, 880 usuarios y
-12.664 biometrias, es el sistema con mas que perder. Ver <code>12_CONTINUIDAD</code>.</p>
-<h3 id="sec-05-aislamiento-entre-instituciones-sin-verificar">SEC-05 — Aislamiento entre instituciones sin verificar</h3>
-<p>Con ~38.247 vinculos usuario-institucion, <strong>que un usuario no vea datos de una
-institucion que no le corresponde es una regla critica</strong>. Usa
-<code>spatie/laravel-permission</code>, que es la libreria correcta.</p>
+<p>O sea que el riesgo de publicarlo por git <strong>ya esta
+cerrado</strong>. Lo que queda es el riesgo de perderlo.</p>
+<p><strong>Recomendacion:</strong> sacarlo del directorio del proyecto a
+un almacen de secretos, y conservar copia fuera del servidor. Sin el
+keystore <strong>no se pueden publicar actualizaciones</strong>, asi que
+perderlo es tan grave como filtrarlo.</p>
 <blockquote>
-<p><strong>Verificado el 2026-09-15, y habia fuga.</strong> <code>RondaDetalleResource</code> e
-<code>InstitucionMarcadoresResource</code> filtraban <strong>solo por el parametro de la URL</strong>,
-sin mirar el perfil. Con ids consecutivos, un Supervisor leia el detalle de las
-rondas de otro cliente --hora, foto y coordenadas de cada punto-- y en
-marcadores, que es editable, <strong>podia mover las coordenadas de los QR de otro
-cliente</strong>, lo que hace fallar la validacion de cercania de ese local sin dejar
-rastro. Habia ademas una segunda via: el formulario de marcadores lleva el
-local en un campo oculto, asi que se podia <strong>crear</strong> uno en un local ajeno.</p>
-<p>Cerrado con <code>PerfilPanel::localesVisibles()</code>, que resuelve los dos alcances en
-un solo lugar, y 12 tests. El patron estaba copiado recurso por recurso: <strong>el
-agujero estaba justo donde no se habia copiado.</strong></p>
+<p><strong>Parcialmente atendido el 2026-09-15.</strong> El respaldo
+diario lo incluye y se verifico comparando su SHA-256. Pero la copia
+<strong>queda en este mismo servidor</strong>, asi que el riesgo de
+perderlo con la maquina sigue intacto. El script ya tiene el paso de
+copia externa (<code>DESTINO_EXTERNO</code>); falta decidir el destino.
+Sigue abierto como <strong>CONT-02</strong>.</p>
 </blockquote>
-<h3 id="sec-06-contenedor-v1_analisis-suelto-y-sin-control">SEC-06 — Contenedor <code>v1_analisis</code> suelto y sin control</h3>
-<p>MariaDB 10.4 (<strong>version antigua</strong>), creado el 2026-09-07, <strong>sin proyecto
-compose</strong>, con la base V1 heredada. No aparece en ningun <code>docker-compose.yml</code>,
-asi que <strong>no se recrea ni se respalda con el resto</strong>.</p>
-<p><strong>Atenuante:</strong> no publica puertos; solo es accesible desde la red Docker.</p>
-<p><strong>Recomendacion:</strong> definir si la migracion concluyo. Si si, respaldar su
-contenido y apagarlo.</p>
-<h2 id="bajo">🔵 BAJO</h2>
-<h3 id="sec-07-mariadb-104-sin-soporte">SEC-07 — MariaDB 10.4 sin soporte</h3>
-<p><code>v1_analisis</code> corre MariaDB 10.4, una version fuera de soporte. Al no estar
-expuesta, el riesgo es acotado, pero es una razon mas para apagarla.</p>
-<h2 id="informativo">⚪ INFORMATIVO</h2>
-<h3 id="sec-08-postgresql-correctamente-limitado">SEC-08 — PostgreSQL correctamente limitado</h3>
-<p><code>ports: "127.0.0.1:5434:5432"</code> — <strong>solo local</strong>, a diferencia de otros
-proyectos del servidor que publican su base a toda interfaz. Correcto.</p>
-<h3 id="sec-09-db_password-con-fail-fast">SEC-09 — <code>DB_PASSWORD</code> con fail-fast</h3>
-<p><code>${DB_PASSWORD:?Definir DB_PASSWORD en .env}</code> en los dos servicios.
-<code>SECRET DETECTADO — NO DOCUMENTAR VALOR.</code></p>
-<h2 id="hallazgo-previo-ya-corregido-vale-la-pena-registrarlo">✅ Hallazgo previo YA CORREGIDO — vale la pena registrarlo</h2>
-<p>El <code>docker-compose.yml</code> documenta en un comentario extenso un incidente real:</p>
+<h2 id="yellow_circle-medio">🟡 MEDIO</h2>
+<h3
+id="sec-04--white_check_mark-resuelto-el-2026-09-15--sin-respaldo-automatico-verificado">SEC-04
+— ✅ RESUELTO el 2026-09-15 — Sin respaldo automatico verificado</h3>
 <blockquote>
-<p><em>"Estaba en <code>local</code> con <code>APP_DEBUG: "true"</code>, y esto es produccion expuesta en
-dos IP publicas. Con el modo depuracion encendido, cualquier error 500
-devuelve la traza completa (...) incluida la contraseña de la base."</em></p>
+<p><strong>Estado: cerrado.</strong>
+<code>backend/scripts/respaldo.sh</code>, diario a las 03:00 por el
+crontab del dueno del repositorio. Cubre los cuatro elementos
+irrecuperables: la base PostgreSQL (formato custom, para restaurar una
+sola tabla), la MariaDB de la V1, los secretos con <code>APP_KEY</code>
+y el keystore de firma. Paquete de ~7 MB con 14 dias de retencion; las
+fotos van aparte por <code>rsync</code> incremental. Probado restaurando
+el indice del dump y comparando el SHA-256 del keystore. Guarda en
+<code>~/respaldos/totalsecureapp/</code>, <strong>fuera del
+repositorio</strong>, porque aca el arbol de trabajo es produccion.
+Procedimiento en <code>backend/scripts/RESPALDO.md</code>.</p>
+<p>⚠️ <strong>Queda abierto que todo se guarda en este mismo
+servidor</strong> (CONT-02).</p>
 </blockquote>
-<p><strong>Verificado hoy:</strong> el contenedor corre con <code>APP_ENV=production</code> y
-<code>APP_DEBUG=false</code>. <strong>La fuga esta cerrada.</strong></p>
-<p>El comentario ademas advierte algo que conviene no olvidar: <em>"estos valores
-pisan al .env, asi que cambiar solo el archivo no alcanza"</em>. Es exacto, y es la
-clase de trampa que hace perder horas.</p>
-<h3 id="el-webhook-de-whatsapp-bien-resuelto">✅ El webhook de WhatsApp, bien resuelto</h3>
+<p>El hallazgo original: no se encontro cron ni timer para este
+proyecto. Con 57 tablas, 880 usuarios y 12.664 biometrias, es el sistema
+con mas que perder. Ver <code>12_CONTINUIDAD</code>.</p>
+<h3 id="sec-05--aislamiento-entre-instituciones-sin-verificar">SEC-05 —
+Aislamiento entre instituciones sin verificar</h3>
+<p>Con ~38.247 vinculos usuario-institucion, <strong>que un usuario no
+vea datos de una institucion que no le corresponde es una regla
+critica</strong>. Usa <code>spatie/laravel-permission</code>, que es la
+libreria correcta.</p>
+<blockquote>
+<p><strong>Verificado el 2026-09-15, y habia fuga.</strong>
+<code>RondaDetalleResource</code> e
+<code>InstitucionMarcadoresResource</code> filtraban <strong>solo por el
+parametro de la URL</strong>, sin mirar el perfil. Con ids consecutivos,
+un Supervisor leia el detalle de las rondas de otro cliente --hora, foto
+y coordenadas de cada punto-- y en marcadores, que es editable,
+<strong>podia mover las coordenadas de los QR de otro cliente</strong>,
+lo que hace fallar la validacion de cercania de ese local sin dejar
+rastro. Habia ademas una segunda via: el formulario de marcadores lleva
+el local en un campo oculto, asi que se podia <strong>crear</strong> uno
+en un local ajeno.</p>
+<p>Cerrado con <code>PerfilPanel::localesVisibles()</code>, que resuelve
+los dos alcances en un solo lugar, y 12 tests. El patron estaba copiado
+recurso por recurso: <strong>el agujero estaba justo donde no se habia
+copiado.</strong></p>
+</blockquote>
+<h3 id="sec-06--contenedor-v1_analisis-suelto-y-sin-control">SEC-06 —
+Contenedor <code>v1_analisis</code> suelto y sin control</h3>
+<p>MariaDB 10.4 (<strong>version antigua</strong>), creado el
+2026-09-07, <strong>sin proyecto compose</strong>, con la base V1
+heredada. No aparece en ningun <code>docker-compose.yml</code>, asi que
+<strong>no se recrea ni se respalda con el resto</strong>.</p>
+<p><strong>Atenuante:</strong> no publica puertos; solo es accesible
+desde la red Docker.</p>
+<p><strong>Recomendacion:</strong> definir si la migracion concluyo. Si
+si, respaldar su contenido y apagarlo.</p>
+<h2 id="large_blue_circle-bajo">🔵 BAJO</h2>
+<h3 id="sec-07--mariadb-104-sin-soporte">SEC-07 — MariaDB 10.4 sin
+soporte</h3>
+<p><code>v1_analisis</code> corre MariaDB 10.4, una version fuera de
+soporte. Al no estar expuesta, el riesgo es acotado, pero es una razon
+mas para apagarla.</p>
+<h2 id="white_circle-informativo">⚪ INFORMATIVO</h2>
+<h3 id="sec-08--postgresql-correctamente-limitado">SEC-08 — PostgreSQL
+correctamente limitado</h3>
+<p><code>ports: "127.0.0.1:5434:5432"</code> — <strong>solo
+local</strong>, a diferencia de otros proyectos del servidor que
+publican su base a toda interfaz. Correcto.</p>
+<h3 id="sec-09--db_password-con-fail-fast">SEC-09 —
+<code>DB_PASSWORD</code> con fail-fast</h3>
+<p><code>${DB_PASSWORD:?Definir DB_PASSWORD en .env}</code> en los dos
+servicios. <code>SECRET DETECTADO — NO DOCUMENTAR VALOR.</code></p>
+<h2
+id="white_check_mark-hallazgo-previo-ya-corregido--vale-la-pena-registrarlo">✅
+Hallazgo previo YA CORREGIDO — vale la pena registrarlo</h2>
+<p>El <code>docker-compose.yml</code> documenta en un comentario extenso
+un incidente real:</p>
+<blockquote>
+<p><em>"Estaba en <code>local</code> con <code>APP_DEBUG: "true"</code>,
+y esto es produccion expuesta en dos IP publicas. Con el modo depuracion
+encendido, cualquier error 500 devuelve la traza completa (...) incluida
+la contraseña de la base."</em></p>
+</blockquote>
+<p><strong>Verificado hoy:</strong> el contenedor corre con
+<code>APP_ENV=production</code> y <code>APP_DEBUG=false</code>.
+<strong>La fuga esta cerrada.</strong></p>
+<p>El comentario ademas advierte algo que conviene no olvidar:
+<em>"estos valores pisan al .env, asi que cambiar solo el archivo no
+alcanza"</em>. Es exacto, y es la clase de trampa que hace perder
+horas.</p>
+<h3 id="white_check_mark-el-webhook-de-whatsapp-bien-resuelto">✅ El
+webhook de WhatsApp, bien resuelto</h3>
 <p>Contrasta con el resto y merece registrarse.
-<code>POST /api/whatsapp/webhook/{token}</code> compara el token con <strong><code>hash_equals</code></strong>
-(resistente a ataques de tiempo) y responde <strong>404</strong> si no hay token configurado.
-El comentario del codigo explica la decision: <em>"Sin token configurado el
-webhook no existe: es una puerta abierta a que cualquiera simule respuestas de
-guardias."</em></p>
-<p>Es la mejor implementacion de webhook del servidor — comparar con la de
-<code>lavado_de_carros</code>, que no valida firma.</p>
+<code>POST /api/whatsapp/webhook/{token}</code> compara el token con
+<strong><code>hash_equals</code></strong> (resistente a ataques de
+tiempo) y responde <strong>404</strong> si no hay token configurado. El
+comentario del codigo explica la decision: <em>"Sin token configurado el
+webhook no existe: es una puerta abierta a que cualquiera simule
+respuestas de guardias."</em></p>
+<p>Es la mejor implementacion de webhook del servidor — comparar con la
+de <code>lavado_de_carros</code>, que no valida firma.</p>
 <h2 id="lo-que-se-reviso-y-esta-bien">Lo que se reviso y esta BIEN</h2>
 <ul>
 <li><strong>PostgreSQL solo en <code>127.0.0.1</code>.</strong></li>
-<li><strong><code>DB_PASSWORD</code> obligatoria con fail-fast</strong> en ambos servicios.</li>
-<li><strong><code>APP_DEBUG=false</code> y <code>APP_ENV=production</code></strong> verificados en ejecucion.</li>
-<li><strong>Healthcheck en la base</strong> con <code>pg_isready</code>, y el backend esperando con
-  <code>condition: service_healthy</code>.</li>
-<li><strong><code>spatie/laravel-permission</code></strong> para roles, y <strong><code>laravel/sanctum</code></strong> para
-  tokens de API: las librerias correctas, no implementaciones propias.</li>
-<li><strong>El keystore tiene permisos <code>600</code></strong> y su manejo esta documentado.</li>
-<li><strong>La huella SHA-256 del certificado esta publicada</strong> en <code>LEEME-apk.txt</code>, lo
-  que permite verificar que un APK salio de este servidor. Es una practica que
-  no se ve en ningun otro proyecto auditado.</li>
-<li><strong>El login es solido:</strong> <code>Hash::check</code>, estado de cuenta, gestion asignada y
-  rol activo, antes de emitir un token de Sanctum con expiracion y un refresh
-  token de <code>random_bytes(32)</code>.</li>
-<li><strong>Solo 4 rutas publicas de 55</strong>, y dos de ellas lo son legitimamente.</li>
-<li><strong><code>CheckPermission</code> con permisos granulares</strong> en biometria y en el portal.</li>
-</ul></body></html>
+<li><strong><code>DB_PASSWORD</code> obligatoria con fail-fast</strong>
+en ambos servicios.</li>
+<li><strong><code>APP_DEBUG=false</code> y
+<code>APP_ENV=production</code></strong> verificados en ejecucion.</li>
+<li><strong>Healthcheck en la base</strong> con <code>pg_isready</code>,
+y el backend esperando con <code>condition: service_healthy</code>.</li>
+<li><strong>Healthcheck propio del backend</strong>
+(<code>docker/php/healthcheck.php</code>), agregado el 2026-09-17.
+<strong>nginx sigue sin uno.</strong></li>
+<li><strong><code>spatie/laravel-permission</code></strong> para roles,
+y <strong><code>laravel/sanctum</code></strong> para tokens de API: las
+librerias correctas, no implementaciones propias.</li>
+<li><strong>El keystore tiene permisos <code>600</code></strong> y su
+manejo esta documentado.</li>
+<li><strong>La huella SHA-256 del certificado esta publicada</strong> en
+<code>LEEME-apk.txt</code>, lo que permite verificar que un APK salio de
+este servidor. Es una practica que no se ve en ningun otro proyecto
+auditado.</li>
+<li><strong>El login es solido:</strong> <code>Hash::check</code>,
+estado de cuenta, gestion asignada y rol activo, antes de emitir un
+token de Sanctum con expiracion y un refresh token de
+<code>random_bytes(32)</code>.</li>
+<li><strong>Solo 4 rutas publicas de 55</strong>, y dos de ellas lo son
+legitimamente.</li>
+<li><strong><code>CheckPermission</code> con permisos
+granulares</strong> en biometria y en el portal.</li>
+</ul>
+</body></html>

@@ -1,6 +1,7 @@
 # Analisis de seguridad
 
-Revision del **2026-09-15**. Ningun cambio aplicado.
+Revision del **2026-09-15**, actualizada el **2026-09-19** con las correcciones
+ya desplegadas. Lo que sigue abierto queda marcado como tal, y con el motivo.
 
 ⚠️ **Contexto:** es el **unico sistema del servidor expuesto a internet** y el
 que mas datos personales sensibles almacena: **12.664 registros biometricos**
@@ -13,15 +14,23 @@ endpoint publico que cambia la contrasena de cualquier usuario sin validar
 ningun token. No se habia detectado en la primera pasada, que reviso
 configuracion y exposicion pero no el codigo de cada controlador.
 
+**Ese hallazgo (SEC-00) esta cerrado desde el mismo 2026-09-15**, por las dos
+vias: la API y el portal web. El detalle esta abajo; se conserva el diagnostico
+original porque explica que hay que revisar en una proxima pasada.
+
 ## Resumen
 
-| Severidad | Cantidad |
-|---|---|
-| 🔴 CRITICO | **1** (eran 2; SEC-00 cerrado el 2026-09-15) |
-| 🟠 ALTO | 2 |
-| 🟡 MEDIO | 4 |
-| 🔵 BAJO | 1 |
-| ⚪ INFORMATIVO | 3 |
+| Severidad | Abiertos | Cerrados | Detalle |
+|---|---|---|---|
+| 🔴 CRITICO | **1** | 1 | Abierto: SEC-01 (sin HTTPS). Cerrado: SEC-00 |
+| 🟠 ALTO | 2 | — | SEC-02, SEC-03 |
+| 🟡 MEDIO | 1 | 2 | Abierto: SEC-06. Cerrados: SEC-04, SEC-05 |
+| 🔵 BAJO | 1 | — | SEC-07 |
+| ⚪ INFORMATIVO | 2 | — | SEC-08, SEC-09 |
+
+**El unico critico abierto es SEC-01**, y no esta detenido por trabajo tecnico:
+la configuracion con certbot ya existe en `docker-compose.prod.yml`. Falta que
+se libere un dominio.
 
 ## 🔴 CRITICO
 
@@ -76,15 +85,21 @@ posterior, no la toma de la cuenta.
 > No se ejecuto la prueba: habria cambiado la contrasena de un usuario real en
 > produccion. La evidencia de codigo y el middleware vacio son concluyentes.
 
-**Recomendacion — es lo primero de todo el proyecto, por delante de HTTPS:**
+**Lo que se recomendo entonces, y se aplico integro:**
 
-1. Validar el `remember_token` contra el usuario y su vigencia.
-2. Generarlo con `random_bytes`, no con `rand()`.
-3. **No devolverlo** en la respuesta de `solicitud_paswchg`.
-4. Invalidarlo tras el primer uso.
+1. Validar el `remember_token` contra el usuario y su vigencia. ✅
+2. Generarlo con `random_bytes`, no con `rand()`. ✅
+3. **No devolverlo** en la respuesta de `solicitud_paswchg`. ✅
+4. Invalidarlo tras el primer uso. ✅
 
-Mientras no se corrija, **cerrar el acceso publico a esas dos rutas** es una
-mitigacion inmediata y valida.
+Se fue mas alla en dos puntos: la respuesta es **identica exista o no la
+cedula** (para que el endpoint no sirva para averiguar quien esta registrado), y
+el codigo **se invalida al quinto intento fallido**. La mitigacion de emergencia
+que se habia propuesto —cerrar las dos rutas en nginx— no hizo falta.
+
+⚠️ **Consecuencia para las tablets:** el APK **1.0.2 ya no puede recuperar
+contrasenas**, porque manda el contrato viejo (`user_id`) y recibe error. Hay
+que actualizarlas a la 1.0.7.
 
 ### SEC-01 — Biometria y credenciales viajando por internet en HTTP plano
 
@@ -156,12 +171,31 @@ el riesgo de perderlo.
 secretos, y conservar copia fuera del servidor. Sin el keystore **no se pueden
 publicar actualizaciones**, asi que perderlo es tan grave como filtrarlo.
 
+> **Parcialmente atendido el 2026-09-15.** El respaldo diario lo incluye y se
+> verifico comparando su SHA-256. Pero la copia **queda en este mismo servidor**,
+> asi que el riesgo de perderlo con la maquina sigue intacto. El script ya tiene
+> el paso de copia externa (`DESTINO_EXTERNO`); falta decidir el destino.
+> Sigue abierto como **CONT-02**.
+
 ## 🟡 MEDIO
 
-### SEC-04 — Sin respaldo automatico verificado
+### SEC-04 — ✅ RESUELTO el 2026-09-15 — Sin respaldo automatico verificado
 
-No se encontro cron ni timer para este proyecto. Con 57 tablas, 880 usuarios y
-12.664 biometrias, es el sistema con mas que perder. Ver `12_CONTINUIDAD`.
+> **Estado: cerrado.** `backend/scripts/respaldo.sh`, diario a las 03:00 por el
+> crontab del dueno del repositorio. Cubre los cuatro elementos irrecuperables:
+> la base PostgreSQL (formato custom, para restaurar una sola tabla), la MariaDB
+> de la V1, los secretos con `APP_KEY` y el keystore de firma. Paquete de ~7 MB
+> con 14 dias de retencion; las fotos van aparte por `rsync` incremental.
+> Probado restaurando el indice del dump y comparando el SHA-256 del keystore.
+> Guarda en `~/respaldos/totalsecureapp/`, **fuera del repositorio**, porque aca
+> el arbol de trabajo es produccion. Procedimiento en
+> `backend/scripts/RESPALDO.md`.
+>
+> ⚠️ **Queda abierto que todo se guarda en este mismo servidor** (CONT-02).
+
+El hallazgo original: no se encontro cron ni timer para este proyecto. Con 57
+tablas, 880 usuarios y 12.664 biometrias, es el sistema con mas que perder. Ver
+`12_CONTINUIDAD`.
 
 ### SEC-05 — Aislamiento entre instituciones sin verificar
 
@@ -246,6 +280,8 @@ Es la mejor implementacion de webhook del servidor — comparar con la de
 - **`APP_DEBUG=false` y `APP_ENV=production`** verificados en ejecucion.
 - **Healthcheck en la base** con `pg_isready`, y el backend esperando con
   `condition: service_healthy`.
+- **Healthcheck propio del backend** (`docker/php/healthcheck.php`), agregado el
+  2026-09-17. **nginx sigue sin uno.**
 - **`spatie/laravel-permission`** para roles, y **`laravel/sanctum`** para
   tokens de API: las librerias correctas, no implementaciones propias.
 - **El keystore tiene permisos `600`** y su manejo esta documentado.
