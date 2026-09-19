@@ -9,6 +9,49 @@ producción y no se hizo.
 
 ---
 
+## Estado al 2026-09-19 (segunda jornada)
+
+**577 tests en verde.** Commits `1951624` (alarma), `5e22fc4` (catálogo global),
+`04ca33b` (stock por cliente + resumen).
+
+### La alarma: por qué el primer arreglo no bastó
+
+Se comprobó la cadena entera antes de tocar nada: el servidor **sí** despacha
+`emergencia-nueva` (test aislado), el HTML autenticado trae todo (volcado y
+verificado), la CSP permite `unsafe-inline`, OPcache revalida. Nada de eso era.
+
+⚠️ **El panel no usa SPA**, así que cada clic en el menú es una carga completa de
+página, y el permiso de audio del navegador es **por documento**: se perdía
+entero en cada navegación. Había que pulsar «Activar alarma» **en cada pantalla
+que se abriera**.
+
+Ahora el audio se desbloquea con **cualquier** interacción (`pointerdown`,
+`keydown`, `touchstart`). Más: el **título de la pestaña parpadea** —lo único que
+se percibe con el panel en segundo plano, y no pide permiso—, el cartel se dibuja
+aunque no suene, y el aviso de bloqueo es un banner, no un botón en una esquina.
+
+Las notificaciones de escritorio serían lo ideal con el navegador minimizado,
+pero el navegador las bloquea sin HTTPS: quedan disponibles al cerrar SEC-01.
+
+### Inventario reestructurado
+
+| | |
+|---|---|
+| **Catálogo global** | 532 filas eran **4 productos repetidos en 133 locales**. Fusionado: 519 items y 23.349 detalles reapuntados, cero huérfanos |
+| **Stock por cliente** | Tabla nueva: cuánto se le asignó a cada cliente. Detecta si se repartió de más |
+| **Resumen de inventario** | Reportería: clientes × productos, con desglose por local al pulsar la fila |
+
+⚠️ **Antes de enseñarle el resumen al cliente hay que resolver los 51 locales sin
+`ins_cliente_id`**: salen agrupados en una fila «Sin cliente asignado». No se
+esconden a propósito — esconderlos haría que el total cuadrara y estuviera
+mintiendo.
+
+### Pendiente decidido y no hecho
+
+- **Tema propio de Filament con Vite + Tailwind.** Aprobado, no empezado.
+  ⚠️ Añade un paso de compilación al despliegue en un repositorio donde **el
+  árbol de trabajo ES producción**; conviene sopesarlo antes.
+
 ## Estado al 2026-09-19
 
 **554 tests en verde** (eran 541). Commits `a57af9e` (documentación) y `05295cc`
