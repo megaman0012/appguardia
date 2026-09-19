@@ -33,10 +33,22 @@ use Filament\Tables;
  * producto creado desde el panel no existia para la tablet y al reves. Ver
  * AGENTS.md, seccion Inventario.
  *
- * Cambio de fondo respecto al modelo viejo: **los productos son por local**
- * (`ipc_ins_code`). En `inv_productos` eran globales y no habia nada que acotar;
- * aqui hay que filtrar por el alcance del perfil como el resto del panel, o un
- * supervisor veria el catalogo de locales que no le tocan.
+ * **El catalogo es GLOBAL desde el 2026-09-19** (`ipc_ins_code` nulo).
+ *
+ * Fue por local durante un tiempo y salio mal: en produccion habia **532 filas
+ * que eran 4 productos repetidos en 133 locales**. Un baston retractil es el
+ * mismo objeto en los 133 sitios; lo que cambia por local es **cuantos hay**, y
+ * eso ya vive en `inv_lista_item.lia_cantidad_default`. Agregar un quinto
+ * producto eran 133 inserciones, y renombrar uno, 133 ediciones -- la
+ * duplicacion ya se habia degradado sola.
+ *
+ * Fusionado con `inventario:fusionar-catalogo`, que reapunto 519 items de lista
+ * y 23.349 detalles de movimiento. Ver `database/migrations/2026_09_19_100001`.
+ *
+ * ⚠️ **Por eso aca ya no se acota por local.** Un `whereIn('ipc_ins_code', ...)`
+ * contra una columna que ahora es nula **no devuelve ninguna fila**: el catalogo
+ * saldria vacio. Quien puede verlo se decide por perfil
+ * (`puedeConfigurarSistema`), no por alcance geografico.
  */
 class InvProductoResource extends Resource
 {
@@ -55,7 +67,8 @@ class InvProductoResource extends Resource
      * Relaciones que usan las columnas de la tabla. Sin esto cada fila dispara
      * una consulta por relacion (N+1).
      */
-    protected const RELACIONES_TABLA = ['institucion.cliente'];
+    // El catalogo ya no cuelga de ningun local: no hay relacion que precargar.
+    protected const RELACIONES_TABLA = [];
 
     protected static string | \UnitEnum | null $navigationGroup = 'Inventario';
     protected static ?int $navigationSort = 1;
@@ -70,37 +83,16 @@ class InvProductoResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Select::make('ipc_ins_code')
-                ->label('Local')
-                ->relationship(
-                    'institucion',
-                    'ins_descripcion',
-                    function ($query) {
-                        if (PerfilPanel::alcanceEsPorInstitucion()) {
-                            $institucionesCodes = UserHasInstitucion::where('ui_usu_id', Session::get('usuID'))
-                                ->where('ui_state', 1)
-                                ->pluck('ui_ins_code');
-                            if ($institucionesCodes->isEmpty()) {
-                                $query->whereRaw('1 = 0');
-                                return;
-                            }
-                            $query->whereIn('ins_code', $institucionesCodes);
-                        }
-                    }
-                )
-                ->required()
-                ->disabledOn('edit'),
+            // No hay selector de local: el producto es del catalogo, no de un
+            // sitio. Donde esta y cuantos hay lo dice la lista de cada local.
             TextInput::make('ipc_nombre')
                 ->label('Nombre')
                 ->required()
-                // El nombre es unico DENTRO del local, no en todo el sistema:
-                // dos locales pueden tener su propio "Extintor 10 lb".
-                // ⚠️ En Filament 3 el argumento se llama `modifyRuleUsing`, no
-                // `callback`. Con el nombre viejo el formulario revienta al
-                // dibujarse con «Unknown named parameter $callback».
-                ->unique(table: static::$model, modifyRuleUsing: function ($rule, $get) {
-                    return $rule->where('ipc_ins_code', $get('ipc_ins_code'));
-                }, ignoreRecord: true),
+                // Unico en todo el sistema. Antes era unico DENTRO del local, que
+                // es lo que permitio las 133 copias del mismo baston.
+                ->unique(table: static::$model, ignoreRecord: true)
+                ->helperText('Es el catálogo general: el mismo producto sirve para '
+                    . 'todos los locales. La cantidad de cada local va en su lista.'),
             TextInput::make('ipc_especificacion')
                 ->label('Especificación')
                 ->required(),
@@ -122,14 +114,6 @@ class InvProductoResource extends Resource
                     ->toggleable()
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('institucion.cliente.org_descripcion')->size('sm')
-                    ->label('Cliente')
-                    ->toggleable()
-                    ->searchable(),
-                TextColumn::make('institucion.ins_descripcion')->size('sm')
-                    ->label('Local')
-                    ->toggleable()
-                    ->searchable(),
                 TextColumn::make('ipc_nombre')->size('sm')
                     ->label('Producto')
                     ->toggleable()
@@ -196,30 +180,16 @@ class InvProductoResource extends Resource
         return PerfilPanel::puedeConfigurarSistema();
     }
 
+    /**
+     * Sin acotar por local, y a proposito.
+     *
+     * ⚠️ El catalogo es global: `ipc_ins_code` es nulo en todas las filas. Un
+     * `whereIn('ipc_ins_code', ...)` **no devolveria ninguna** y la pantalla
+     * saldria vacia sin ningun error. Quien entra aca ya esta limitado por
+     * `canViewAny()`, que exige perfil de Sistemas.
+     */
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery()->with(self::RELACIONES_TABLA);
-
-        if (PerfilPanel::alcanceEsPorInstitucion()) {
-            $institucionesCodes = UserHasInstitucion::where('ui_usu_id', Session::get('usuID'))
-                ->where('ui_state', 1)
-                ->pluck('ui_ins_code');
-            if ($institucionesCodes->isEmpty()) {
-                return $query->whereRaw('1 = 0');
-            }
-            return $query->whereIn('ipc_ins_code', $institucionesCodes);
-        }
-
-        // El Lider Operativo ve los locales de su(s) pais(es). Sin paises
-        // asignados no ve nada: un lider mal configurado no debe terminar con
-        // acceso global.
-        $localesDelPais = PerfilPanel::localesDelUsuario();
-        if ($localesDelPais !== null) {
-            return empty($localesDelPais)
-                ? $query->whereRaw('1 = 0')
-                : $query->whereIn('ipc_ins_code', $localesDelPais);
-        }
-
-        return $query;
+        return parent::getEloquentQuery();
     }
 }

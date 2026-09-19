@@ -149,10 +149,12 @@ class DatabaseSeeder extends Seeder
         // demostracion **no existia para la tablet**: la pantalla salia vacia y
         // parecia que el modulo no funcionaba.
         //
-        // Los productos ahora son POR LOCAL (`ipc_ins_code`); en el modelo viejo
-        // eran globales.
+        // ⚠️ El catalogo es GLOBAL (`ipc_ins_code` nulo) desde el 2026-09-19.
+        // Fue por local un tiempo y produjo 532 filas que eran 4 productos
+        // repetidos en 133 sitios; sembrarlo con el local aqui reintroduciria
+        // ese modelo en cada instalacion nueva.
         $p1 = DB::table('inv_producto_catalogo')->insertGetId([
-            'ipc_ins_code' => $insId,
+            'ipc_ins_code' => null,
             'ipc_nombre' => 'Extintor',
             'ipc_descripcion' => 'Extintor PQS 10 lb',
             'ipc_especificacion' => 'Polvo químico seco',
@@ -162,7 +164,7 @@ class DatabaseSeeder extends Seeder
             'ipc_updated_at' => now(),
         ], 'ipc_id');
         $p2 = DB::table('inv_producto_catalogo')->insertGetId([
-            'ipc_ins_code' => $insId,
+            'ipc_ins_code' => null,
             'ipc_nombre' => 'Botiquín',
             'ipc_descripcion' => 'Botiquín primeros auxilios',
             'ipc_especificacion' => 'Completo',

@@ -44,16 +44,22 @@ class InvProductosRelationManager extends RelationManager
                 ->default(fn ($livewire) => $livewire->ownerRecord->li_id),
             Select::make('lia_producto_id')
                 ->label('Producto')
-                // Los productos ahora son POR LOCAL (`ipc_ins_code`). Sin este
-                // filtro se ofreceria el catalogo de otros locales y se armarian
-                // listas con productos que ese local no tiene.
-                ->options(function ($livewire) {
-                    return ProductoCatalogo::query()
-                        ->where('ipc_ins_code', $livewire->ownerRecord->li_ins_code)
-                        ->where('ipc_activo', true)
-                        ->orderBy('ipc_nombre')
-                        ->pluck('ipc_nombre', 'ipc_id');
-                })
+                /*
+                 * ⚠️ Esto filtraba por `ipc_ins_code` cuando el catalogo era por
+                 * local. **Desde el 2026-09-19 el catalogo es global y esa
+                 * columna es nula en todas las filas**, asi que ese filtro
+                 * dejaba el selector COMPLETAMENTE VACIO -- sin error, sin
+                 * aviso: simplemente no se podia agregar ningun producto a
+                 * ninguna lista.
+                 *
+                 * Ahora se ofrece el catalogo entero, que es justo el sentido de
+                 * la fusion: el producto es el mismo en los 133 locales y lo que
+                 * cambia es la cantidad de cada lista.
+                 */
+                ->options(fn () => ProductoCatalogo::query()
+                    ->where('ipc_activo', true)
+                    ->orderBy('ipc_nombre')
+                    ->pluck('ipc_nombre', 'ipc_id'))
                 ->searchable()
                 ->required()
                 ->unique(table: 'inv_lista_item', modifyRuleUsing: function ($rule, $get) {

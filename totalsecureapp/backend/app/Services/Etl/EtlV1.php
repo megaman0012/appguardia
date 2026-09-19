@@ -593,7 +593,10 @@ class EtlV1
                     continue;
                 }
                 $mapaProducto[$clave] = DB::table('inv_producto_catalogo')->insertGetId([
-                    'ipc_ins_code'       => $ins,
+                    // Nulo = global. El catalogo dejo de ser por local el
+                    // 2026-09-19: importarlo con el local volveria a crear una
+                    // copia del mismo producto por cada sitio.
+                    'ipc_ins_code'       => null,
                     'ipc_nombre'         => $p->pr_nombre,
                     'ipc_descripcion'    => $p->pr_descripcion,
                     'ipc_especificacion' => $p->pr_especificacion,

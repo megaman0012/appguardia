@@ -89,8 +89,24 @@ class ProductoCatalogo extends Model
         return $query->where('ipc_activo', true);
     }
 
+    /**
+     * ⚠️ **No usar: el catalogo es global desde el 2026-09-19.**
+     *
+     * `ipc_ins_code` es nulo en todas las filas, asi que este alcance
+     * **no devuelve ninguna** -- sin error y sin aviso. Se deja para que quien
+     * lo busque encuentre esta nota en vez de reintroducirlo; ya causo que el
+     * selector de productos de las listas quedara vacio.
+     *
+     * Que productos toca cada local lo dice su lista (`inv_lista_item`), no el
+     * catalogo.
+     *
+     * @deprecated
+     */
     public function scopePorInstitucion($query, int $insCode)
     {
-        return $query->where('ipc_ins_code', $insCode);
+        throw new \LogicException(
+            'El catalogo de productos es global: filtrarlo por local no devuelve nada. '
+            . 'Use la lista del local (inv_lista_item) para saber que productos le tocan.'
+        );
     }
 }

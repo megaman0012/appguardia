@@ -40,9 +40,17 @@ class SeedInvInventoryData extends Seeder
                 $instituciones = collect([1]);
             }
 
-            foreach ($instituciones as $insCode) {
+            /*
+             * ⚠️ **Una fila por producto, no una por local.**
+             *
+             * Esto recorria las instituciones y creaba una copia del mismo
+             * producto en cada una. Asi se llego a 532 filas que eran 4
+             * productos repetidos en 133 locales, con las erratas que trae
+             * copiar el mismo dato cien veces. El catalogo es global desde el
+             * 2026-09-19; que productos toca cada local lo dice su lista.
+             */
+            {
                 $existe = DB::table('inv_producto_catalogo')
-                    ->where('ipc_ins_code', $insCode)
                     ->where('ipc_nombre', $prod->pr_nombre)
                     ->exists();
 
@@ -51,7 +59,7 @@ class SeedInvInventoryData extends Seeder
                 }
 
                 DB::table('inv_producto_catalogo')->insert([
-                    'ipc_ins_code'       => $insCode,
+                    'ipc_ins_code'       => null,
                     'ipc_nombre'         => $prod->pr_nombre,
                     'ipc_descripcion'    => $prod->pr_descripcion,
                     'ipc_especificacion' => $prod->pr_especificacion,
@@ -112,8 +120,8 @@ class SeedInvInventoryData extends Seeder
                 ->first();
             
             if ($lista) {
+                // Sin acotar por local: el catalogo es global.
                 $productoCatalogo = DB::table('inv_producto_catalogo')
-                    ->where('ipc_ins_code', $lista->lp_ins_code)
                     ->where('ipc_nombre', function($q) use ($item) {
                         $q->select('pr_nombre')
                           ->from('inv_productos')
@@ -210,8 +218,8 @@ class SeedInvInventoryData extends Seeder
                 ->first();
             
             if ($movimiento) {
+                // Sin acotar por local: el catalogo es global.
                 $productoCatalogo = DB::table('inv_producto_catalogo')
-                    ->where('ipc_ins_code', $movimiento->mc_ins_code)
                     ->where('ipc_nombre', function($q) use ($det) {
                         $q->select('pr_nombre')
                           ->from('inv_productos')
