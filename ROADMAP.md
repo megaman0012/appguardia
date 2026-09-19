@@ -11,8 +11,34 @@ producción y no se hizo.
 
 ## Estado al 2026-09-19
 
-Documentación de auditoría regenerada y coherente con el sistema (ver 0.1). Sin
-cambios en código ni en producción. Lo abierto sigue siendo lo de abajo.
+**554 tests en verde** (eran 541). Commits `a57af9e` (documentación) y `05295cc`
+(los cinco puntos de abajo). Producción sana, contenedor `healthy`.
+
+### Cerrado hoy
+
+| | |
+|---|---|
+| **La alarma no sonaba** | Tres fallos encadenados, ver 2.6 |
+| **«Personas dentro» decía 9.769** | Era falso: 6.436 ya habían salido. Ver 2.7 |
+| **Perfiles › Editar estaba vacío** | Formulario + permisos por perfil. Ver 2.8 |
+| **Bitácora → Novedades** | Panel y app, acordado con el cliente |
+| **Arranque de la app** | Tras la biometría sigue el inventario, no el menú |
+| — | Informe de auditoría coherente y `docs/generar-documentos.sh` |
+
+### ⏳ Esperando el APK (se acumulan a propósito)
+
+Se hace **una sola versión al final**, cuando estén todas las adecuaciones. Lo
+que ya está en el código y todavía no llega a las tablets:
+
+- «Bitácora» → «Novedades» en el menú lateral, el Home y el título de la pantalla.
+- Tras la biometría de entrada se va al **inventario**, y de ahí al menú.
+- Y lo que ya venía pendiente: la **1.0.7 nunca se instaló en tablet**, y por
+  debajo de la 1.0.2 no existe el botón de pánico ni la recuperación de clave.
+
+Al compilar hay que subir `versionCode` **a mano y en dos archivos**
+(`android/app/build.gradle` y `app.json`), correr `npm install` antes, y **no
+correr los tests del backend justo antes** (deja `storage/framework/testing` en
+un estado que rompe la compilación).
 
 ## Estado al 2026-09-17 (cierre de la jornada)
 
@@ -445,6 +471,100 @@ cambio hecho fuera no llega hasta que el guardia vuelve a entrar.
 **Arreglo:** el toggle en el panel — y el cliente pide que viva en el **módulo de
 Turnos**, no en Perfil — más refresco del valor al abrir la pantalla de Vacantes,
 para que no dependa de volver a iniciar sesión.
+
+---
+
+### 2.6 ✅ La alarma de emergencia llegaba y no sonaba — RESUELTO (2026-09-19)
+
+Tres fallos encadenados, y **cada uno bastaba por sí solo**. Por eso el problema
+volvió cuatro veces: se arreglaba uno y quedaban los otros.
+
+1. **`wire:poll.15s` sin `keep-alive`.** Livewire descarta el **95% de los
+   sondeos** con la pestaña en segundo plano
+   (`throttleWhile(theTabIsInTheBackground() && theDirectiveIsMissingKeepAlive)`,
+   y luego `Math.random() < 0.95` en `start()`). A 15 s eso es una comprobación
+   cada cinco minutos de media, y el panel de un operador está de fondo casi
+   todo el tiempo.
+2. **El botón de activar desaparecía sin que el audio funcionara.** Se abría el
+   `AudioContext` en la carga de la página —sin gesto del usuario, o sea
+   **suspendido**— pero se ponía `listo = true` igual, escondiendo el único
+   botón que podía desbloquearlo. Sonaba la primera vez y **quedaba mudo para
+   siempre desde la segunda carga**, sin síntoma.
+3. **No se esperaba el `resume()`.** Con el contexto suspendido `currentTime` no
+   avanza: los osciladores se programaban contra un reloj parado y esos
+   instantes ya habían pasado al arrancar.
+
+Y uno de diseño: **sin audio no se dibujaba ni el cartel**. Ahora el aviso visual
+va siempre y el sonido es lo único condicional.
+
+⚠️ **La lógica estaba copiada en dos sitios** (widget del tablero y componente
+global), que es la razón de fondo de que reapareciera. Vive en
+`resources/views/partials/alarma-de-emergencia-js.blade.php`, inyectada en
+`HEAD_END`. Tres tests la fijan en `PanelConSesionTest`.
+
+### 2.7 ✅ «Personas dentro» decía 9.769 de 9.776 accesos — RESUELTO (2026-09-19)
+
+Solo 7 accesos cerrados en toda la historia. **Dos problemas distintos
+mezclados:**
+
+- **6.436 ya habían salido.** La migración `2026_08_21_100002` creó
+  `ac_estado_acceso` con `default('en_curso')` y rellenó bien lo que había. Pero
+  el **ETL importó los accesos tres semanas después** y la v1 no tiene esa
+  columna: cada fila tomó el valor por defecto. El ETL nunca aplicó la regla que
+  la migración ya tenía escrita. Corregido en `EtlV1::accesos()`.
+- **3.333 abiertos de verdad**, desde abril de 2025; solo 5 de los últimos siete
+  días.
+
+`accesos:cerrar-abiertos` (simula por defecto, idempotente) los trata distinto: al
+primer grupo solo le pone el estado —su salida fue real—; al segundo lo cierra
+**sin fabricar la hora**, igualando la salida al ingreso y dejando la razón en
+`ac_observaciones` y en el historial.
+
+⚠️ **Dos trampas que encontró el test antes que producción**, las dos por el
+accessor `getAcCreatedAtAttribute` de `Acceso`: devuelve **cadena vacía** en vez
+de null (131 accesos sin fecha habrían cortado la corrida con «invalid input
+syntax for type timestamp») y **convierte a `America/Guayaquil`** (habría corrido
+la hora de las 3.202 filas restantes). Va con `getRawOriginal()`.
+
+Resultado: **0 personas dentro**, 3.333 cierres trazados.
+
+### 2.8 ✅ Configuración › Perfiles › Editar abría una página vacía — RESUELTO (2026-09-19)
+
+`RolesResource::form()` era literalmente `return $schema->schema([ ]);`. Los 111
+vínculos de `role_has_permissions` solo se podían tocar por SQL.
+
+Debajo había un segundo fallo que el primero tapaba: **`roles` no declaraba
+`$fillable`**, y con el `$guarded = ['*']` por defecto de Eloquent
+`$record->update()` no habría escrito nada, sin error.
+
+⚠️ **El nombre queda bloqueado en los cinco perfiles que `PerfilPanel` compara
+por cadena literal.** Renombrar «Administrador» deja fuera del panel a todos sus
+usuarios y el único síntoma sería «no puedo entrar». Va con `dehydrated(false)`,
+no solo `disabled()`: un campo deshabilitado **sigue siendo escribible desde
+fuera**, el mismo error que el `Hidden` de marcadores.
+
+Los permisos de esta pantalla **no** gobiernan el panel: son los granulares de la
+app móvil (`PermisosApiService`, `permission.api`).
+
+### 2.9 Inventario: Productos y Listas no son redundantes (aclaración, 2026-09-19)
+
+Surgió como duda y conviene dejarlo escrito. **Productos**
+(`inv_producto_catalogo`) es el catálogo: qué cosas existen en un puesto, por
+local. **Listas** (`inv_lista` + `inv_lista_item`) es la plantilla de conteo: qué
+productos y **cuántos** debe haber al recibir el turno. Esa cantidad esperada es
+lo que no cabe en el catálogo y obliga a la tabla intermedia. El movimiento
+compara `md_cantidad_default` (de la lista) contra `md_cantidad_real` (contada).
+
+Si vuelve a confundir, lo que ayuda es renombrar las etiquetas a «Catálogo de
+productos» y «Listas de conteo»; no se hizo por no tocar sin pedido.
+
+### 2.10 Qué es el módulo Gestiones (aclaración, 2026-09-19)
+
+Es el **período de vinculación de una persona con la empresa**: `ug_ingreso`,
+`ug_egreso`, `ug_finish`. No es decorativo: `LoginController:62` exige una
+gestión abierta (`ug_finish = 0`) para entrar, y `getSanctumSession()` la
+resuelve en cada petición de la app. **Dar de baja a un guardia = cerrar su
+gestión**, no borrar el usuario: así se conserva su histórico.
 
 ---
 
