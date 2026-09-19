@@ -21,7 +21,12 @@ export type RootStackParamList = {
   NovedadList: undefined;
   NovedadCreate: undefined;
   Alertas: undefined;
-  Inventario: undefined;
+  /**
+   * `alIniciarJornada` marca el inventario al que se llega en el arranque,
+   * justo despues de la marcacion. De ahi se sigue al menu: no hay pantalla
+   * anterior a la que volver, porque todo el arranque va con `replace`.
+   */
+  Inventario: { alIniciarJornada?: boolean } | undefined;
   InventarioDetalle: {
     lp_id: number | string;
     lp_nombre: string;
@@ -30,7 +35,8 @@ export type RootStackParamList = {
   };
   /**
    * `alIniciarJornada` marca la marcación de entrada a la que se llega justo
-   * después de elegir el local: de ahí se sigue al menú, no se vuelve atrás.
+   * después de elegir el local. De ahí se sigue al **inventario**, que es lo
+   * que se revisa al recibir el puesto, y recién después al menú.
    */
   Biometria: { alIniciarJornada?: boolean } | undefined;
   Vacantes: undefined;

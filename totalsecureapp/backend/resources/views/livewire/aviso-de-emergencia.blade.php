@@ -5,84 +5,28 @@
     se este en Usuarios, Turnos o Accesos -- que es donde se pasa el tiempo. El
     widget del tablero solo existe en el tablero, y ahi estaba el problema: una
     emergencia que entraba mientras se trabajaba en otra pantalla no sonaba.
+
+    ⚠️ **`keep-alive` no es opcional aca.** Sin ese modificador, Livewire
+    descarta el 95% de los sondeos cuando la pestana esta en segundo plano
+    (`throttleWhile(theTabIsInTheBackground() && theDirectiveIsMissingKeepAlive)`
+    en su bundle). A 15 s eso es una comprobacion cada cinco minutos de media, y
+    el panel de un operador esta de fondo casi todo el tiempo -- que es
+    exactamente cuando una emergencia importa.
+
+    La logica de audio vive en `partials/alarma-de-emergencia-js`, compartida con
+    el widget del tablero.
 --}}
 <div
-    wire:poll.15s="comprobar"
-    x-data="{
-        audio: null,
-        listo: false,
-        sonando: false,
-
-        init() {
-            if (localStorage.getItem('alertas-sonido') === '1') this.preparar();
-
-            // Los dos caminos: el API explicito de Livewire y el evento del DOM.
-            // Con uno solo ya fallo una vez.
-            document.addEventListener('livewire:init', () => {
-                window.Livewire.on('emergencia-nueva', () => this.alarma());
-            });
-            if (window.Livewire) {
-                window.Livewire.on('emergencia-nueva', () => this.alarma());
-            }
-        },
-
-        preparar() {
-            try {
-                this.audio = new (window.AudioContext || window.webkitAudioContext)();
-                this.listo = true;
-                localStorage.setItem('alertas-sonido', '1');
-            } catch (e) { console.warn('audio', e); }
-        },
-
-        activar() { this.preparar(); this.alarma(); },
-
-        /*
-         * Sirena de emergencia, no un pitido.
-         *
-         * Un barrido continuo de frecuencia entre 600 y 1200 Hz, repetido seis
-         * veces durante unos 5 segundos: es el patron que se reconoce como
-         * alarma a traves de una puerta y con ruido de oficina. Los pitines
-         * cortos anteriores se confundian con una notificacion de correo.
-         */
-        alarma() {
-            if (!this.audio) return;
-            if (this.audio.state === 'suspended') this.audio.resume();
-
-            this.sonando = true;
-            setTimeout(() => { this.sonando = false; }, 5200);
-
-            const t0 = this.audio.currentTime;
-            const ciclos = 6;
-            const dur = 0.8;
-
-            for (let i = 0; i < ciclos; i++) {
-                const t = t0 + i * dur;
-
-                const osc = this.audio.createOscillator();
-                const vol = this.audio.createGain();
-
-                osc.type = 'sawtooth';
-                // El barrido: sube y baja, como una sirena de verdad.
-                osc.frequency.setValueAtTime(600, t);
-                osc.frequency.linearRampToValueAtTime(1200, t + dur / 2);
-                osc.frequency.linearRampToValueAtTime(600, t + dur);
-
-                vol.gain.setValueAtTime(0.0001, t);
-                vol.gain.exponentialRampToValueAtTime(0.85, t + 0.05);
-                vol.gain.setValueAtTime(0.85, t + dur - 0.1);
-                vol.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-
-                osc.connect(vol).connect(this.audio.destination);
-                osc.start(t);
-                osc.stop(t + dur);
-            }
-        },
-    }"
-    x-on:emergencia-nueva.window="alarma()"
+    wire:poll.15s.keep-alive="comprobar"
+    x-data="alarmaDeEmergencia()"
+    x-init="escucharEmergencias()"
+    x-on:emergencia-nueva.window="dispararAlarma()"
 >
-    {{-- Mientras el sonido no este activado se pide una vez, en cualquier
-         pagina: el navegador no deja reproducir audio sin una interaccion
-         previa, y si no se avisa, la alarma queda muda sin que nadie lo sepa. --}}
+    {{-- Mientras el navegador no este dejando sonar se pide en cualquier
+         pagina. `listo` sale del estado real del AudioContext, asi que este
+         boton reaparece solo si el audio se suspende: antes se escondia para
+         siempre en cuanto `localStorage` decia que ya se habia activado, y la
+         alarma quedaba muda sin que nadie lo supiera. --}}
     <div x-show="!listo" x-cloak
          style="position:fixed; right:1rem; bottom:1rem; z-index:50;">
         <button type="button" x-on:click="activar()"
@@ -94,7 +38,8 @@
     </div>
 
     {{-- Aviso flotante cuando suena: el sonido solo no dice que pasa ni donde
-         mirar. --}}
+         mirar. Se dibuja aunque el audio este bloqueado -- una emergencia que no
+         suena tiene que verse. --}}
     <div x-show="sonando" x-cloak
          style="position:fixed; left:50%; top:1rem; transform:translateX(-50%);
                 z-index:60; background:#b91c1c; color:#fff; border-radius:.75rem;
@@ -105,6 +50,13 @@
             <span x-text="$wire.abiertas"></span> sin atender ·
             <a href="{{ \App\Filament\Resources\AlertasResource::getUrl('index') }}"
                style="color:#fff; text-decoration:underline;">Ver alertas</a>
+        </div>
+        <div x-show="!listo" x-cloak
+             style="font-weight:500; font-size:.75rem; margin-top:.4rem;">
+            El navegador tiene el sonido bloqueado ·
+            <button type="button" x-on:click="activar()"
+                    style="background:none; border:0; color:#fff; text-decoration:underline;
+                           cursor:pointer; font:inherit;">Activar</button>
         </div>
     </div>
 </div>

@@ -150,6 +150,17 @@ class AdminPanelProvider extends PanelProvider
              * Turnos **no sonaba**: no habia nada montado que la detectara. Con
              * el render hook, el componente viaja con el panel entero.
              */
+            /*
+             * La logica de audio de la alarma, compartida por el widget del
+             * tablero y el componente global. Iba copiada en los dos y por eso
+             * el mismo fallo volvio cuatro veces. En HEAD_END para que la
+             * funcion exista antes de que Alpine monte cualquier `x-data`.
+             */
+            ->renderHook(
+                \Filament\View\PanelsRenderHook::HEAD_END,
+                fn (): \Illuminate\Contracts\View\View => view('partials.alarma-de-emergencia-js'),
+            )
+
             ->renderHook(
                 \Filament\View\PanelsRenderHook::BODY_END,
                 /*

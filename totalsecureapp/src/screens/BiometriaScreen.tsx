@@ -34,10 +34,16 @@ export const BiometriaScreen = ({ navigation, route }: { navigation: any; route?
   const { institucion } = useAuth();
   // Se llega acá de dos formas: desde el menú, para marcar en cualquier momento,
   // o recién elegido el local al empezar la jornada. En el segundo caso no hay
-  // pantalla anterior a la que volver: lo que sigue es el menú.
+  // pantalla anterior a la que volver.
+  //
+  // Al arrancar la jornada lo que sigue es el **inventario**, no el menú: recibir
+  // el puesto es contar lo que hay en él, y dejarlo para después significa que se
+  // cuenta tarde o no se cuenta. El menú viene luego, desde el propio inventario.
   const alIniciarJornada: boolean = route?.params?.alIniciarJornada === true;
   const continuar = () =>
-    alIniciarJornada ? navigation.replace('Home') : navigation.goBack();
+    alIniciarJornada
+      ? navigation.replace('Inventario', { alIniciarJornada: true })
+      : navigation.goBack();
   const [isEntrada, setIsEntrada] = useState(true);
   const [showCamera, setShowCamera] = useState(false);
   const [photo, setPhoto] = useState<{ uri: string } | null>(null);
@@ -193,7 +199,7 @@ export const BiometriaScreen = ({ navigation, route }: { navigation: any; route?
             // Un guardia que ya marcó, o que no puede marcar ahora, no puede
             // quedarse encerrado en esta pantalla sin llegar a su trabajo.
             <TouchableOpacity
-              onPress={() => navigation.replace('Home')}
+              onPress={continuar}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
               <Text style={styles.omitir}>Omitir</Text>

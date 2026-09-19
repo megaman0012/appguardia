@@ -109,7 +109,7 @@ export const NovedadListScreen = ({ navigation }: { navigation: any }) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backText}>‹ Volver</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Bitácora</Text>
+        <Text style={styles.title}>Novedades</Text>
       </View>
 
       <View style={styles.filtros}>

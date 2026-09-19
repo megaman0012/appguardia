@@ -415,6 +415,25 @@ class EtlV1
                     $fila['ac_bicicleta'] = true;
                 }
 
+                /*
+                 * ⚠️ `ac_estado_acceso` NO existe en v1, y la columna de v2 tiene
+                 * `default('en_curso')`.
+                 *
+                 * Sin esta linea cada fila importada entraba como «en curso»
+                 * aunque su salida estuviera registrada, y «Personas dentro»
+                 * mostraba **9.769 de 9.776 accesos**: la pantalla quedo
+                 * inservible y nadie volvio a mirarla. La regla es la misma que
+                 * ya usa la migracion `2026_08_21_100002_acceso_generalizado_migrate_data`,
+                 * que relleno bien lo que habia entonces; el ETL corrio tres
+                 * semanas despues y no la aplico.
+                 *
+                 * Se toma `ac_is_entrada` del ORIGEN y no de `$fila`, que es lo
+                 * mismo aqui pero deja explicito de donde sale el dato.
+                 */
+                $fila['ac_estado_acceso'] = ((int) $origen->ac_is_entrada === 1)
+                    ? 'en_curso'
+                    : 'completada';
+
                 return $fila;
             }
         );

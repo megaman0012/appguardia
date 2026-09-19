@@ -134,12 +134,62 @@ class PanelConSesionTest extends TestCase
             $html = $this->get($ruta)->getContent();
 
             $this->assertStringContainsString(
-                'alarma()',
+                'alarmaDeEmergencia()',
                 $html,
                 "La alarma de emergencia no esta montada en {$ruta}: una emergencia "
                 . 'que entre mientras se trabaja en esa pantalla no sonaria.'
             );
         }
+    }
+
+    /**
+     * El sondeo tiene que llevar `keep-alive`, y no es un detalle.
+     *
+     * ⚠️ Livewire **descarta el 95% de los sondeos cuando la pestana esta en
+     * segundo plano** si al `wire:poll` le falta ese modificador:
+     *
+     *     throttleWhile(() => theTabIsInTheBackground() && theDirectiveIsMissingKeepAlive(directive))
+     *     ...
+     *     if (throttleConditions.some(i => i()) && Math.random() < 0.95) return;
+     *
+     * A 15 s eso es una comprobacion cada cinco minutos de media. Y el panel de
+     * un operador esta de fondo casi todo el tiempo, que es justo cuando una
+     * emergencia importa: la alarma llegaba tarde o no llegaba.
+     */
+    public function test_el_sondeo_de_la_alarma_sigue_vivo_con_la_pestana_de_fondo(): void
+    {
+        $html = $this->get('/admin/users')->getContent();
+
+        $this->assertStringContainsString(
+            'wire:poll.15s.keep-alive',
+            $html,
+            'Sin keep-alive, Livewire descarta el 95% de los sondeos con la pestana en '
+            . 'segundo plano y la emergencia no suena.'
+        );
+    }
+
+    /**
+     * El aviso visual no puede depender de que el audio funcione.
+     *
+     * La version anterior salia por `return` al principio si el AudioContext no
+     * estaba listo, asi que cuando el navegador tenia el sonido bloqueado **no
+     * se dibujaba nada**: ni sonido ni cartel. Una emergencia que no suena tiene
+     * que verse.
+     */
+    public function test_el_cartel_de_emergencia_no_depende_del_audio(): void
+    {
+        $html = $this->get('/admin/users')->getContent();
+
+        $pos = strpos($html, 'dispararAlarma() {');
+        $this->assertNotFalse($pos, 'no se encontro la funcion de la alarma');
+
+        $cuerpo = substr($html, $pos, 260);
+
+        $this->assertStringContainsString(
+            'this.sonando = true;',
+            $cuerpo,
+            'el cartel tiene que ponerse antes de intentar sonar, no despues'
+        );
     }
 
     public function test_la_alarma_pide_activarse_una_vez(): void

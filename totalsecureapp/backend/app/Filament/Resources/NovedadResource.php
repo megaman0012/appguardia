@@ -39,22 +39,29 @@ class NovedadResource extends Resource
     // tabla vacia. Sin declararlo los deriva del nombre de la clase, y sale
     // «Producto Catalogos» o «User Has Biometrias».
     /*
-     * Se llama «Bitacora» aunque el modelo y la tabla sigan siendo `novedad`.
+     * Se llama «Novedades», que es como quedo acordado con el cliente el
+     * 2026-09-19. Coincide con el modelo y la tabla, que siempre fueron
+     * `novedad`.
      *
-     * Habia DOS modulos para lo mismo: `BitacoraResource` sobre la tabla
-     * `bitacora` --misma estructura exacta: usuario, local, observacion, foto,
-     * fecha, coordenadas-- y este sobre `novedad`. La bitacora estaba **vacia,
-     * 0 filas**, su controlador de la API no tenia ni rutas registradas, y la
-     * app movil nunca la uso. Todo lo real vive en `novedad`.
+     * **Historia, porque explica por que el nombre iba y venia.** Habia DOS
+     * modulos para lo mismo: `BitacoraResource` sobre la tabla `bitacora`
+     * --misma estructura exacta: usuario, local, observacion, foto, fecha,
+     * coordenadas-- y este sobre `novedad`. La bitacora estaba **vacia, 0
+     * filas**, su controlador de la API no tenia ni rutas registradas, y la app
+     * movil nunca la uso. Todo lo real vive en `novedad`. Se quito el duplicado
+     * y este tomo el nombre «Bitacora» porque era el que se usaba entonces;
+     * ahora la operacion prefiere «Novedades».
      *
-     * Asi que se quito el recurso duplicado y este toma el nombre que la
-     * operacion usa. **No se renombro la tabla a proposito**: eso obligaria a
-     * tocar el modelo, la API que ya usan las tablets y los registros que ya
-     * existen, sin ganar nada -- el nombre que ve la gente es este.
+     * ⚠️ **No confundir con el canal de avisos `bitacora`** de `AvisoResource` y
+     * `App\Services\Avisos\CanalBitacora`: ese es otra cosa --dejar constancia
+     * de un aviso que no salio por WhatsApp ni por push-- y conserva su nombre.
+     *
+     * La tabla y la ruta de la API siguen diciendo `novedad`: son el contrato
+     * con las tablets y no se tocan por una etiqueta.
      */
-    protected static ?string $modelLabel = 'registro de bitácora';
-    protected static ?string $pluralModelLabel = 'registros de bitácora';
-    protected static ?string $navigationLabel = 'Bitácora';
+    protected static ?string $modelLabel = 'novedad';
+    protected static ?string $pluralModelLabel = 'novedades';
+    protected static ?string $navigationLabel = 'Novedades';
     protected static ?int $navigationSort = 5;
     protected static ?string $model = Novedad::class;
 

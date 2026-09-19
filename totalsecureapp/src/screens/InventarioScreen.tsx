@@ -50,7 +50,20 @@ export interface ListaInventario {
   }>;
 }
 
-export const InventarioScreen = ({ navigation }: { navigation: any }) => {
+export const InventarioScreen = ({ navigation, route }: { navigation: any; route?: any }) => {
+  /*
+   * Se llega acá de dos formas: desde el menú, o en el arranque de la jornada
+   * justo después de la marcación biométrica.
+   *
+   * ⚠️ En el arranque **no hay pantalla anterior**: todo el recorrido de entrada
+   * va con `replace` (login → perfil → local → biometría → inventario), así que
+   * un `goBack()` no hace nada y el guardia se queda encerrado acá sin llegar al
+   * menú. Por eso en ese caso la flecha lleva al Home en vez de volver.
+   */
+  const alIniciarJornada: boolean = route?.params?.alIniciarJornada === true;
+  const salir = () =>
+    alIniciarJornada ? navigation.replace('Home') : navigation.goBack();
+
   const { institucion } = useAuth();
   const [listas, setListas] = useState<ListaInventario[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +95,13 @@ export const InventarioScreen = ({ navigation }: { navigation: any }) => {
 
   return (
     <View style={styles.container}>
-      <Encabezado titulo="Inventario" onVolver={() => navigation.goBack()} />
+      <Encabezado
+        titulo="Inventario"
+        onVolver={salir}
+        // Al arrancar la jornada esto no es «volver», es «ya conté, déjame
+        // trabajar»: la flecha confundiría.
+        iconoVolver={alIniciarJornada ? '✓' : undefined}
+      />
 
       {loading ? (
         <View style={styles.center}>

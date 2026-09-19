@@ -27,10 +27,11 @@ export const MODULOS: Modulo[] = [
   { pantalla: 'Biometria', titulo: 'Biometría', icono: '🕐', permiso: 'biometria.marcar' },
   { pantalla: 'RondaList', titulo: 'Rondas', icono: '🚶', permiso: 'rondas.ver' },
   { pantalla: 'AccesoList', titulo: 'Accesos', icono: '🚪', permiso: 'acceso.ver' },
-  // Se llama «Bitácora», que es como lo nombra la operación. La ruta y el
-  // permiso siguen diciendo «novedad» porque son los de la API y la base: un
-  // cambio de etiqueta no justifica tocar el contrato con el servidor.
-  { pantalla: 'NovedadList', titulo: 'Bitácora', icono: '📝', permiso: 'novedades.ver' },
+  // «Novedades» desde el 2026-09-19, acordado con el cliente; antes decía
+  // «Bitácora». La ruta y el permiso siempre dijeron «novedad», que es lo que
+  // usan la API y la base: un cambio de etiqueta no justifica tocar el contrato
+  // con el servidor.
+  { pantalla: 'NovedadList', titulo: 'Novedades', icono: '📝', permiso: 'novedades.ver' },
   { pantalla: 'Alertas', titulo: 'Alertas', icono: '🚨', permiso: 'alertas.ver' },
   { pantalla: 'Vacantes', titulo: 'Turnos disponibles', icono: '📅', permiso: 'vacantes.ver' },
   { pantalla: 'Perfil', titulo: 'Perfil', icono: '👤', permiso: 'perfil.ver' },
