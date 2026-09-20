@@ -2,9 +2,12 @@
 
 namespace App\Filament\Pages;
 
+use App\Exports\ResumenDeInventarioExport;
 use App\Services\Inventario\ResumenDeInventario;
 use App\Support\PerfilPanel;
+use Filament\Actions\Action;
 use Filament\Pages\Page;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
 use Modules\Administracion\Models\ProductoCatalogo;
 
@@ -49,6 +52,45 @@ class ResumenDeInventarioPage extends Page
     public static function canAccess(): bool
     {
         return PerfilPanel::puedeOperar();
+    }
+
+    /**
+     * El boton de descarga de la cabecera.
+     *
+     * ⚠️ No usa `App\Filament\Tables\Descarga`: ese helper exporta la consulta
+     * Eloquent de un `Resource` con `fromTable()`, y aca no hay consulta que
+     * exportar -- cada celda es una suma calculada en PHP.
+     */
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('descargar')
+                ->label('Descargar')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('gray')
+                ->action(fn () => $this->descargar()),
+        ];
+    }
+
+    public function descargar(): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $filas = $this->filas();
+
+        /*
+         * El archivo lleva el desglose de TODOS los clientes, no solo el que
+         * este abierto en pantalla: en un Excel no hay donde pulsar, y bajarse
+         * los totales pelados obliga a volver al panel para cada pregunta.
+         */
+        $desgloses = [];
+
+        foreach ($filas as $f) {
+            $desgloses[$f['org_code']] = $this->desgloseDe($f['org_code']);
+        }
+
+        return Excel::download(
+            new ResumenDeInventarioExport($filas, $desgloses, $this->productos(), $this->totales()),
+            'resumen-inventario-' . now()->format('Ymd-His') . '.xlsx',
+        );
     }
 
     /** Abre y cierra el desglose de un cliente. */
@@ -114,17 +156,19 @@ class ResumenDeInventarioPage extends Page
         return array_values($filas);
     }
 
-    /** El desglose por local del cliente abierto. */
+    /** El desglose por local del cliente abierto en pantalla. */
     public function desglose(): array
     {
-        if ($this->abierto === null) {
-            return [];
-        }
+        return $this->abierto === null ? [] : $this->desgloseDe($this->abierto);
+    }
 
+    /** El desglose por local de un cliente cualquiera. Lo usa tambien la descarga. */
+    public function desgloseDe(int $orgCode): array
+    {
         $filas = [];
 
         foreach (app(ResumenDeInventario::class)
-            ->porLocalYProducto($this->abierto, PerfilPanel::localesVisibles()) as $d) {
+            ->porLocalYProducto($orgCode, PerfilPanel::localesVisibles()) as $d) {
             $ins = (int) $d->ins_code;
 
             $filas[$ins] ??= ['nombre' => $d->ins_descripcion, 'celdas' => [], 'total' => 0.0];

@@ -133,6 +133,46 @@ class ResumenDeInventarioPantallaTest extends TestCase
             ->assertSee('ts-alerta', false);
     }
 
+    /**
+     * La descarga produce un archivo, y con el desglose dentro.
+     *
+     * ⚠️ En pantalla el desglose por local se abre al pulsar la fila. **En un
+     * Excel no hay dónde pulsar**, así que el archivo lleva el desglose de
+     * todos los clientes: bajarse los totales pelados obligaría a volver al
+     * panel para cada pregunta.
+     */
+    public function test_la_descarga_genera_un_excel_con_el_desglose(): void
+    {
+        \Maatwebsite\Excel\Facades\Excel::fake();
+
+        // El nombre lleva la marca de tiempo, así que se congela el reloj para
+        // poder afirmarlo exacto.
+        \Carbon\Carbon::setTestNow('2026-09-20 10:30:00');
+
+        Livewire::test(ResumenDeInventarioPage::class)
+            ->callAction('descargar');
+
+        \Maatwebsite\Excel\Facades\Excel::assertDownloaded('resumen-inventario-20260920-103000.xlsx');
+
+        \Carbon\Carbon::setTestNow();
+    }
+
+    public function test_el_archivo_lleva_los_locales_y_no_solo_los_totales(): void
+    {
+        $pagina = new ResumenDeInventarioPage();
+        $filas  = $pagina->filas();
+
+        // El cliente 1 tiene dos locales: tienen que estar en el desglose que
+        // se manda al Excel, esté o no abierta la fila en pantalla.
+        $desglose = $pagina->desgloseDe(1);
+
+        $this->assertCount(2, $desglose);
+        $this->assertSame(
+            ['Garita Norte', 'Garita Sur'],
+            collect($desglose)->pluck('nombre')->sort()->values()->all(),
+        );
+    }
+
     public function test_sin_asignacion_declarada_no_se_dibuja_la_comparacion(): void
     {
         // Un «/ 0» se leería como un error de datos, no como «nadie lo declaró».
