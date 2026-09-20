@@ -56,6 +56,22 @@ class AdminPanelProvider extends PanelProvider
         return $panel
             ->default()
             ->id('admin')
+
+            /*
+             * El tema propio. Ver `resources/css/filament/admin/theme.css`.
+             *
+             * ⚠️ **El CSS compilado (`public/build/`) va versionado.** Aca el
+             * arbol de trabajo *es* produccion y desplegar es `git pull`. Si
+             * esto dependiera de que `npm run build` corra en el servidor, un
+             * fallo de compilacion no dejaria el panel «sin estilos»: Filament
+             * busca el manifiesto de Vite y, si no esta, **revienta con un 500
+             * en todas las paginas**. Versionando el resultado, `npm` solo hace
+             * falta para cambiar el tema, no para servirlo.
+             *
+             * Al tocar el CSS: `npm run build` y commitear `public/build/`.
+             * `ElTemaEstaCompiladoTest` comprueba que el manifiesto exista.
+             */
+            ->viteTheme('resources/css/filament/admin/theme.css')
             ->path(env('FILAMENT_PATH', 'admin'))
             ->homeUrl('/')
             ->brandName(env('APP_NAMES', 'Total Secure'))

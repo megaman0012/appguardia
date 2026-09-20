@@ -136,6 +136,54 @@ marcaje de un local sin marcadores. Hoy no se bloquea. Lo que hay que mirar ante
 es cuantas filas salen con `verificada = false`; si son muchas, el problema es la
 carga de datos y no la regla.
 
+## El tema del panel se COMPILA (desde el 2026-09-19)
+
+Hasta ahora este proyecto **no compilaba CSS**: `package.json` traia
+`laravel-mix` de la epoca de Laravel 8 sin nada que construir, y solo existian
+las clases de la hoja precompilada que publica `php artisan filament:assets`.
+Por eso los widgets llevan estilos en linea.
+
+Ahora hay un tema propio de Filament con **Vite + Tailwind 4**:
+
+| | |
+|---|---|
+| Fuente | `backend/resources/css/filament/admin/theme.css` |
+| Compilado | `backend/public/build/` — **versionado** |
+| Registro | `->viteTheme(...)` en `AdminPanelProvider` |
+| Comando | `npm run build` (desde `backend/`) |
+
+⚠️ **Desplegar NO cambia: sigue siendo `git pull` + `filament:assets`.** El CSS
+compilado va en git a proposito, con una excepcion explicita en el `.gitignore`
+de la raiz (que tiene `**/build/`). El motivo: aca el arbol de trabajo *es*
+produccion, y si el panel dependiera de que `npm run build` corriera bien en el
+servidor, un fallo de compilacion no lo dejaria «sin estilos» --Filament busca
+el manifiesto de Vite y **sin el revienta con un 500 en TODAS las paginas**--.
+
+⚠️ **Al tocar el tema hay que compilar y commitear el resultado:**
+
+    cd backend && npm run build && git add public/build resources/css
+
+`ElTemaEstaCompiladoTest` lo verifica: comprueba que el manifiesto exista, que
+apunte a un archivo presente, y que **el fuente no sea mas nuevo que el
+compilado**. Ese ultimo caza el error real -- alguien toca el tema, lo ve bien
+con `npm run dev` porque recompila al vuelo, y sube solo el fuente.
+
+⚠️ **`public/hot` no puede llegar a produccion.** Lo crea `npm run dev`; si
+existe, Filament pide los assets a un `localhost:5173` que aqui no responde y el
+panel queda sin estilos. Esta en el `.gitignore` y hay un test que lo comprueba.
+
+**Las clases propias van con prefijo `ts-`** para distinguirlas de las de
+Filament y no chocar si alguna version suya agrega una con el mismo nombre. Las
+que hay (`ts-matriz`, `ts-num`, `ts-hija`, `ts-scroll-x`, `ts-alerta`,
+`ts-sangria`) son las del resumen de inventario.
+
+⚠️ **El color primario NO se pone en el rojo de marca**, y no es un olvido: ese
+rojo (#C0172C) es practicamente el mismo que Filament usa para `danger`, asi que
+«Guardar» y «Eliminar» quedarian del mismo color en un panel donde se borran
+registros. Si se quiere la marca, va en la cabecera y el logotipo. Ademas, las
+variables de `@theme` que ningun utility usa **Tailwind 4 las descarta**: no
+sirve declarar una escala de color ahi y esperar que aparezca.
+
 ## Inventario: un solo juego de tablas (arreglado el 2026-09-07)
 
 **El guardia escribia en unas tablas y el panel leia otras.** FASE1 diseño el

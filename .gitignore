@@ -6,6 +6,24 @@ node_modules/
 vendor/
 **/build/
 
+# ⚠️ EXCEPCION: el CSS compilado del tema del panel SI se versiona.
+#
+# `**/build/` de arriba caza `backend/public/build/`, que es donde Vite deja el
+# tema de Filament. Aca el arbol de trabajo *es* produccion y desplegar es
+# `git pull`: si el panel dependiera de que `npm run build` corra en el
+# servidor, un fallo de compilacion no lo dejaria «sin estilos» --Filament busca
+# el manifiesto de Vite y sin el revienta con un 500 en todas las paginas--.
+# Versionando el resultado, `npm` solo hace falta para CAMBIAR el tema.
+#
+# Son ~620 KB de un archivo que solo cambia cuando alguien toca el tema.
+!totalsecureapp/backend/public/build/
+!totalsecureapp/backend/public/build/**
+
+# Lo que NO se versiona: el marcador del servidor de desarrollo de Vite. Si este
+# archivo llegara a produccion, Filament pediria los assets a un `localhost:5173`
+# que no existe y el panel quedaria sin estilos.
+totalsecureapp/backend/public/hot
+
 # ⚠️ `vendor/` de arriba caza CUALQUIER carpeta con ese nombre a cualquier
 # profundidad, y eso incluye `resources/views/vendor` -- las vistas de paquetes
 # que sobrescribimos, que son codigo nuestro y no dependencias. Ya se colo una

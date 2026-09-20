@@ -127,9 +127,10 @@ class ResumenDeInventarioPantallaTest extends TestCase
             'isc_activo' => true, 'isc_created_at' => now(),
         ]);
 
-        // Repartidas 5 sobre 3 asignadas: el rojo es lo que pide acción.
+        // Repartidas 5 sobre 3 asignadas: el rojo es lo que pide acción. La
+        // clase viene del tema propio, ya no es un estilo en línea.
         Livewire::test(ResumenDeInventarioPage::class)
-            ->assertSee('#b91c1c', false);
+            ->assertSee('ts-alerta', false);
     }
 
     public function test_sin_asignacion_declarada_no_se_dibuja_la_comparacion(): void

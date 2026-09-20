@@ -1,0 +1,142 @@
+/*
+ * Tema propio del panel de Total Secure App.
+ *
+ * ⚠️ **Antes de esto el proyecto NO compilaba CSS.** Solo existía `laravel-mix`
+ * de la época de Laravel 8, sin Vite ni Tailwind, así que únicamente funcionaban
+ * las clases que ya venían en la hoja precompilada de Filament: cualquier clase
+ * inventada no existía, y por eso los widgets llevan estilos en línea.
+ *
+ * ⚠️ **El CSS compilado (`public/build/`) VA VERSIONADO, a propósito.** En este
+ * repositorio el árbol de trabajo *es* producción, y desplegar es `git pull`.
+ * Si el panel dependiera de que `npm run build` funcione en el servidor, un
+ * fallo de compilación lo dejaría sin estilos — o peor, sin manifiesto, que es
+ * un error 500. Versionando el resultado, desplegar sigue siendo `git pull` y
+ * `npm` solo hace falta para *cambiar* el tema, no para servirlo.
+ *
+ * Al tocar este archivo hay que correr `npm run build` y **commitear también
+ * `public/build/`**. Hay un test que comprueba que el manifiesto exista.
+ */
+
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../../app/Filament/**/*';
+@source '../../../../resources/views/filament/**/*';
+@source '../../../../app/Livewire/**/*';
+
+/*
+ * ── Sobre el color de marca ──────────────────────────────────────────────────
+ *
+ * **No se define aca, y no por olvido.**
+ *
+ * 1. Tailwind 4 **descarta las variables de `@theme` que ningun utility usa**,
+ *    asi que declarar una escala de color aca no produce absolutamente nada en
+ *    el compilado. Se comprobo: `grep marca-600` sobre el CSS generado daba 0.
+ * 2. El color primario de Filament se fija en el panel provider
+ *    (`->colors(['primary' => Color::hex('#C0172C')])`), que es otro mecanismo.
+ *
+ * ⚠️ **Y hay una razon para no ponerlo igualmente:** el rojo de marca (#C0172C,
+ * el del logotipo y el de los informes en PDF) es practicamente el mismo que
+ * Filament usa para `danger`. Con el primario en rojo, «Guardar» y «Eliminar»
+ * quedan del mismo color en un panel donde se borran registros. Si se quiere la
+ * marca en el panel, va en la cabecera y el logotipo, no en el color primario.
+ */
+
+/*
+ * ── Densidad de los listados ─────────────────────────────────────────────────
+ *
+ * Las pantallas de operación se leen en tablets y monitores de garita, casi
+ * siempre buscando una fila concreta entre muchas. Filament deja las filas
+ * cómodas para formularios; acá interesa que quepan más de un vistazo.
+ */
+.fi-ta-row .fi-ta-cell {
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
+}
+
+/*
+ * ── Utilidades propias ───────────────────────────────────────────────────────
+ *
+ * Lo que antes se escribía como estilo en línea en cada plantilla. Van con
+ * prefijo `ts-` para que se distingan de las de Filament y no choquen si alguna
+ * versión suya agrega una clase con el mismo nombre.
+ */
+
+/* Tabla de matriz (Resumen de inventario): cabecera fija al desplazar. */
+.ts-matriz {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.ts-matriz th {
+    position: sticky;
+    top: 0;
+    background: var(--color-white);
+    border-bottom: 2px solid var(--color-gray-300);
+    padding: 0.5rem 0.6rem;
+    white-space: nowrap;
+}
+
+.ts-matriz td {
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--color-gray-200);
+    white-space: nowrap;
+}
+
+.ts-matriz .ts-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Fila que se puede abrir. */
+.ts-matriz .ts-abrible {
+    cursor: pointer;
+}
+
+.ts-matriz .ts-abrible:hover {
+    background: var(--color-gray-50);
+}
+
+/* Fila de desglose, un nivel por debajo. */
+.ts-matriz .ts-hija td {
+    background: var(--color-gray-50);
+    color: var(--color-gray-600);
+    border-bottom-color: var(--color-gray-100);
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+}
+
+.ts-matriz .ts-hija .ts-sangria {
+    padding-left: 2.2rem;
+}
+
+/* El contenedor con scroll propio: sin esto una tabla ancha desplaza la página
+   entera de lado, y en tablet se pierde el menú. */
+.ts-scroll-x {
+    overflow-x: auto;
+}
+
+/* Un número que exige acción. */
+.ts-alerta {
+    color: var(--color-danger-600);
+    font-weight: 600;
+}
+
+.dark .ts-matriz th {
+    background: var(--color-gray-900);
+    border-bottom-color: var(--color-gray-700);
+}
+
+.dark .ts-matriz td {
+    border-bottom-color: var(--color-gray-800);
+}
+
+.dark .ts-matriz .ts-abrible:hover {
+    background: var(--color-gray-800);
+}
+
+.dark .ts-matriz .ts-hija td {
+    background: var(--color-gray-800);
+    color: var(--color-gray-300);
+    border-bottom-color: var(--color-gray-700);
+}
