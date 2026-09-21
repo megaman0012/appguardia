@@ -9,6 +9,52 @@ producción y no se hizo.
 
 ---
 
+## Estado al 2026-09-21
+
+**590 tests en verde.** Commits `854bc69` (descarga del resumen) y `81cecb6` (kit
+de puesto). Producción sana.
+
+### El kit de puesto
+
+Había **132 listas y 130 idénticas**: una plantilla copiada a mano, con erratas
+(`SEGURIDA FISICA` junto a `SEGURIDAD FISICA`). Dar inventario a un local nuevo
+eran ~22 interacciones; agregar un producto a todos, 132 ediciones.
+
+⚠️ **`inv_lista` e `inv_lista_item` conservan su forma**: son lo que lee la app
+del guardia y contra lo que se registran los 23.799 movimientos. El kit gobierna
+cómo se *escriben* las listas, no cómo se leen. Se descartó el diseño que las
+calculaba en vivo justo porque tocaba el camino operativo.
+
+⚠️ **Lo que costó acertar:** «modificada» se compara contra el kit **tal como
+estaba al aplicarlo** (`li_kit_huella`), no contra el kit actual. Comparar con el
+actual se rompe al agregar un producto al kit: las 132 listas pasan a diferir,
+todas quedan marcadas y el cambio no se propaga a ninguna. Y la **bandera**
+(«es una excepción declarada») es distinta de la **huella** («alguien editó
+esto»): mirar solo la huella dejaba pasar la excepción migrada. Los dos casos
+los cazaron tests.
+
+Migración aplicada: **132 listas → 2 kits**, 2 marcadas como apartadas (las dos
+«Oficina Garzota», sin forros de chaleco), 526 items y 23.799 movimientos
+intactos. La excepción ahora se ve: columna «Sigue al kit» y filtro en Listas.
+
+### «Stock por cliente»: eliminado
+
+Se creó el 19-sep y se quitó el 21 tras aclararlo con la operación: **no manejan
+stock ni bodega, solo tienen o no tienen**, y el equipo nuevo o dañado va a otros
+departamentos. No era bodega, no era la cifra del contrato, y como número
+derivable ya era «locales × 1». Nunca tuvo una fila.
+
+### Abierto, del propio análisis del inventario
+
+- **El circuito de equipo dañado o faltante no existe.** 814 detalles en «falta»,
+  **0 en «dañado»** y **0 movimientos de tipo «baja»** — los dos estados existen
+  en el modelo y nunca se han usado. Cuando algo se rompe no hay registro de a
+  qué departamento se entregó ni si llegó el reemplazo. Decidido dejarlo fuera
+  por ahora.
+- ⚠️ **«Entrada a Consulta Externa del Hospital…» acumula 360 de las 814 faltas:
+  el 44% en un solo puesto.** No parece pérdida aleatoria; o ese puesto nunca
+  tuvo el equipo que su lista exige, o hay algo sistemático. Sin mirar.
+
 ## Estado al 2026-09-19 (segunda jornada)
 
 **577 tests en verde.** Commits `1951624` (alarma), `5e22fc4` (catálogo global),
