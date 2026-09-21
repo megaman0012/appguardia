@@ -9,6 +9,46 @@ producción y no se hizo.
 
 ---
 
+## Estado al 2026-09-21 (cuarta jornada) — APK 1.0.8
+
+**618 tests en verde.** Commits `f57d03d`, `b3af040`.
+
+### ✅ APK 1.0.8 (versionCode 9) compilado y verificado
+
+`apk/TotalSecureApp-v1.0.8-prod-20260921.apk` (53 MB). Primera versión desde la
+1.0.7 del 17-sep; recoge lo que se venía acumulando:
+
+- «Bitácora» → **«Novedades»** en menú lateral, Home y título.
+- Tras la biometría de entrada sigue el **inventario**, no el menú.
+
+Verificado sobre el archivo publicado: versionCode 9, firma SHA-256 `e084fd69…`
+—**la misma desde la 1.0.0**, se instala encima sin desinstalar— y en el bundle
+aparece «Novedades» sin quedar ni un «Bitácora». Esa última comprobación es la
+que demuestra que salió del código actual y no de una compilación en caché.
+
+### Al guardia de prueba no le aparecía nada: eran los datos
+
+Se revisó la cadena entera y **el código estaba bien**. Tres condiciones sin
+cumplir, cada una deja la pantalla vacía **sin decir por qué**:
+
+1. El guardia no tenía **ni un turno** (la carga del 17-sep alcanzó a 25 de 269).
+2. Las 9 vacantes vigentes estaban en estado `detectada`, y `scopeAbiertas()`
+   solo trae las `abierta`.
+3. Y estaban en locales a los que **no está vinculado**, que es lo que exige
+   `VacanteService::motivoParaNoCubrir()`.
+
+`demo:turnos-y-cobertura` carga turnos y vacantes para un guardia concreto, todo
+marcado con «[DEMO]» y reversible con `--limpiar`.
+
+⚠️ **Y dos errores míos que sirven de aviso:** puse las vacantes en días que el
+guardia ya trabajaba (solapamiento), y al moverlas a sus días libres caían
+pegadas a un turno nocturno («descansaría solo 0h»). La solución no fue
+reimplementar las reglas sino **preguntárselas a `VacanteService`**. Además las
+calculaba **antes** de insertar los turnos, así que el servicio miraba una
+jornada vacía y las daba todas por buenas.
+
+Comprobado llamando a la API como el guardia: **6 turnos y 3 vacantes**.
+
 ## Estado al 2026-09-21 (tercera jornada)
 
 **609 tests en verde.** Commits `ff66a16`, `afcc2e4`. Producción sana.
