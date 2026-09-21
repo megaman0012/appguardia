@@ -9,6 +9,41 @@ producción y no se hizo.
 
 ---
 
+## Estado al 2026-09-21 (segunda jornada)
+
+**599 tests en verde.** Commit `37d5136`. Producción sana.
+
+### Locales puestos al día contra la lista final del cliente
+
+`locales:sincronizar` con `docs/locales-2026-09-21-0957.xlsx`:
+
+| | |
+|---|---|
+| Locales en el archivo | 84, todos existían ya |
+| Actualizados | 18 nombres, 42 ciudades, 11 clientes |
+| Desactivados | **91** (activos que no estaban en la lista) |
+| Cliente creado | CHILENITA |
+| Resultado | **84 activos**, 104 inactivos |
+
+✅ **Se cerró de paso el pendiente de los 51 locales sin cliente**: ya no queda
+ninguno activo sin asignar, así que el resumen del cliente se puede enseñar.
+
+⚠️ **Se desactivan, no se borran.** Un borrado habría fallado (40 vacantes con FK
+`NO ACTION`), destruido en cascada 3.388 movimientos con sus 6.802 detalles, y
+dejado **22.857 filas huérfanas** —18.707 vínculos, **2.741 biometrías**, 1.149
+rondas— porque esas tablas no tienen clave foránea al local. Eso no falla ni
+avisa: los reportes empiezan a mostrar vacíos.
+
+### Dos bugs que este trabajo destapó
+
+- ⚠️ **`allInstitucions` no miraba `ins_estado`**: el endpoint que le da los
+  locales a la tablet filtraba solo por el vínculo usuario-local, así que
+  desactivar un local **no lo quitaba de la pantalla del guardia**. Sin
+  arreglarlo, desactivar los 91 no habría servido de nada.
+- ⚠️ **El resumen de inventario contaba locales retirados**: 59 listas con 236
+  items colgando de puestos desactivados seguían sumando en el reporte del
+  cliente. Nadie lo habría notado — el número sale mayor, no roto.
+
 ## Estado al 2026-09-21
 
 **590 tests en verde.** Commits `854bc69` (descarga del resumen) y `81cecb6` (kit
