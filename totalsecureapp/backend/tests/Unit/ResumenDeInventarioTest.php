@@ -8,11 +8,12 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * Asignado contra distribuido: lo que antes no se podia responder.
+ * Cuánto equipo tiene repartido cada cliente, sumando las listas de sus locales.
  *
- * Las listas de cada local se llenan sin nada contra que contrastar, así que
- * repartir más equipo del que el cliente tiene asignado era **invisible** hasta
- * que alguien iba a buscar la cámara y no estaba.
+ * ⚠️ Hubo aquí una segunda cifra, «asignado», que salía de `inv_stock_cliente`.
+ * Se quitó el 2026-09-21: modelaba algo que este departamento no hace --no
+ * maneja stock ni bodega, solo tiene o no tiene-- y la tabla nunca llegó a tener
+ * una fila.
  */
 class ResumenDeInventarioTest extends TestCase
 {
@@ -68,14 +69,6 @@ class ResumenDeInventarioTest extends TestCase
         ]);
     }
 
-    private function asigna(int $org, int $producto, float $cant): void
-    {
-        DB::table('inv_stock_cliente')->insert([
-            'isc_org_code' => $org, 'isc_producto_id' => $producto,
-            'isc_cantidad' => $cant, 'isc_activo' => true, 'isc_created_at' => now(),
-        ]);
-    }
-
     private function escenario(): void
     {
         $this->cliente(1, 'JBGYE');
@@ -84,7 +77,6 @@ class ResumenDeInventarioTest extends TestCase
         $this->local(101, 1);
         $this->local(102, 1);
 
-        $this->asigna(1, 10, 5);
         $this->reparte(101, 10, 2);
         $this->reparte(102, 10, 3);
     }
@@ -95,24 +87,7 @@ class ResumenDeInventarioTest extends TestCase
 
         $f = $this->resumen->porClienteYProducto()->firstWhere('org_code', 1);
 
-        $this->assertEquals(5.0, $f->asignado);
         $this->assertEquals(5.0, $f->distribuido, '2 + 3 de los dos locales');
-        $this->assertEquals(0.0, $f->diferencia, 'cuadra');
-    }
-
-    /** El caso que justifica toda la entrega. */
-    public function test_detecta_que_se_repartio_mas_de_lo_asignado(): void
-    {
-        $this->escenario();
-
-        $this->local(103, 1);
-        $this->reparte(103, 10, 4);   // 2 + 3 + 4 = 9 sobre 5 asignadas
-
-        $f = $this->resumen->porClienteYProducto()->firstWhere('org_code', 1);
-
-        $this->assertEquals(9.0, $f->distribuido);
-        $this->assertEquals(-4.0, $f->diferencia,
-            'negativa significa que se repartió más de lo que el cliente tiene');
     }
 
     public function test_un_cliente_no_ve_lo_de_otro(): void
@@ -121,7 +96,6 @@ class ResumenDeInventarioTest extends TestCase
 
         $this->cliente(2, 'DHL');
         $this->local(201, 2);
-        $this->asigna(2, 10, 3);
         $this->reparte(201, 10, 3);
 
         $filas = $this->resumen->porClienteYProducto();
@@ -147,19 +121,6 @@ class ResumenDeInventarioTest extends TestCase
 
         $this->assertNotNull($f, 'los locales sin cliente tienen que aparecer, agrupados');
         $this->assertEquals(7.0, $f->distribuido);
-    }
-
-    public function test_aparece_lo_asignado_aunque_no_se_haya_repartido(): void
-    {
-        $this->cliente(1, 'JBGYE');
-        $this->producto(10, 'Cámara corporal');
-        $this->asigna(1, 10, 5);
-
-        $f = $this->resumen->porClienteYProducto()->firstWhere('org_code', 1);
-
-        $this->assertEquals(5.0, $f->asignado);
-        $this->assertEquals(0.0, $f->distribuido);
-        $this->assertEquals(5.0, $f->diferencia, 'cinco cámaras sin repartir todavía');
     }
 
     public function test_el_desglose_baja_al_local(): void

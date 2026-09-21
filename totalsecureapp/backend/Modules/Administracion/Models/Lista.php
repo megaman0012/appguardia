@@ -18,6 +18,11 @@ class Lista extends Model
     protected $fillable = [
         'li_id',
         'li_ins_code',
+        // De que kit salio esta lista, y si se aparto de el. Ver
+        // App\Services\Inventario\AplicadorDeKit.
+        'li_kit_id',
+        'li_modificada',
+        'li_kit_huella',
         'li_nombre',
         'li_descripcion',
         'li_activo',
@@ -26,8 +31,14 @@ class Lista extends Model
     ];
 
     protected $casts = [
-        'li_activo' => 'boolean',
+        'li_activo'     => 'boolean',
+        'li_modificada' => 'boolean',
     ];
+
+    public function kit(): BelongsTo
+    {
+        return $this->belongsTo(Kit::class, 'li_kit_id', 'ki_id');
+    }
 
     public function institucion(): BelongsTo
     {

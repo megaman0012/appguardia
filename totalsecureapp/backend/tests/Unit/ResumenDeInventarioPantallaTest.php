@@ -119,20 +119,6 @@ class ResumenDeInventarioPantallaTest extends TestCase
             ->assertSee('7');
     }
 
-    /** Cuando hay asignación declarada, la comparación tiene que verse. */
-    public function test_marca_cuando_se_repartio_mas_de_lo_asignado(): void
-    {
-        DB::table('inv_stock_cliente')->insert([
-            'isc_org_code' => 1, 'isc_producto_id' => 10, 'isc_cantidad' => 3,
-            'isc_activo' => true, 'isc_created_at' => now(),
-        ]);
-
-        // Repartidas 5 sobre 3 asignadas: el rojo es lo que pide acción. La
-        // clase viene del tema propio, ya no es un estilo en línea.
-        Livewire::test(ResumenDeInventarioPage::class)
-            ->assertSee('ts-alerta', false);
-    }
-
     /**
      * La descarga produce un archivo, y con el desglose dentro.
      *
@@ -147,12 +133,12 @@ class ResumenDeInventarioPantallaTest extends TestCase
 
         // El nombre lleva la marca de tiempo, así que se congela el reloj para
         // poder afirmarlo exacto.
-        \Carbon\Carbon::setTestNow('2026-09-20 10:30:00');
+        \Carbon\Carbon::setTestNow('2026-09-21 10:30:00');
 
         Livewire::test(ResumenDeInventarioPage::class)
             ->callAction('descargar');
 
-        \Maatwebsite\Excel\Facades\Excel::assertDownloaded('resumen-inventario-20260920-103000.xlsx');
+        \Maatwebsite\Excel\Facades\Excel::assertDownloaded('resumen-inventario-20260921-103000.xlsx');
 
         \Carbon\Carbon::setTestNow();
     }
@@ -160,7 +146,6 @@ class ResumenDeInventarioPantallaTest extends TestCase
     public function test_el_archivo_lleva_los_locales_y_no_solo_los_totales(): void
     {
         $pagina = new ResumenDeInventarioPage();
-        $filas  = $pagina->filas();
 
         // El cliente 1 tiene dos locales: tienen que estar en el desglose que
         // se manda al Excel, esté o no abierta la fila en pantalla.
@@ -171,12 +156,5 @@ class ResumenDeInventarioPantallaTest extends TestCase
             ['Garita Norte', 'Garita Sur'],
             collect($desglose)->pluck('nombre')->sort()->values()->all(),
         );
-    }
-
-    public function test_sin_asignacion_declarada_no_se_dibuja_la_comparacion(): void
-    {
-        // Un «/ 0» se leería como un error de datos, no como «nadie lo declaró».
-        Livewire::test(ResumenDeInventarioPage::class)
-            ->assertDontSee('/ 0');
     }
 }

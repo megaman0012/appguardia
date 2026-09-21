@@ -13,6 +13,7 @@ use Filament\Schemas\Schema;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Table;
 use Filament\Tables;
+use App\Services\Inventario\AplicadorDeKit;
 use Filament\Actions\CreateAction;
 use Filament\Tables\Columns\BooleanColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -107,6 +108,7 @@ class InvProductosRelationManager extends RelationManager
         ])
         ->actions([
             Actions\EditAction::make()
+                ->after($this->marcarApartadaDelKit(...))
             ->mutateFormDataUsing(function (array $data): array {
                 // Antes decia 'im_updated_user', que no es columna de esta tabla:
                 // la auditoria de quien editaba se perdia en silencio.
@@ -119,6 +121,7 @@ class InvProductosRelationManager extends RelationManager
         ])
         ->headerActions([
             CreateAction::make()
+                ->after($this->marcarApartadaDelKit(...))
             ->label('Agregar Producto')
             ->mutateFormDataUsing(function (array $data): array {
                 $data['lia_created_user'] = auth()->id();
@@ -130,5 +133,20 @@ class InvProductosRelationManager extends RelationManager
             }),
         ])
         ->bulkActions([]);
+    }
+
+    /**
+     * Tocar los productos de una lista la aparta de su kit.
+     *
+     * ⚠️ Sin esto, la siguiente vez que alguien pulse «Aplicar a locales» el
+     * kit **pisaría este cambio en silencio**: la lista se vería igual a las
+     * demás y nada indicaría que ese puesto era distinto a propósito.
+     *
+     * Se recalcula comparando contenidos, no se confía en levantar una bandera
+     * a mano — una bandera que hay que acordarse de poner se olvida.
+     */
+    private function marcarApartadaDelKit(): void
+    {
+        app(AplicadorDeKit::class)->refrescarBandera($this->ownerRecord->fresh());
     }
 }

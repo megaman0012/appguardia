@@ -49,7 +49,7 @@ class InvListaProductoResource extends Resource
      * dispara una consulta por relacion (N+1): con 25 filas por pagina eran
      * 126 consultas en vez de 6.
      */
-    protected const RELACIONES_TABLA = ['institucion.cliente'];
+    protected const RELACIONES_TABLA = ['institucion.cliente', 'kit'];
     protected static string | \UnitEnum | null $navigationGroup = 'Inventario';
     protected static ?int $navigationSort = 2;
     // Filament arma con esto las migas, el boton «Crear …» y el aviso de
@@ -119,6 +119,30 @@ class InvListaProductoResource extends Resource
             TextColumn::make('li_nombre')->size('sm')
                 ->label('Nombre')
                 ->searchable(),
+            TextColumn::make('kit.ki_nombre')->size('sm')
+                ->label('Kit')
+                ->placeholder('sin kit')
+                ->toggleable(),
+            /*
+             * ⚠️ La columna que hace visible la excepcion.
+             *
+             * Antes un puesto con inventario distinto era **indistinguible** del
+             * resto: habia 132 listas, 130 identicas, y la unica forma de saber
+             * cual difería era abrirlas una por una. Una lista apartada ademas
+             * deja de recibir los cambios de su kit, asi que conviene que se vea
+             * de una pasada.
+             */
+            \Filament\Tables\Columns\TextColumn::make('li_modificada')->size('sm')
+                ->label('Sigue al kit')
+                ->badge()
+                ->state(fn ($record) => $record->li_kit_id === null
+                    ? '—'
+                    : ($record->li_modificada ? 'Apartada' : 'Sí'))
+                ->color(fn ($state) => match ($state) {
+                    'Apartada' => 'warning',
+                    'Sí'       => 'success',
+                    default    => 'gray',
+                }),
             TextColumn::make('li_descripcion')->size('sm')
                 ->label('Descripción')
                 ->searchable(),
@@ -140,6 +164,12 @@ class InvListaProductoResource extends Resource
         ])->filters([
     // Abre mostrando solo los activos. Ver App\Filament\Tables\FiltroDeEstado.
     FiltroDeEstado::make('li_activo', true, 'Estado'),
+    // Para dar con los puestos apartados sin recorrer las 132 listas.
+    \Filament\Tables\Filters\TernaryFilter::make('li_modificada')
+        ->label('Apartada del kit')
+        ->placeholder('Todas')
+        ->trueLabel('Solo apartadas')
+        ->falseLabel('Solo las que siguen al kit'),
 ])
 ->bulkActions([
                 Descarga::enLote('inv-lista-producto'),

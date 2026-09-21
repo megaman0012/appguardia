@@ -136,11 +136,7 @@ class ResumenDeInventarioPage extends Page
                 'total'    => 0.0,
             ];
 
-            $filas[$org]['celdas'][(int) $d->producto_id] = [
-                'asignado'    => (float) $d->asignado,
-                'distribuido' => (float) $d->distribuido,
-                'diferencia'  => (float) $d->diferencia,
-            ];
+            $filas[$org]['celdas'][(int) $d->producto_id] = (float) $d->distribuido;
 
             $filas[$org]['total'] += (float) $d->distribuido;
         }
@@ -185,9 +181,9 @@ class ResumenDeInventarioPage extends Page
         $t = ['general' => 0.0];
 
         foreach ($this->filas() as $f) {
-            foreach ($f['celdas'] as $prod => $c) {
-                $t[$prod] = ($t[$prod] ?? 0) + $c['distribuido'];
-                $t['general'] += $c['distribuido'];
+            foreach ($f['celdas'] as $prod => $cantidad) {
+                $t[$prod] = ($t[$prod] ?? 0) + $cantidad;
+                $t['general'] += $cantidad;
             }
         }
 

@@ -60,19 +60,7 @@ class ResumenDeInventarioExport implements FromArray, WithHeadings, WithStyles, 
             $fila = [$f['nombre']];
 
             foreach ($this->productos as $p) {
-                $c = $f['celdas'][$p->ipc_id] ?? null;
-
-                /*
-                 * Cuando hay asignacion declarada se escribe «repartido / asignado»,
-                 * igual que en pantalla. Se pone como TEXTO a proposito: un
-                 * «5 / 3» tiene que leerse como la comparacion que es, no
-                 * convertirse en una division.
-                 */
-                $fila[] = $c === null
-                    ? ''
-                    : ($c['asignado'] > 0
-                        ? ((int) $c['distribuido']) . ' / ' . ((int) $c['asignado'])
-                        : (int) $c['distribuido']);
+                $fila[] = isset($f['celdas'][$p->ipc_id]) ? (int) $f['celdas'][$p->ipc_id] : '';
             }
 
             $fila[] = (int) $f['total'];

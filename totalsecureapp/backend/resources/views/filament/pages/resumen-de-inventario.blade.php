@@ -52,20 +52,12 @@
                                 </td>
 
                                 @foreach ($productos as $p)
-                                    @php $c = $f['celdas'][$p->ipc_id] ?? null; @endphp
                                     <td class="ts-num">
-                                        @if ($c === null)
-                                            <span style="color:#9ca3af;">—</span>
+                                        @isset($f['celdas'][$p->ipc_id])
+                                            {{ (int) $f['celdas'][$p->ipc_id] }}
                                         @else
-                                            {{ (int) $c['distribuido'] }}
-                                            {{-- Solo se muestra la comparacion cuando alguien declaro
-                                                 una asignacion: si no, un «/0» pareceria un error. --}}
-                                            @if ($c['asignado'] > 0)
-                                                <span @class(['ts-alerta' => $c['diferencia'] < 0]) style="font-size:.72rem;{{ $c['diferencia'] < 0 ? '' : 'color:#6b7280;' }}">
-                                                    / {{ (int) $c['asignado'] }}
-                                                </span>
-                                            @endif
-                                        @endif
+                                            <span style="color:#9ca3af;">—</span>
+                                        @endisset
                                     </td>
                                 @endforeach
 
@@ -107,10 +99,8 @@
             </div>
 
             <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                Cada celda es lo <strong>repartido</strong> en las listas de los locales del cliente.
-                Cuando hay una asignación declarada en «Stock por cliente» se muestra
-                <em>repartido / asignado</em>, y el número se pone en rojo si se repartió de más.
-                Pulse una fila para ver el desglose por local.
+                Cada celda es lo que las listas de los locales de ese cliente dicen que
+                debe haber en el puesto. Pulse una fila para ver el desglose por local.
             </p>
         @endif
     </x-filament::card>
