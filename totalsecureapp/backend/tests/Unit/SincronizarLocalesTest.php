@@ -187,6 +187,44 @@ class SincronizarLocalesTest extends TestCase
         $this->assertSame('Manta', $l->ins_ciudad);
     }
 
+    /**
+     * ⚠️ Un local con turnos programados no se desactiva.
+     *
+     * Pasó de verdad el 2026-09-21: la lista dejaba fuera 4 locales con **268
+     * turnos, 134 de hoy en adelante**. `CerrarTurnosDelDia` solo recorre
+     * locales activos, así que esos turnos dejaron de cerrarse esa misma noche
+     * — sin error y sin aviso: el puesto simplemente desaparece del proceso.
+     *
+     * Una lista de locales puede venir incompleta; la programación de turnos es
+     * un hecho. Ante la contradicción gana el turno.
+     */
+    public function test_no_desactiva_un_local_con_turnos_programados(): void
+    {
+        $this->local(45, 'PAX');
+        $this->local(99, 'CON TURNOS');
+
+        $puesto = DB::table('puesto')->insertGetId([
+            'pu_ins_code' => 99, 'pu_nombre' => 'Garita', 'pu_estado' => 1,
+            'created_at' => now(), 'updated_at' => now(),
+        ], 'pu_id');
+
+        DB::table('turno')->insert([
+            'tu_usu_id' => 1, 'tu_ins_code' => 99, 'tu_puesto_id' => $puesto,
+            'tu_fecha' => now()->addDays(3)->toDateString(),
+            'tu_hora_inicio_prevista' => '07:00', 'tu_hora_fin_prevista' => '19:00',
+            'tu_estado' => 'programado', 'tu_state' => 1,
+            'tu_created_at' => now(), 'tu_updated_at' => now(),
+        ]);
+
+        $this->excel([['45', 'PAX', '', 'Ecuador', 'Guayaquil', '', '', '1']]);
+        $this->correr(['--ejecutar' => true]);
+
+        $this->assertTrue(
+            (bool) DB::table('organizacion_institucion')->where('ins_code', 99)->value('ins_estado'),
+            'desactivarlo lo sacaría del cierre diario de turnos sin que nada lo avise',
+        );
+    }
+
     public function test_la_simulacion_no_escribe(): void
     {
         $this->local(45, 'VIEJO');

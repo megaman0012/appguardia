@@ -182,9 +182,48 @@ class SincronizarLocalesCommand extends Command
         $this->line('  Se <options=bold>desactivan</>, no se borran. Ver la cabecera del comando: '
             . 'borrarlos dejaría 22.857 filas huérfanas, incluidas 2.741 biometrías.');
 
+        /*
+         * ⚠️ **Un local con turnos programados NO se desactiva.**
+         *
+         * Paso de verdad el 2026-09-21: la lista dejaba fuera 4 locales que
+         * tenian **268 turnos, 134 de ellos de hoy en adelante** --hasta el 4 de
+         * octubre--. `CerrarTurnosDelDia` solo recorre locales activos, asi que
+         * esos turnos **dejaron de cerrarse esa misma noche**, y nada lo
+         * anuncio: no hay error, simplemente el puesto desaparece del proceso.
+         *
+         * Una lista de locales puede venir incompleta; la programacion de turnos
+         * es un hecho. Ante la contradiccion gana el turno, y quien mande la
+         * lista que decida.
+         */
+        $conTurnos = (clone $aDesactivar)
+            ->whereIn('ins_code', function ($q) {
+                $q->select('p.pu_ins_code')
+                    ->from('puesto as p')
+                    ->join('turno as t', 't.tu_puesto_id', '=', 'p.pu_id');
+            })
+            ->get(['ins_code', 'ins_descripcion']);
+
+        if ($conTurnos->isNotEmpty()) {
+            $this->newLine();
+            $this->warn('  ⚠ ' . $conTurnos->count() . ' de ellos tienen TURNOS PROGRAMADOS y NO se tocan:');
+
+            foreach ($conTurnos as $l) {
+                $t = DB::table('turno as t')->join('puesto as p', 'p.pu_id', '=', 't.tu_puesto_id')
+                    ->where('p.pu_ins_code', $l->ins_code)->count();
+
+                $this->line("      {$l->ins_code}  {$l->ins_descripcion}  ({$t} turnos)");
+            }
+
+            $this->line('      Desactivarlos los sacaría del cierre diario de turnos sin avisar.');
+            $this->line('      Resuelva la contradicción entre la lista y la programación primero.');
+        }
+
         if ($ejecutar && $n > 0) {
-            (clone $aDesactivar)->update(['ins_estado' => false, 'updated_at' => now()]);
-            $this->info("  desactivados: {$n}");
+            $afectados = (clone $aDesactivar)
+                ->whereNotIn('ins_code', $conTurnos->pluck('ins_code'))
+                ->update(['ins_estado' => false, 'updated_at' => now()]);
+
+            $this->info("  desactivados: {$afectados}");
         }
 
         if (! $ejecutar) {
