@@ -9,6 +9,42 @@ producción y no se hizo.
 
 ---
 
+## Estado al 2026-09-21 (tercera jornada)
+
+**609 tests en verde.** Commits `ff66a16`, `afcc2e4`. Producción sana.
+
+### ⚠️ Un local con turnos programados no se desactiva
+
+Al aplicar la lista de locales quedaron fuera 4 locales con **268 turnos, 134 de
+hoy en adelante** (hasta el 4-oct). `CerrarTurnosDelDia` solo recorre locales
+activos, así que **esos turnos dejaron de cerrarse esa noche** — sin error y sin
+aviso. Reactivados (170, 120, 203, 151); quedan 88 activos y 0 turnos huérfanos.
+El comando ahora los detecta y no los toca.
+
+### Puestos al día
+
+`puestos:sincronizar`: 55 renombrados, 16 actualizados, 66 creados, 6
+desactivados. **148 puestos activos** (antes 84, uno por local). HOSPITAL LUIS
+VERNAZA pasa a 20 puestos y Cementerio General a 18. **558 turnos intactos.**
+
+⚠️ **Renombrar y no recrear** es lo que salva la programación: los puestos se
+generaron con el nombre del local y la lista les da nombre propio. Cuando sobra
+uno y falta uno, se renombra y conserva su `pu_id`. 55 de 137 casos.
+
+### 🔴 Abierto: los dos archivos se contradicen
+
+La lista de puestos nombra **103 locales, de los que 14 no existen**: son nombres
+**consolidados** (`SWISSPORT` por los cinco `SWISSPORT MATRIZ`/`CARGA`/…,
+`NEUROCIENCIAS` por sus dos garitas, `INC` por sus tres). Es la reorganización
+pospuesta, y **choca con la lista de locales**, que mantiene los sitios separados.
+
+Se decidió que manda la lista de locales: esos **40 puestos no se cargaron** y
+quedan en `docs/puestos-sin-local-2026-09-21.csv` con su motivo.
+
+**Si algún día se consolida**, es una migración de histórico: reasignar accesos,
+rondas, biometrías, turnos e inventario de los `ins_code` viejos al nuevo, y
+desactivar los viejos después. No es una carga.
+
 ## Estado al 2026-09-21 (segunda jornada)
 
 **599 tests en verde.** Commit `37d5136`. Producción sana.
