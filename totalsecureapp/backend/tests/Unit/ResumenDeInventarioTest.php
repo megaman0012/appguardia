@@ -35,11 +35,11 @@ class ResumenDeInventarioTest extends TestCase
         ]);
     }
 
-    private function local(int $ins, ?int $org): void
+    private function local(int $ins, ?int $org, bool $activo = true): void
     {
         DB::table('organizacion_institucion')->updateOrInsert(['ins_code' => $ins], [
             'ins_descripcion' => 'Local ' . $ins, 'ins_cliente_id' => $org,
-            'ins_estado' => 1, 'created_at' => now(), 'updated_at' => now(),
+            'ins_estado' => $activo, 'created_at' => now(), 'updated_at' => now(),
         ]);
     }
 
@@ -121,6 +121,28 @@ class ResumenDeInventarioTest extends TestCase
 
         $this->assertNotNull($f, 'los locales sin cliente tienen que aparecer, agrupados');
         $this->assertEquals(7.0, $f->distribuido);
+    }
+
+    /**
+     * ⚠️ Un local retirado no cuenta.
+     *
+     * Al retirar 91 locales contra la lista final del cliente quedaron 59
+     * listas con 236 items colgando de puestos desactivados. Sin filtrar, el
+     * reporte seguiría contando equipo donde ya no se opera — y nadie lo
+     * notaría, porque el número sale mayor, no roto.
+     */
+    public function test_un_local_desactivado_no_suma(): void
+    {
+        $this->escenario();
+
+        $this->local(103, 1, activo: false);
+        $this->reparte(103, 10, 9);
+
+        $f = $this->resumen->porClienteYProducto()->firstWhere('org_code', 1);
+
+        $this->assertEquals(5.0, $f->distribuido, 'las 9 del local retirado no deben contar');
+        $this->assertCount(2, $this->resumen->porLocalYProducto(1),
+            'el desglose tampoco debe mostrar el puesto retirado');
     }
 
     public function test_el_desglose_baja_al_local(): void

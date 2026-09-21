@@ -70,6 +70,17 @@ class ResumenDeInventario
             ->join('organizacion_institucion as i', 'i.ins_code', '=', 'l.li_ins_code')
             ->where('it.lia_activo', true)
             ->where('l.li_activo', true)
+            /*
+             * ⚠️ Solo locales activos.
+             *
+             * Al retirar 91 locales contra la lista final del cliente
+             * (2026-09-21) quedaron **59 listas con 236 items colgando de
+             * puestos desactivados**. Sin este filtro el reporte que se le
+             * entrega al cliente seguiria contando equipo en sitios donde ya no
+             * se opera -- y nadie lo notaria, porque el numero sale mayor, no
+             * roto.
+             */
+            ->where('i.ins_estado', true)
             ->select(
                 'i.ins_code',
                 'i.ins_descripcion',
@@ -96,6 +107,17 @@ class ResumenDeInventario
             ->join('organizacion_institucion as i', 'i.ins_code', '=', 'l.li_ins_code')
             ->where('it.lia_activo', true)
             ->where('l.li_activo', true)
+            /*
+             * ⚠️ Solo locales activos.
+             *
+             * Al retirar 91 locales contra la lista final del cliente
+             * (2026-09-21) quedaron **59 listas con 236 items colgando de
+             * puestos desactivados**. Sin este filtro el reporte que se le
+             * entrega al cliente seguiria contando equipo en sitios donde ya no
+             * se opera -- y nadie lo notaria, porque el numero sale mayor, no
+             * roto.
+             */
+            ->where('i.ins_estado', true)
             ->select(
                 // Los locales sin cliente van al grupo 0, no se descartan.
                 DB::raw('coalesce(i.ins_cliente_id, 0) as org_code'),
