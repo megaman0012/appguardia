@@ -24,7 +24,7 @@
 #
 # La tipografia es DejaVu porque es la unica que dompdf trae con cobertura de
 # acentos. Lo que NO tiene son los emoji de severidad: comprobado con
-# `fc-list ':charset=1F534'`, a DejaVu Sans le faltan 🔴 🟠 🟡 🔵 🟢 y ✅, y en el PDF
+# `fc-list ':charset=1F534'`, a DejaVu Sans le faltan 🔴 🟠 🟡 🔵 🟢, ✅ y 🚨, y en el PDF
 # salian como un hueco (18 en el informe de auditoria). Si tiene ⚠ ⚪ ● y ✔.
 #
 # Por eso la rama del PDF sustituye cada emoji por un circulo U+25CF del color
@@ -97,6 +97,7 @@ for MD in "${DOCUMENTOS[@]}"; do
       -e 's|🔵|<span style="color:#1A6FB0">●</span>|g' \
       -e 's|🟢|<span style="color:#1F8A3B">●</span>|g' \
       -e 's|✅|<span style="color:#1F8A3B">✔</span>|g' \
+      -e 's|🚨|<span style="color:#C0172C">⚠</span>|g' \
       -e 's|️||g' \
       "$BASE.html" > "$PASO_HOST/$NOMBRE.html"
   docker compose --project-directory "$BACKEND" exec -T -u 1000 backend \

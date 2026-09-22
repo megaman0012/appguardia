@@ -13,8 +13,8 @@ Auditoria del **2026-09-15**.
 | DOCKER | 🟢 COMPLETO | [04_DOCKER/Docker.md](04_DOCKER/Docker.md) |
 | SEGURIDAD | 🟢 COMPLETO | [05_SEGURIDAD/Analisis_Seguridad.md](05_SEGURIDAD/Analisis_Seguridad.md) |
 | BASE DE DATOS | 🟡 PARCIAL | [06_BASE_DATOS/Modelo_Datos.md](06_BASE_DATOS/Modelo_Datos.md) — 57 tablas, no todas documentadas |
-| MANUAL USUARIO | 🔴 PENDIENTE | requiere credenciales de prueba; ver nota |
-| MANUAL ADMINISTRADOR | 🔴 PENDIENTE | idem |
+| MANUAL USUARIO | 🟢 COMPLETO (guardia) | [07_MANUAL_USUARIO/Manual_Guardia.md](07_MANUAL_USUARIO/Manual_Guardia.md) — el uso de la app en la tablet |
+| MANUAL ADMINISTRADOR | 🔴 PENDIENTE | el panel está cambiando; ver nota |
 | MANUAL SOPORTE | 🟢 COMPLETO | [09_MANUAL_SOPORTE/Manual_Soporte.md](09_MANUAL_SOPORTE/Manual_Soporte.md) |
 | **MOBILE** | 🟢 **COMPLETO** | [10_MOBILE/Aplicacion_Movil.md](10_MOBILE/Aplicacion_Movil.md) |
 | OPERACION | 🟢 COMPLETO | [11_OPERACION/Operacion.md](11_OPERACION/Operacion.md) |
@@ -22,19 +22,32 @@ Auditoria del **2026-09-15**.
 | PRUEBAS | 🟡 PARCIAL | [13_PRUEBAS/Plan_Pruebas.md](13_PRUEBAS/Plan_Pruebas.md) |
 | GESTION | 🟢 COMPLETO | [14_GESTION/Historial_Versiones.md](14_GESTION/Historial_Versiones.md) |
 
-## Por que los manuales de usuario y administrador quedan pendientes
+## Manual del guardia: hecho el 2026-09-22
 
-El sistema esta en produccion con 880 usuarios y datos biometricos reales.
-Documentar sus pantallas exigiria **credenciales de un usuario real**, que no
-se solicitaron ni se deben inventar, y navegar un sistema productivo.
+`07_MANUAL_USUARIO/Manual_Guardia.md` cubre **el uso de la app en la tablet del
+puesto**: entrar, el arranque de la jornada, marcacion, inventario, rondas,
+accesos, novedades, el boton de emergencia, turnos y perfil.
 
-Ademas, el alcance funcional es grande: cuatro modulos Laravel
-(Acceso, Administracion, MobileApp, PortalApi) mas 22 pantallas en la app
-movil. Hacerlo bien exige una sesion dedicada con un usuario de prueba.
+Se escribio **leyendo las pantallas una por una en el codigo fuente**, no
+navegando produccion ni de memoria: los textos, los avisos y las validaciones que
+menciona son los que la app muestra de verdad. Eso resuelve el bloqueo que tenia
+--hacia falta un usuario real-- sin tocar datos de nadie.
 
-**Lo que si esta documentado** es todo lo verificable sin credenciales:
-arquitectura, base de datos, seguridad, Docker, operacion, continuidad y
-—completo— la aplicacion movil.
+⚠️ **Dice que la aplicacion NECESITA CONEXION**, porque es la verdad: el contrato
+de sincronizacion sin senal existe en el backend (`API-OFFLINE-SYNC.md`) pero
+**la cola no esta implementada en la APK**. Prometer lo contrario en un manual
+haria que un guardia diera por registrado algo que se perdio.
+
+## Por que el manual de administrador sigue pendiente
+
+El panel web tiene 28 recursos y su documentacion util depende de decisiones de
+operacion que todavia se estan moviendo --el kit de puesto, los locales, la
+consolidacion pendiente--. Documentarlo hoy seria describir pantallas que van a
+cambiar.
+
+**Lo que si esta documentado** es todo lo verificable: arquitectura, base de
+datos, seguridad, Docker, operacion, continuidad, la aplicacion movil y ahora su
+manual de uso.
 
 ## Documentacion previa: clasificacion
 
@@ -66,7 +79,7 @@ Estos documentos existen ademas en **PDF** y **DOCX**, junto a cada `.md`:
 |---|---|---|
 | `INFORME_AUDITORIA` | ✅ | ✅ |
 | `02_ARQUITECTURA/Arquitectura` | ✅ | ✅ |
-| `07_MANUAL_USUARIO/Manual_Usuario` | ✅ | ✅ |
+| `07_MANUAL_USUARIO/Manual_Guardia` | ✅ | ✅ |
 | `08_MANUAL_ADMINISTRADOR/Manual_Administrador` | ✅ | ✅ |
 | `09_MANUAL_SOPORTE/Manual_Soporte` | ✅ | ✅ |
 | `14_GESTION/Historial_Versiones` | ✅ | ✅ |
